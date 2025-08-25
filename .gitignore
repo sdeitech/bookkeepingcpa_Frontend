@@ -1,0 +1,11 @@
+
+ 
+node_modules
+# .env
+# .env.staging
+# .env.prod
+# dist
+# dist-ssr
+ /dist
+ *dist
+ dist

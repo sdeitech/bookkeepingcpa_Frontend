@@ -1,0 +1,259 @@
+.amazon-orders-container {
+  margin-top: 24px;
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  border: 1px solid #e0e0e0;
+}
+
+.orders-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.orders-header h3 {
+  margin: 0;
+  color: #232f3e;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.date-filters {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.date-input-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.date-input-group label {
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+.date-input-group input[type="date"] {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #333;
+}
+
+.refresh-btn {
+  padding: 8px 16px;
+  background: #2196F3;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.3s ease;
+}
+
+.refresh-btn:hover {
+  background: #1976D2;
+}
+
+/* Orders Summary */
+.orders-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.summary-card {
+  background: #f8f9fa;
+  padding: 16px;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.summary-label {
+  display: block;
+  color: #666;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.summary-value {
+  display: block;
+  color: #232f3e;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+/* Orders Table */
+.orders-table-container {
+  overflow-x: auto;
+  margin-top: 20px;
+}
+
+.orders-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.orders-table thead {
+  background: #f5f5f5;
+}
+
+.orders-table th {
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+  color: #333;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.orders-table tbody tr {
+  border-bottom: 1px solid #e0e0e0;
+  transition: background 0.2s ease;
+}
+
+.orders-table tbody tr:hover {
+  background: #f9f9f9;
+}
+
+.orders-table td {
+  padding: 12px;
+  color: #555;
+}
+
+.order-id {
+  font-family: monospace;
+  font-size: 13px;
+  color: #1976D2;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: white;
+  text-transform: uppercase;
+}
+
+.order-total {
+  font-weight: 600;
+  color: #333;
+}
+
+.fulfillment-type {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.fulfillment-type.afn {
+  background: #e3f2fd;
+  color: #1565c0;
+}
+
+.fulfillment-type.mfn {
+  background: #f3e5f5;
+  color: #7b1fa2;
+}
+
+/* No Orders */
+.no-orders {
+  text-align: center;
+  padding: 60px 20px;
+  color: #999;
+  font-size: 16px;
+}
+
+/* Pagination */
+.pagination-info {
+  text-align: center;
+  margin-top: 20px;
+  padding: 12px;
+  background: #fff3e0;
+  border-radius: 4px;
+  color: #e65100;
+  font-size: 14px;
+}
+
+/* Loading State */
+.loading {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+  font-size: 16px;
+}
+
+/* Error State */
+.error {
+  text-align: center;
+  padding: 20px;
+  color: #f44336;
+  background: #ffebee;
+  border-radius: 6px;
+  margin: 20px 0;
+}
+
+.retry-btn {
+  margin-left: 12px;
+  padding: 6px 12px;
+  background: #f44336;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.retry-btn:hover {
+  background: #da190b;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .orders-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .date-filters {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .date-input-group {
+    width: 100%;
+  }
+
+  .date-input-group input[type="date"] {
+    flex: 1;
+  }
+
+  .orders-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .orders-table-container {
+    overflow-x: scroll;
+  }
+
+  .orders-table {
+    min-width: 800px;
+  }
+}
