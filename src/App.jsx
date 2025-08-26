@@ -7,6 +7,7 @@ import DashboardRouter from './components/DashboardRouter';
 import AdminDashboard from './pages/AdminDashboard';
 import StaffDashboard from './pages/StaffDashboard';
 import ClientDashboard from './pages/ClientDashboard';
+import AmazonCallback from './pages/AmazonCallback';
 import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
 
@@ -68,6 +69,12 @@ function App() {
                 {user?.role_id === '3' ? <ClientDashboard /> : <Navigate to="/dashboard" replace />}
               </ProtectedRoute>
             }
+          />
+          
+          {/* Amazon OAuth Callback Route */}
+          <Route
+            path="/amazon-callback"
+            element={<AmazonCallback />}
           />
           
           {/* Default redirect */}
