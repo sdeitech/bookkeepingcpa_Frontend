@@ -8,6 +8,14 @@ import AdminDashboard from './pages/AdminDashboard';
 import StaffDashboard from './pages/StaffDashboard';
 import ClientDashboard from './pages/ClientDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
+import PersonelInfo from './components/Onboarding/PersonelInfo';
+import InfoHistory from './components/Onboarding/InfoHistory';
+import BusinessTrack from './components/Onboarding/BusinessTrack';
+
+
+
+
+
 import './App.css';
 
 function App() {
@@ -18,6 +26,15 @@ function App() {
     <Router>
       <div className="app">
         <Routes>
+          <Route
+            path="/"
+            element={
+              <PersonelInfo />
+              // <InfoHistory/>//
+              // <BusinessTrack/>
+            }
+          />
+
           {/* Public routes */}
           <Route
             path="/login"
@@ -31,7 +48,7 @@ function App() {
               isAuthenticated ? <Navigate to="/dashboard" replace /> : <Signup />
             }
           />
-          
+
           {/* Protected routes - Main dashboard router */}
           <Route
             path="/dashboard"
@@ -41,7 +58,7 @@ function App() {
               </ProtectedRoute>
             }
           />
-          
+
           {/* Individual dashboard routes for direct navigation */}
           <Route
             path="/admin-dashboard"
@@ -51,7 +68,7 @@ function App() {
               </ProtectedRoute>
             }
           />
-          
+
           <Route
             path="/staff-dashboard"
             element={
@@ -60,7 +77,7 @@ function App() {
               </ProtectedRoute>
             }
           />
-          
+
           <Route
             path="/client-dashboard"
             element={
@@ -69,7 +86,7 @@ function App() {
               </ProtectedRoute>
             }
           />
-          
+
           {/* Default redirect */}
           <Route
             path="/"
@@ -77,16 +94,16 @@ function App() {
               isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />
             }
           />
-          
+
           {/* 404 catch-all */}
-          <Route 
-            path="*" 
+          <Route
+            path="*"
             element={
               <div className="not-found">
                 <h2>404 - Page Not Found</h2>
                 <p>The page you're looking for doesn't exist.</p>
               </div>
-            } 
+            }
           />
         </Routes>
       </div>
