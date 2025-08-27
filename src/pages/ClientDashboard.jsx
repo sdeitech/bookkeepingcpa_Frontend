@@ -4,9 +4,11 @@ import { useNavigate } from 'react-router-dom';
 import { logout, selectCurrentUser } from '../features/auth/authSlice';
 import AmazonIntegration from '../components/Amazon/AmazonIntegration';
 import AmazonSandbox from '../components/Amazon/AmazonSandbox';
+import ProfileEdit from '../components/Profile/ProfileEdit';
 
 const ClientDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
+  const [showProfileEdit, setShowProfileEdit] = useState(false);
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const user = useSelector(selectCurrentUser);
@@ -37,7 +39,24 @@ const ClientDashboard = () => {
         <div className="dashboard-content">
           {/* Client Profile Section */}
           <section className="user-info-card">
-            <h2>My Profile</h2>
+            <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h2>My Profile</h2>
+              <button
+                className="btn-primary"
+                onClick={() => setShowProfileEdit(true)}
+                style={{
+                  padding: '8px 16px',
+                  background: '#4299e1',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                Edit Profile
+              </button>
+            </div>
             <div className="info-grid">
               <div className="info-item">
                 <label>Name:</label>
@@ -52,6 +71,14 @@ const ClientDashboard = () => {
                 <span>{user?.phoneNumber || 'Not provided'}</span>
               </div>
               <div className="info-item">
+                <label>Address:</label>
+                <span>{user?.address || 'Not provided'}</span>
+              </div>
+              <div className="info-item">
+                <label>Date of Birth:</label>
+                <span>{user?.dob ? new Date(user.dob).toLocaleDateString() : 'Not provided'}</span>
+              </div>
+              <div className="info-item">
                 <label>Account Type:</label>
                 <span>Client</span>
               </div>
@@ -61,7 +88,7 @@ const ClientDashboard = () => {
               </div>
               <div className="info-item">
                 <label>Member Since:</label>
-                <span>{new Date(user?.createdAt).toLocaleDateString()}</span>
+                <span>{user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}</span>
               </div>
             </div>
           </section>
@@ -318,6 +345,11 @@ const ClientDashboard = () => {
           </section>
         </div>
       </main>
+      
+      {/* Profile Edit Modal */}
+      {showProfileEdit && (
+        <ProfileEdit onClose={() => setShowProfileEdit(false)} />
+      )}
     </div>
   );
 };

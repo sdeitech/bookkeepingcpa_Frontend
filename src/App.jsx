@@ -7,6 +7,7 @@ import DashboardRouter from './components/DashboardRouter';
 import AdminDashboard from './pages/AdminDashboard';
 import StaffDashboard from './pages/StaffDashboard';
 import ClientDashboard from './pages/ClientDashboard';
+import AmazonCallback from './pages/AmazonCallback';
 import ProtectedRoute from './components/ProtectedRoute';
 import PersonelInfo from './components/Onboarding/PersonelInfo';
 import InfoHistory from './components/Onboarding/InfoHistory';
@@ -86,7 +87,13 @@ function App() {
               </ProtectedRoute>
             }
           />
-
+          
+          {/* Amazon OAuth Callback Route */}
+          <Route
+            path="/amazon-callback"
+            element={<AmazonCallback />}
+          />
+          
           {/* Default redirect */}
           <Route
             path="/"
