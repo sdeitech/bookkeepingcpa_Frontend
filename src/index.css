@@ -167,13 +167,28 @@ button {
   background-color: var(--slide-bg);
   cursor: pointer;
   font-size: var(--font-sm);
-  transition: 0.20s;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  transition: 0.30s;
 }
 
 .option:hover {
   background: var(--light-color);
   transform: scale(1.01);
   box-shadow: 0 3px 9px 0 rgba(0, 0, 0, 0.15);
+}
+
+.option img {
+  width: 24px;
+  height: 24px;
+  transition: transform 0.3s ease;
+  /* smooth animation */
+}
+
+.option:hover img {
+  transform: scale(1.3);
+  /* increase size smoothly */
 }
 
 .buttons {
@@ -229,4 +244,9 @@ button {
   .right-panel {
     border-radius: 0;
   }
+}
+
+.industry_sec {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
 }

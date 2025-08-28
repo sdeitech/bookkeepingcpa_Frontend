@@ -10,8 +10,13 @@ import ClientDashboard from './pages/ClientDashboard';
 import AmazonCallback from './pages/AmazonCallback';
 import ProtectedRoute from './components/ProtectedRoute';
 import PersonelInfo from './components/Onboarding/PersonelInfo';
-import InfoHistory from './components/Onboarding/InfoHistory';
-import BusinessTrack from './components/Onboarding/BusinessTrack';
+// import InfoHistory from './components/Onboarding/InfoHistory';
+// import BusinessTrack from './components/Onboarding/BusinessTrack';
+import Industry from './components/Onboarding/Industry';
+
+import Payment from './components/Onboarding/Payment';
+
+
 
 
 
@@ -30,9 +35,11 @@ function App() {
           <Route
             path="/"
             element={
-              <PersonelInfo />
+              // <PersonelInfo />
               // <InfoHistory/>//
               // <BusinessTrack/>
+              // <Industry/>
+              <Payment />
             }
           />
 
@@ -87,13 +94,13 @@ function App() {
               </ProtectedRoute>
             }
           />
-          
+
           {/* Amazon OAuth Callback Route */}
           <Route
             path="/amazon-callback"
             element={<AmazonCallback />}
           />
-          
+
           {/* Default redirect */}
           <Route
             path="/"
