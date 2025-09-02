@@ -94,7 +94,7 @@ const ClientAssignment = () => {
                   onChange={(e) => setSelectedClient(e.target.value)}
                   className="form-select"
                   required
-                >
+                > 
                   <option value="">-- Select Client --</option>
                   {clients.map(client => (
                     <option key={client._id} value={client._id}>

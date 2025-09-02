@@ -1,0 +1,276 @@
+.payment_container {
+    background: linear-gradient(to bottom, #f8faff, #dfeaff);
+    padding: 3rem 3.6rem;
+    border-radius: var(--radius-xxl);
+    display: flex;
+    flex-direction: column;
+    gap: 7rem;
+    min-height: 100vh;
+}
+
+.payment-sec {
+    display: flex;
+    flex-direction: column;
+    gap: 5rem;
+}
+
+.payment-sec .payment-heading h4 {
+    font-size: 3.6rem;
+    font-weight: 600;
+    color: var(--color-heading);
+}
+
+
+.payment-sec .payment-heading {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.payment-sec .payment-heading span {
+    background: var(--linear-gradient, linear-gradient(180deg, #0D63E8 0%, #8AB0E8 100%));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.payment-sec .payment-heading p {
+    color: var(--color-text);
+    font-size: var(--font-md);
+    font-weight: 300;
+}
+
+
+
+/* card css  */
+
+.payment_cards_sec {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.card {
+    background: var(--light-color);
+    border-radius: 3rem;
+    border: 1px solid var(--stroke-color);
+    padding: 4rem 3rem;
+    flex: 1;
+    min-width: 280px;
+    max-width: 350px;
+    position: relative;
+    text-align: left;
+    transition: 0.8s;
+}
+
+/* .card.popular:hover .badge {
+    display: block;
+} */
+
+
+.card.popular .badge {
+    position: absolute;
+    top: -12px;
+    left: 60%;
+    transform: translateX(-50%);
+    background: var(--color-primary);
+    color: #fff;
+    font-size: 1.2rem;
+    font-weight: 600;
+    padding: 0.6rem 1.4rem;
+    border-radius: var(--radius-xxl);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.card:hover {
+    background: linear-gradient(180deg, #272F3F 0%, #273040 47.12%, #272E3D 100%);
+}
+
+.card:hover .heading_card h3 {
+    color: var(--light-color);
+}
+
+.card:hover .heading_card .desc {
+    color: var(--light-color);
+}
+
+.card:hover .pricing_wrapper p {
+    color: var(--light-color);
+}
+
+.card:hover .pricing_wrapper span {
+    color: var(--light-color);
+}
+
+.card:hover .Pricing_input {
+    color: var(--light-color);
+}
+
+.card:hover .includes {
+    color: var(--light-color);
+}
+
+.card:hover ul a {
+    color: var(--light-color);
+}
+
+
+
+
+
+.upper_sec {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.upper_sec img {
+    width: 3rem;
+    height: 3rem;
+    background-color: #F0F1F5;
+    border-radius: 0.8rem;
+}
+
+.heading_card h3 {
+    font-size: 1.8rem;
+    color: var(--color-heading);
+    font-weight: 600;
+}
+
+.heading_card .desc {
+    font-size: 14px;
+    color: var(--color-text);
+    font-weight: 500;
+}
+
+.heading_card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.pricing_wrapper {
+    gap: 1.4rem;
+    display: flex;
+    align-items: center;
+}
+
+.pricing_wrapper p {
+    font-size: var(--font-sm);
+    color: var(--color-heading);
+}
+
+.pricing_wrapper span {
+    color: var(--color-text);
+    font-size: var(--font-sm);
+}
+
+.Pricing_input {
+    font-size: 4rem;
+    color: var(--color-heading);
+    font-weight: 700;
+}
+
+.card .tag {
+    position: absolute;
+    top: -12px;
+    right: 20px;
+    background: #2563eb;
+    color: #fff;
+    font-size: 12px;
+    padding: 5px 12px;
+    border-radius: 50px;
+}
+
+.card h2 {
+    font-size: 3.2rem;
+}
+
+
+
+.card h2 span {
+    font-size: var(--font-md);
+    font-weight: 400;
+}
+
+.card .contact {
+    font-size: 2.6rem;
+    font-weight: 600;
+}
+
+.card .billing {
+    font-size: var(--font-sm);
+    color: #9ca3af;
+}
+
+.card .btn {
+    display: block;
+    margin: 1.5rem 0;
+    padding: 1.2rem;
+    background: linear-gradient(90deg, #9ED0FF 0%, #347AE4 100%);
+    color: #fff;
+    border: none;
+    border-radius: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    width: 100%;
+}
+
+.includes {
+    font-size: var(--font-sm);
+    color: var(--color-text);
+    text-transform: uppercase;
+    margin: 3rem 0;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    text-align: center;
+    color: #333;
+    font-weight: 600;
+
+}
+
+.includes::before,
+.includes::after {
+    content: "";
+    flex: 1;
+    border-bottom: 1px solid #ccc;
+    margin: 0 10px;
+}
+
+.card ul {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.card ul a {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: var(--font-sm);
+    font-weight: 500;
+    list-style: none;
+    color: var(--color-text);
+    text-decoration: none;
+}
+
+.card ul a img {
+    padding: 0.5rem 0.4rem;
+    background-color: #DBE8FC;
+    border-radius: var(--radius-xxl);
+}
+
+
+
+/* .card ul li::before {
+    content: "✔";
+    position: absolute;
+    left: 0;
+    color: #2563eb;
+    font-weight: bold;
+} */

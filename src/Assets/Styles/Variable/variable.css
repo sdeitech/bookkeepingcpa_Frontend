@@ -1,0 +1,26 @@
+:root {
+    /* Colors */
+    --color-primary: #0D63E8;
+    --color-text: #4A5565;
+    --color-heading: #1C1C1E;
+    --placeholder: #9CA3AF;
+    --slide-bg: #F8F8F8;
+    --stroke-color: #E5E7EB;
+    --light-color: #ffffff;
+
+
+
+
+    /* Fonts */
+    --font-lg: 20px;
+    --font-md: 16px;
+    --font-sm: 14px;
+
+    /* border */
+
+
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 16px;
+    --radius-xxl: 50px;
+}

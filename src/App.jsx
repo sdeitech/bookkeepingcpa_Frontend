@@ -18,6 +18,18 @@ import SubscriptionPlanManager from './components/Admin/SubscriptionPlanManager/
 
 // Subscription Protected Route Component
 import { RequireSubscription } from './routes/ProtectedRoute';
+import PersonelInfo from './components/Onboarding/PersonelInfo';
+// import InfoHistory from './components/Onboarding/InfoHistory';
+// import BusinessTrack from './components/Onboarding/BusinessTrack';
+import Industry from './components/Onboarding/Industry';
+
+import Payment from './components/Onboarding/Payment';
+
+
+
+
+
+
 
 import './App.css';
 
@@ -34,6 +46,17 @@ function App() {
     <Router>
       <div className="app">
         <Routes>
+          <Route
+            path="/"
+            element={
+              // <PersonelInfo />
+              // <InfoHistory/>//
+              // <BusinessTrack/>
+              // <Industry/>
+              <Payment />
+            }
+          />
+
           {/* Public routes */}
           <Route
             path="/login"
@@ -87,6 +110,7 @@ function App() {
             }
           />
           
+
           {/* Protected routes - Main dashboard router */}
           {/* Dashboard now requires active subscription for clients */}
           <Route
@@ -104,7 +128,7 @@ function App() {
               </ProtectedRoute>
             }
           />
-          
+
           {/* Individual dashboard routes for direct navigation */}
           <Route
             path="/admin-dashboard"
@@ -114,7 +138,7 @@ function App() {
               </ProtectedRoute>
             }
           />
-          
+
           <Route
             path="/staff-dashboard"
             element={
@@ -123,7 +147,7 @@ function App() {
               </ProtectedRoute>
             }
           />
-          
+
           <Route
             path="/client-dashboard"
             element={
@@ -138,13 +162,13 @@ function App() {
               </ProtectedRoute>
             }
           />
-          
+
           {/* Amazon OAuth Callback Route */}
           <Route
             path="/amazon-callback"
             element={<AmazonCallback />}
           />
-          
+
           {/* Default redirect */}
           <Route
             path="/"
@@ -163,16 +187,16 @@ function App() {
               )
             }
           />
-          
+
           {/* 404 catch-all */}
-          <Route 
-            path="*" 
+          <Route
+            path="*"
             element={
               <div className="not-found">
                 <h2>404 - Page Not Found</h2>
                 <p>The page you're looking for doesn't exist.</p>
               </div>
-            } 
+            }
           />
         </Routes>
       </div>
