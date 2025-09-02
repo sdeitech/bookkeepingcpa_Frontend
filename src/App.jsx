@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { selectIsAuthenticated, selectCurrentUser } from './features/auth/authSlice';
+import { selectIsOnboardingCompleted } from './features/onboarding/onboardingSlice';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import DashboardRouter from './components/DashboardRouter';
@@ -10,6 +11,9 @@ import ClientDashboard from './pages/ClientDashboard';
 import AmazonCallback from './pages/AmazonCallback';
 import ProtectedRoute from './components/ProtectedRoute';
 
+// Onboarding Components
+import OnboardingWizard from './components/Onboarding/OnboardingWizard/OnboardingWizard';
+
 // Stripe Components
 import PricingPlans from './components/Stripe/PricingPlans/PricingPlans';
 import CheckoutPage from './components/Stripe/Checkout/CheckoutPage';
@@ -18,24 +22,29 @@ import SubscriptionPlanManager from './components/Admin/SubscriptionPlanManager/
 
 // Subscription Protected Route Component
 import { RequireSubscription } from './routes/ProtectedRoute';
-import PersonelInfo from './components/Onboarding/PersonelInfo';
-// import InfoHistory from './components/Onboarding/InfoHistory';
-// import BusinessTrack from './components/Onboarding/BusinessTrack';
 import Industry from './components/Onboarding/Industry';
-
-import Payment from './components/Onboarding/Payment';
-
-
-
-
-
-
-
 import './App.css';
+
+// Helper component to check onboarding and redirect
+const RequireOnboarding = ({ children }) => {
+  const isOnboardingCompleted = useSelector(selectIsOnboardingCompleted);
+  const isAuthenticated = useSelector(selectIsAuthenticated);
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  if (!isOnboardingCompleted) {
+    return <Navigate to="/onboarding" replace />;
+  }
+  
+  return children;
+};
 
 function App() {
   const isAuthenticated = useSelector(selectIsAuthenticated);
   const user = useSelector(selectCurrentUser);
+  const isOnboardingCompleted = useSelector(selectIsOnboardingCompleted);
   
   // Helper to check user role
   const isAdmin = user?.role_id === '1';
@@ -44,30 +53,48 @@ function App() {
 
   return (
     <Router>
+     
       <div className="app">
         <Routes>
-          <Route
-            path="/"
-            element={
-              // <PersonelInfo />
-              // <InfoHistory/>//
-              // <BusinessTrack/>
-              // <Industry/>
-              <Payment />
-            }
-          />
-
           {/* Public routes */}
           <Route
             path="/login"
             element={
-              isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />
+              isAuthenticated ?
+                (isClient && !isOnboardingCompleted ?
+                  <Navigate to="/onboarding" replace /> :
+                  <Navigate to="/dashboard" replace />
+                ) :
+                <Login />
             }
           />
           <Route
             path="/signup"
             element={
-              isAuthenticated ? <Navigate to="/dashboard" replace /> : <Signup />
+              isAuthenticated ?
+                (isClient ?
+                  <Navigate to="/onboarding" replace /> :
+                  <Navigate to="/dashboard" replace />
+                ) :
+                <Signup />
+            }
+          />
+          
+          {/* Onboarding Route - Protected, for clients only */}
+          <Route
+            path="/onboarding"
+            element={
+              <ProtectedRoute>
+                {isClient ? (
+                  isOnboardingCompleted ? (
+                    <Navigate to="/pricing" replace />
+                  ) : (
+                    <OnboardingWizard />
+                  )
+                ) : (
+                  <Navigate to="/dashboard" replace />
+                )}
+              </ProtectedRoute>
             }
           />
           
@@ -112,17 +139,19 @@ function App() {
           
 
           {/* Protected routes - Main dashboard router */}
-          {/* Dashboard now requires active subscription for clients */}
+          {/* Dashboard requires onboarding completion and active subscription for clients */}
           <Route
             path="/dashboard"
             element={
               <ProtectedRoute>
                 {isClient ? (
-                  <RequireSubscription>
-                    <DashboardRouter />
-                  </RequireSubscription>
+                  <RequireOnboarding>
+                    <RequireSubscription>
+                      <DashboardRouter />
+                    </RequireSubscription>
+                  </RequireOnboarding>
                 ) : (
-                  // Admin and Staff don't need subscription
+                  // Admin and Staff don't need onboarding or subscription
                   <DashboardRouter />
                 )}
               </ProtectedRoute>
@@ -153,9 +182,11 @@ function App() {
             element={
               <ProtectedRoute>
                 {isClient ? (
-                  <RequireSubscription>
-                    <ClientDashboard />
-                  </RequireSubscription>
+                  <RequireOnboarding>
+                    <RequireSubscription>
+                      <ClientDashboard />
+                    </RequireSubscription>
+                  </RequireOnboarding>
                 ) : (
                   <Navigate to="/dashboard" replace />
                 )}
@@ -174,12 +205,17 @@ function App() {
             path="/"
             element={
               isAuthenticated ? (
-                // If client without subscription, go to pricing
+                // For clients: check onboarding first, then subscription
                 isClient ? (
-                  <RequireSubscription fallbackPath="/pricing">
-                    <Navigate to="/dashboard" replace />
-                  </RequireSubscription>
+                  !isOnboardingCompleted ? (
+                    <Navigate to="/onboarding" replace />
+                  ) : (
+                    <RequireSubscription fallbackPath="/pricing">
+                      <Navigate to="/dashboard" replace />
+                    </RequireSubscription>
+                  )
                 ) : (
+                  // Admin and Staff go directly to dashboard
                   <Navigate to="/dashboard" replace />
                 )
               ) : (

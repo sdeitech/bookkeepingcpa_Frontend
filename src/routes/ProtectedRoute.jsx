@@ -59,22 +59,22 @@ const ProtectedRoute = ({ children, requireSubscription = false, requireAdmin = 
     }
     
     // No active subscription found
-    if (!subscription || subscription.status !== 'active') {
+    if (!subscription || !subscription.data || subscription.data.status !== 'active') {
       // Redirect to pricing page to select a plan
       return (
-        <Navigate 
-          to="/pricing" 
-          state={{ 
+        <Navigate
+          to="/pricing"
+          state={{
             from: location.pathname,
             message: 'Please subscribe to a plan to access this feature'
-          }} 
-          replace 
+          }}
+          replace
         />
       );
     }
     
     // Check if subscription is past due or canceled
-    if (subscription.status === 'past_due' || subscription.status === 'canceled') {
+    if (subscription.data.status === 'past_due' || subscription.data.status === 'canceled') {
       return (
         <Navigate 
           to="/dashboard/subscription" 

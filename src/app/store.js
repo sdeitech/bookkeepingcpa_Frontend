@@ -1,17 +1,21 @@
 import { configureStore } from '@reduxjs/toolkit';
 import { setupListeners } from '@reduxjs/toolkit/query';
 import authReducer from '../features/auth/authSlice';
+import onboardingReducer from '../features/onboarding/onboardingSlice';
 import { authApi } from '../features/auth/authApi';
 import { subscriptionApi } from '../features/subscription/subscriptionApi';
+import { onboardingApi } from '../features/onboarding/onboardingApi';
 
 export const store = configureStore({
   reducer: {
     // Regular reducers
     auth: authReducer,
+    onboarding: onboardingReducer,
     
     // RTK Query reducers
     [authApi.reducerPath]: authApi.reducer,
     [subscriptionApi.reducerPath]: subscriptionApi.reducer,
+    [onboardingApi.reducerPath]: onboardingApi.reducer,
   },
   
   // Adding the api middleware enables caching, invalidation, polling,
@@ -20,15 +24,16 @@ export const store = configureStore({
     getDefaultMiddleware({
       serializableCheck: {
         // Ignore these action types
-        ignoredActions: ['auth/setCredentials'],
+        ignoredActions: ['auth/setCredentials', 'onboarding/loadOnboardingData'],
         // Ignore these field paths in all actions
-        ignoredActionPaths: ['payload.timestamp'],
+        ignoredActionPaths: ['payload.timestamp', 'payload.lastSavedAt'],
         // Ignore these paths in the state
-        ignoredPaths: ['auth.user'],
+        ignoredPaths: ['auth.user', 'onboarding.lastSavedAt'],
       },
     })
       .concat(authApi.middleware)
-      .concat(subscriptionApi.middleware),
+      .concat(subscriptionApi.middleware)
+      .concat(onboardingApi.middleware),
 });
 
 // optional, but required for refetchOnFocus/refetchOnReconnect behaviors

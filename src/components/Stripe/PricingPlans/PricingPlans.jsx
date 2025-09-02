@@ -133,6 +133,9 @@ const PricingPlans = () => {
     return { amount: savings, percent: percentSaved };
   };
 
+  // No auto-redirect needed - users should select a plan
+  // The redirect only happens if they have an active subscription and try to access pricing
+
   if (plansLoading || subscriptionLoading) {
     return (
       <div className="pricing-loading">
@@ -167,7 +170,14 @@ const PricingPlans = () => {
           <div className="current-subscription-info">
             <p>
               You are currently on the <strong>{currentSubscription.subscriptionPlanId?.name}</strong> plan.
-              <a href="/subscription"> Manage Subscription</a>
+              <button
+                onClick={() => navigate('/dashboard')}
+                className="dashboard-btn"
+                style={{ marginLeft: '10px', padding: '5px 15px', backgroundColor: '#667eea', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}
+              >
+                Go to Dashboard
+              </button>
+              <a href="/subscription" style={{ marginLeft: '10px' }}> Manage Subscription</a>
             </p>
           </div>
         )}
