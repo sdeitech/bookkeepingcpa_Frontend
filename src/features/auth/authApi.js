@@ -1,19 +1,46 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { logout } from './authSlice';
+
+// Custom base query that handles 401 errors
+const baseQueryWithReauth = async (args, api, extraOptions) => {
+  // Get token from auth state
+  const token = api.getState().auth?.token;
+  
+  // Prepare the request with token
+  const baseQuery = fetchBaseQuery({
+    baseUrl: 'http://localhost:8080/api',
+    prepareHeaders: (headers) => {
+      if (token) {
+        // Clean token if needed
+        const cleanToken = token.replace(/^["']|["']$/g, '');
+        headers.set('authorization', `Bearer ${cleanToken}`);
+      }
+      headers.set('Content-Type', 'application/json');
+      return headers;
+    },
+  });
+  
+  // Make the request
+  let result = await baseQuery(args, api, extraOptions);
+  
+  // Handle 401 errors - token expired or invalid
+  if (result.error && result.error.status === 401) {
+    console.log('[Auth] Token expired or invalid, logging out...');
+    
+    // Dispatch logout action to clear Redux state and localStorage
+    api.dispatch(logout());
+    
+    // Redirect to login page with expiration message
+    window.location.href = '/login?message=Session expired. Please login again.';
+  }
+  
+  return result;
+};
 
 // Define the auth API using RTK Query
 export const authApi = createApi({
   reducerPath: 'authApi',
-  baseQuery: fetchBaseQuery({
-    baseUrl: 'http://localhost:8080/api',
-    prepareHeaders: (headers, { getState }) => {
-      // Get token from state
-      const token = getState().auth.token;
-      if (token) {
-        headers.set('authorization', `Bearer ${token}`);
-      }
-      return headers;
-    },
-  }),
+  baseQuery: baseQueryWithReauth,
   endpoints: (builder) => ({
     // Login endpoint
     login: builder.mutation({

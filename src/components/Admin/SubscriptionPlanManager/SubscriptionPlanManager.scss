@@ -1,0 +1,389 @@
+.subscription-plan-manager {
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+
+  .manager-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #e2e8f0;
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #1a202c;
+      margin: 0;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      transition: all 0.3s ease;
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+      }
+    }
+  }
+
+  .plan-form-container {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+    overflow: hidden;
+
+    .form-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.5rem 2rem;
+      background: #f7fafc;
+      border-bottom: 1px solid #e2e8f0;
+
+      h2 {
+        margin: 0;
+        color: #2d3748;
+        font-size: 1.5rem;
+      }
+
+      .btn-close {
+        background: transparent;
+        border: none;
+        color: #718096;
+        cursor: pointer;
+        padding: 0.5rem;
+        border-radius: 4px;
+        transition: all 0.2s;
+
+        &:hover {
+          background: #edf2f7;
+          color: #2d3748;
+        }
+      }
+    }
+
+    .plan-form {
+      padding: 2rem;
+
+      .form-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+      }
+
+      .form-group {
+        display: flex;
+        flex-direction: column;
+
+        label {
+          font-weight: 600;
+          color: #4a5568;
+          margin-bottom: 0.5rem;
+          font-size: 0.875rem;
+          text-transform: uppercase;
+          letter-spacing: 0.025em;
+        }
+
+        input,
+        select {
+          padding: 0.75rem;
+          border: 1px solid #cbd5e0;
+          border-radius: 6px;
+          font-size: 1rem;
+          transition: all 0.2s;
+
+          &:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+          }
+        }
+      }
+
+      .features-section {
+        margin-bottom: 1.5rem;
+
+        > label {
+          display: block;
+          font-weight: 600;
+          color: #4a5568;
+          margin-bottom: 1rem;
+          font-size: 0.875rem;
+          text-transform: uppercase;
+          letter-spacing: 0.025em;
+        }
+
+        .features-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 1rem;
+          padding: 1rem;
+          background: #f7fafc;
+          border-radius: 8px;
+        }
+      }
+
+      .checkbox-label {
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        user-select: none;
+
+        input[type="checkbox"] {
+          margin-right: 0.5rem;
+          width: 18px;
+          height: 18px;
+          cursor: pointer;
+        }
+      }
+
+      .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+        margin-top: 2rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid #e2e8f0;
+
+        .btn {
+          padding: 0.75rem 1.5rem;
+          border-radius: 6px;
+          font-size: 1rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+          display: flex;
+          align-items: center;
+          border: none;
+
+          &.btn-secondary {
+            background: #edf2f7;
+            color: #4a5568;
+
+            &:hover {
+              background: #e2e8f0;
+            }
+          }
+
+          &.btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+
+            &:hover:not(:disabled) {
+              transform: translateY(-2px);
+              box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+            }
+
+            &:disabled {
+              opacity: 0.6;
+              cursor: not-allowed;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  .plans-list {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+
+    h2 {
+      padding: 1.5rem 2rem;
+      margin: 0;
+      background: #f7fafc;
+      border-bottom: 1px solid #e2e8f0;
+      color: #2d3748;
+      font-size: 1.5rem;
+    }
+
+    .plans-table {
+      overflow-x: auto;
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+
+        thead {
+          background: #f7fafc;
+
+          th {
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: #4a5568;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+            border-bottom: 2px solid #e2e8f0;
+          }
+        }
+
+        tbody {
+          tr {
+            border-bottom: 1px solid #e2e8f0;
+            transition: background 0.2s;
+
+            &:hover {
+              background: #f7fafc;
+            }
+
+            td {
+              padding: 1rem;
+              color: #2d3748;
+
+              .plan-name-cell {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                font-weight: 600;
+
+                .popular-icon {
+                  color: #f6ad55;
+                  width: 18px;
+                  height: 18px;
+                }
+              }
+
+              .status {
+                display: inline-block;
+                padding: 0.25rem 0.75rem;
+                border-radius: 9999px;
+                font-size: 0.875rem;
+                font-weight: 600;
+
+                &.active {
+                  background: #c6f6d5;
+                  color: #276749;
+                }
+
+                &.inactive {
+                  background: #fed7d7;
+                  color: #742a2a;
+                }
+              }
+
+              .actions {
+                display: flex;
+                gap: 0.5rem;
+
+                .btn-icon {
+                  padding: 0.5rem;
+                  border: none;
+                  border-radius: 6px;
+                  cursor: pointer;
+                  transition: all 0.2s;
+                  background: transparent;
+
+                  &.btn-edit {
+                    color: #3182ce;
+
+                    &:hover {
+                      background: #ebf8ff;
+                    }
+                  }
+
+                  &.btn-delete {
+                    color: #e53e3e;
+
+                    &:hover {
+                      background: #fff5f5;
+                    }
+
+                    &:disabled {
+                      opacity: 0.5;
+                      cursor: not-allowed;
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      .no-plans {
+        padding: 4rem 2rem;
+        text-align: center;
+        color: #718096;
+
+        p {
+          margin: 0.5rem 0;
+
+          &.text-sm {
+            font-size: 0.875rem;
+            color: #a0aec0;
+          }
+        }
+
+        svg {
+          color: #cbd5e0;
+          margin: 0 auto;
+        }
+      }
+    }
+  }
+
+  .loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 400px;
+    color: #718096;
+    font-size: 1.125rem;
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .subscription-plan-manager {
+    padding: 1rem;
+
+    .manager-header {
+      flex-direction: column;
+      gap: 1rem;
+      text-align: center;
+
+      h1 {
+        font-size: 1.5rem;
+      }
+    }
+
+    .plan-form-container {
+      .plan-form {
+        padding: 1rem;
+
+        .form-row {
+          grid-template-columns: 1fr;
+        }
+      }
+    }
+
+    .plans-table {
+      font-size: 0.875rem;
+
+      table {
+        th,
+        td {
+          padding: 0.75rem 0.5rem;
+        }
+      }
+    }
+  }
+}
