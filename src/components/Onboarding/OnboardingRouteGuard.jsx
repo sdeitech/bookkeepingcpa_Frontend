@@ -1,12 +1,16 @@
 import React, { useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
 import { useGetOnboardingStatusQuery } from '../../features/onboarding/onboardingApi';
+import { markCompleted } from '../../features/onboarding/onboardingSlice';
 
 /**
  * Route guard for onboarding pages
  * Prevents access to onboarding if already completed
  */
 const OnboardingRouteGuard = ({ children }) => {
+  const dispatch = useDispatch();
+  
   // Refetch on mount to ensure fresh status
   const { data: onboardingStatus, isLoading, error, refetch } = useGetOnboardingStatusQuery(
     undefined,
@@ -20,6 +24,14 @@ const OnboardingRouteGuard = ({ children }) => {
     // Force refetch when component mounts to ensure fresh data
     refetch();
   }, [refetch]);
+  
+  // Sync Redux state with API status
+  useEffect(() => {
+    if (onboardingStatus && onboardingStatus.completed) {
+      // Update Redux state to match API status
+      dispatch(markCompleted());
+    }
+  }, [onboardingStatus, dispatch]);
 
   // Show loading state while checking status
   if (isLoading) {
@@ -32,9 +44,8 @@ const OnboardingRouteGuard = ({ children }) => {
   }
 
   // If there's an error fetching status, allow access (fail open)
-  // You might want to handle this differently in production
+  // This prevents blocking users if the API is temporarily unavailable
   if (error) {
-    console.error('Error checking onboarding status:', error);
     return children;
   }
 
