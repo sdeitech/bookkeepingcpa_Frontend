@@ -4,36 +4,37 @@
   min-height: 100vh;
   background: #f7f9fc;
   overflow-x: hidden;
-  
+
   // Header section
   .pricing-header {
     text-align: center;
     padding: 2rem;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(270deg, #347AE4 0%, #9ED0FF 100%);
     color: white;
     position: sticky;
     top: 0;
     z-index: 100;
     transition: all 0.5s ease;
-    
+
     .pricing-title {
       font-size: 2.5rem;
       font-weight: 700;
       margin-bottom: 1rem;
       animation: fadeIn 0.5s ease;
-      
+      color: var(--light-color);
+
       @media (max-width: 768px) {
         font-size: 2rem;
       }
     }
-    
+
     .pricing-subtitle {
       font-size: 1.125rem;
       margin-bottom: 2rem;
       opacity: 0.95;
       animation: fadeIn 0.6s ease;
     }
-    
+
     .back-button {
       display: inline-flex;
       align-items: center;
@@ -47,18 +48,18 @@
       cursor: pointer;
       transition: all 0.3s ease;
       animation: slideInLeft 0.5s ease;
-      
+
       &:hover {
         background: rgba(255, 255, 255, 0.3);
         transform: translateX(-5px);
       }
-      
+
       svg {
         width: 20px;
         height: 20px;
       }
     }
-    
+
     .current-subscription-info {
       background: rgba(255, 255, 255, 0.1);
       padding: 1rem 1.5rem;
@@ -68,12 +69,12 @@
       backdrop-filter: blur(10px);
       position: relative;
       z-index: 10;
-      
+
       p {
         margin: 0 0 1rem 0;
         text-align: center;
       }
-      
+
       .action-buttons {
         display: flex;
         justify-content: center;
@@ -81,7 +82,7 @@
         flex-wrap: wrap;
         position: relative;
         z-index: 11;
-        
+
         button,
         a {
           display: inline-block;
@@ -100,34 +101,34 @@
           line-height: 1.5;
           text-decoration: none !important;
           text-align: center;
-          
+
           &:hover {
             background-color: rgba(255, 255, 255, 0.3);
             transform: translateY(-2px);
             text-decoration: none !important;
           }
-          
+
           &:active {
             transform: translateY(0);
           }
-          
+
           &:focus {
             outline: 2px solid white;
             outline-offset: 2px;
           }
         }
-        
+
         .dashboard-btn {
           background-color: white !important;
           color: #667eea !important;
           border: none !important;
-          
+
           &:hover {
             background-color: rgba(255, 255, 255, 0.95) !important;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
           }
         }
-        
+
         .manage-btn {
           &:hover {
             background-color: rgba(255, 255, 255, 0.3);
@@ -135,14 +136,14 @@
         }
       }
     }
-    
+
     .billing-toggle {
       display: inline-flex;
       background: rgba(255, 255, 255, 0.2);
       border-radius: 12px;
       padding: 4px;
       backdrop-filter: blur(10px);
-      
+
       .toggle-btn {
         padding: 0.75rem 1.5rem;
         border: none;
@@ -154,12 +155,12 @@
         transition: all 0.3s ease;
         position: relative;
         z-index: 1;
-        
+
         &.active {
           background: white;
           color: #667eea;
         }
-        
+
         .save-badge {
           display: inline-block;
           margin-left: 0.5rem;
@@ -173,38 +174,38 @@
       }
     }
   }
-  
+
   // Content area that contains both plans and checkout
   .content-area {
     display: flex;
     position: relative;
     min-height: calc(100vh - 200px);
     padding: 2rem;
-    
+
     @media (max-width: 768px) {
       flex-direction: column;
       padding: 1rem;
     }
   }
-  
+
   // Plans section
   .plans-section {
     flex: 1;
     transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-    
+
     .plans-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
       gap: 2rem;
       max-width: 1200px;
-      
+
       @media (max-width: 768px) {
         grid-template-columns: 1fr;
         gap: 1.5rem;
       }
     }
   }
-  
+
   // Individual plan card
   .plan-card {
     background: white;
@@ -214,19 +215,19 @@
     position: relative;
     transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
     animation: fadeIn 0.5s ease backwards;
-    
+
     @for $i from 1 through 6 {
       &:nth-child(#{$i}) {
         animation-delay: #{$i * 0.1}s;
       }
     }
-    
+
     // Normal hover state (only when not in checkout mode)
     &:not(.selected):not(.hidden):hover {
       transform: translateY(-5px);
       box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
     }
-    
+
     // When card is selected and checkout is shown
     &.selected {
       position: absolute !important;
@@ -236,35 +237,35 @@
       max-width: 90vw;
       z-index: 10;
       box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-      
+
       @media (max-width: 768px) {
         position: relative !important;
         width: 100%;
         margin-bottom: 2rem;
       }
     }
-    
+
     // Hide non-selected cards when in checkout mode
     &.hidden {
       opacity: 0;
       transform: scale(0.8);
       pointer-events: none;
     }
-    
+
     &.popular {
       border: 2px solid #667eea;
       transform: scale(1.05);
-      
+
       &:hover:not(.selected) {
         transform: scale(1.05) translateY(-5px);
       }
     }
-    
+
     &.current {
       background: linear-gradient(135deg, #f7f9fc 0%, #e9ecef 100%);
       border: 2px solid #cbd5e0;
     }
-    
+
     .popular-badge,
     .current-badge {
       position: absolute;
@@ -279,29 +280,29 @@
       align-items: center;
       white-space: nowrap;
     }
-    
+
     .popular-badge {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
     }
-    
+
     .current-badge {
       background: #4a5568;
       color: white;
     }
-    
+
     .plan-icon {
       display: flex;
       justify-content: center;
       margin-bottom: 1rem;
       color: #667eea;
-      
+
       svg {
         width: 48px;
         height: 48px;
       }
     }
-    
+
     .plan-name {
       text-align: center;
       font-size: 1.5rem;
@@ -309,60 +310,60 @@
       color: #2d3748;
       margin-bottom: 0.5rem;
     }
-    
+
     .plan-description {
       text-align: center;
       color: #718096;
       margin-bottom: 1.5rem;
       font-size: 0.875rem;
     }
-    
+
     .plan-pricing {
       text-align: center;
       margin-bottom: 2rem;
-      
+
       .price-container {
         display: flex;
         align-items: baseline;
         justify-content: center;
         margin-bottom: 0.5rem;
-        
+
         .currency {
           font-size: 1.25rem;
           color: #4a5568;
           margin-right: 2px;
         }
-        
+
         .price {
           font-size: 2.5rem;
           font-weight: 700;
           color: #2d3748;
         }
-        
+
         .period {
           font-size: 1rem;
           color: #718096;
           margin-left: 4px;
         }
       }
-      
+
       .savings-text {
         color: #48bb78;
         font-size: 0.875rem;
         font-weight: 500;
       }
     }
-    
+
     .features-list {
       list-style: none;
       padding: 0;
       margin: 0 0 1.5rem;
-      
+
       .feature-item {
         display: flex;
         align-items: center;
         padding: 0.5rem 0;
-        
+
         .feature-check {
           width: 20px;
           height: 20px;
@@ -370,18 +371,18 @@
           color: #48bb78;
           flex-shrink: 0;
         }
-        
+
         span {
           color: #4a5568;
           font-size: 0.875rem;
         }
       }
     }
-    
+
     .trial-info {
       text-align: center;
       margin-bottom: 1rem;
-      
+
       .trial-badge {
         display: inline-block;
         padding: 4px 12px;
@@ -393,7 +394,7 @@
         font-weight: 500;
       }
     }
-    
+
     .plan-button {
       width: 100%;
       padding: 0.875rem;
@@ -403,30 +404,30 @@
       font-size: 1rem;
       cursor: pointer;
       transition: all 0.3s ease;
-      
+
       &:not(.current) {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
-        
+
         &:hover {
           transform: translateY(-2px);
           box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
         }
       }
-      
+
       &.current {
         background: #e2e8f0;
         color: #a0aec0;
         cursor: not-allowed;
       }
     }
-    
+
     // Billing toggle for selected card
     .billing-toggle-selected {
       margin-top: 1.5rem;
       padding-top: 1.5rem;
       border-top: 1px solid #e2e8f0;
-      
+
       label {
         display: block;
         font-size: 0.875rem;
@@ -435,11 +436,11 @@
         margin-bottom: 0.75rem;
         text-align: center;
       }
-      
+
       .toggle-buttons {
         display: flex;
         gap: 0.5rem;
-        
+
         button {
           flex: 1;
           padding: 0.75rem;
@@ -450,13 +451,13 @@
           font-weight: 500;
           cursor: pointer;
           transition: all 0.3s ease;
-          
+
           &.active {
             background: #667eea;
             border-color: #667eea;
             color: white;
           }
-          
+
           &:hover:not(.active) {
             background: #edf2f7;
           }
@@ -464,7 +465,7 @@
       }
     }
   }
-  
+
   // Checkout section
   .checkout-section {
     position: absolute;
@@ -475,7 +476,7 @@
     padding-left: 2rem;
     opacity: 0;
     transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-    
+
     @media (max-width: 768px) {
       position: relative;
       right: auto;
@@ -483,74 +484,74 @@
       padding-left: 0;
       height: auto;
     }
-    
+
     &.visible {
       right: 0;
       opacity: 1;
     }
   }
-  
+
   // When in checkout mode
   &.checkout-mode {
     .pricing-header {
       background: white;
       color: #2d3748;
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      
+
       .back-button {
         background: #f7f9fc;
         border-color: #e2e8f0;
         color: #4a5568;
-        
+
         &:hover {
           background: #edf2f7;
         }
       }
     }
-    
+
     .plans-section {
       width: 400px;
       flex-shrink: 0;
-      
+
       @media (max-width: 768px) {
         width: 100%;
       }
-      
+
       .plans-grid {
         position: relative;
         min-height: 500px;
       }
     }
   }
-  
+
   // Trust section
   .trust-section {
     padding: 3rem 2rem 2rem;
     border-top: 1px solid #e2e8f0;
     animation: fadeIn 0.8s ease 0.5s backwards;
-    
+
     .trust-badges {
       display: flex;
       justify-content: center;
       gap: 3rem;
       flex-wrap: wrap;
-      
+
       @media (max-width: 768px) {
         gap: 1.5rem;
       }
-      
+
       .trust-badge {
         display: flex;
         align-items: center;
         gap: 0.5rem;
         color: #4a5568;
-        
+
         svg {
           width: 24px;
           height: 24px;
           color: #667eea;
         }
-        
+
         span {
           font-weight: 500;
         }
@@ -565,6 +566,7 @@
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -576,6 +578,7 @@
     opacity: 0;
     transform: translateX(-30px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -591,7 +594,7 @@
   justify-content: center;
   min-height: 100vh;
   background: #f7f9fc;
-  
+
   .spinner {
     width: 48px;
     height: 48px;
@@ -600,13 +603,13 @@
     border-radius: 50%;
     animation: spin 1s linear infinite;
   }
-  
+
   p {
     margin-top: 1rem;
     color: #4a5568;
     font-size: 1.125rem;
   }
-  
+
   button {
     margin-top: 1rem;
     padding: 0.75rem 1.5rem;
@@ -617,7 +620,7 @@
     font-weight: 500;
     cursor: pointer;
     transition: all 0.3s ease;
-    
+
     &:hover {
       background: #5a67d8;
     }
