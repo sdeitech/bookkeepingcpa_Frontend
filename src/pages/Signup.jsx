@@ -75,20 +75,28 @@ const Signup = () => {
     try {
       const result = await signup(formData).unwrap();
       
-      if (result.success) {
+      if (result.success && result.data) {
         // Auto-login after successful signup
-        dispatch(setCredentials(result));
+        // Pass the data object which contains { token, user }
+        dispatch(setCredentials({ data: result.data }));
         
         // For client users (role_id === '3'), redirect to onboarding
         // For admin/staff, redirect to dashboard
-        if (result.user && result.user.role_id === '3') {
+        if (result.data?.user?.role_id === '3') {
           navigate('/onboarding');
         } else {
           navigate('/dashboard');
         }
+      } else {
+        // Handle signup failure
+        console.error('Signup failed:', result);
+        // The signup failed, user should stay on signup page
+        // Error will be displayed via the error state from useSignupMutation
       }
     } catch (err) {
       console.error('Signup failed:', err);
+      // If the signup fails, don't redirect anywhere
+      // The error will be shown to the user
     }
   };
   
