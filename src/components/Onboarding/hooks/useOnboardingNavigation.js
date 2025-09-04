@@ -128,22 +128,42 @@ const useOnboardingNavigation = () => {
    * @param {Object} overrideData - Optional data to use for validation
    */
   const handleNext = useCallback(async (autoAdvance = false, overrideData = null) => {
+    console.log('=== handleNext called ===', {
+      currentStep,
+      autoAdvance,
+      currentData: data,
+      stepDataField: getStepById(currentStep)?.dataField,
+      actualValue: data[getStepById(currentStep)?.dataField]
+    });
+    
     // Prevent navigation during submission
     if (isSubmitting) {
+      console.log('Blocked: isSubmitting is true');
       return false;
     }
     
-    // Validate current step
-    if (!validateStep(currentStep, overrideData)) {
-      // Don't show alert for auto-advance failures
-      if (!autoAdvance && currentStep !== 3) {
-        const stepConfig = getStepById(currentStep);
-        alert(`Please complete the ${stepConfig.title.toLowerCase()} step before proceeding.`);
+    // Get current step configuration
+    const stepConfig = getStepById(currentStep);
+    
+    // ALWAYS validate when clicking Next button (not auto-advancing)
+    // This ensures ALL steps validate properly
+    if (!autoAdvance) {
+      console.log('Running validation for step', currentStep);
+      console.log('Current data value:', data[stepConfig.dataField]);
+      
+      const isValid = validateStep(currentStep, overrideData);
+      console.log('Validation result:', isValid);
+      
+      if (!isValid) {
+        // Validation failed, prevent navigation
+        // Keep errors displayed
+        console.log('❌ Validation FAILED - blocking navigation');
+        console.log('Current errors:', fieldErrors);
+        return false;
       }
-      return false;
     }
     
-    // Clear errors
+    // Only clear errors if validation passed
     setFieldErrors({});
     
     // Check if this is the last step

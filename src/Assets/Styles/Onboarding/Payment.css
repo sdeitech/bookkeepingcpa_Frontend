@@ -267,10 +267,152 @@
 
 
 
-/* .card ul li::before {
-    content: "✔";
-    position: absolute;
-    left: 0;
-    color: #2563eb;
-    font-weight: bold;
+
+
+/* animation css  */
+
+.card {
+    transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    position: relative;
+    z-index: 1;
+}
+
+.card.selected {
+    transform: scale(1.05);
+    z-index: 10;
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.2);
+}
+
+.card.unselected {
+    opacity: 0;
+    transform: scale(0.95);
+    pointer-events: none;
+}
+
+.card.moving {
+    position: absolute !important;
+    top: 27% !important;
+    left: 43% !important;
+    transform: translate(-98%, 0%) scale(1) !important;
+    z-index: 100 !important;
+    max-width: 400px !important;
+    width: 400px !important;
+}
+
+/* Button Fade Animation */
+/* .btn.fade-out {
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.3s ease;
 } */
+
+/* Payment Form */
+.payment-form {
+    background: white;
+    border-radius: 20px;
+    padding: 40px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    opacity: 0;
+    transform: translateX(50px);
+    transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    transform: translate(255%, -95%) scale(1) !important;
+    width: 400px;
+    max-width: 90vw;
+    z-index: 50;
+}
+
+.payment-form.show {
+    opacity: 1;
+    text-align: left;
+    transform: translate(50%, -50%) translateX(0);
+}
+
+.payment-form h2 {
+    color: var(--color-heading);
+    font-size: 1.8rem;
+    font-weight: 600;
+}
+
+/* Form Elements */
+.form-group {
+    text-align: left;
+}
+
+.form-group label {
+    display: block;
+    color: var(--color-text);
+    font-weight: 500;
+    font-size: var(--font-sm);
+}
+
+.form-group input {
+    padding: 1rem 1.4rem;
+    border: 1px solid #ddd;
+    border-radius: 7px;
+    font-size: 1.2rem;
+    transition: border-color 0.3s ease;
+    width: 100%;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.payment-button {
+    background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+    color: white;
+    border: none;
+    padding: 11px 24px;
+    border-radius: 0.8rem;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+    transition: all 0.3s ease;
+}
+
+.payment-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(72, 187, 120, 0.3);
+}
+
+.reset-button {
+    background: transparent;
+    padding: 11px 24px;
+    border-radius: 0.8rem;
+    cursor: pointer;
+    width: 100%;
+    transition: all 0.3s ease;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.reset-button:hover {
+    background: #667eea;
+    color: white;
+}
+
+/* Ensure payment cards section doesn't interfere */
+.payment_cards_sec {
+    transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.payment_top_wrapper,
+.payment_bottom_wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.payment_inner_wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.btn-grp {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}

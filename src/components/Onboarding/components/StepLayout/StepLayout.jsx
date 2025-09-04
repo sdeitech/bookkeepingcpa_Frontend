@@ -76,9 +76,12 @@ const StepLayout = ({
             >
               Back
             </button>
-            <button 
-              className="btn btn-next" 
-              onClick={onNext}
+            <button
+              className="btn btn-next"
+              onClick={() => {
+                console.log('Next button clicked!');
+                onNext();
+              }}
               disabled={isSubmitting}
               type="button"
               aria-label={isLastStep ? "Complete onboarding" : "Go to next step"}
