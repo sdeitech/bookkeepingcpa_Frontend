@@ -212,14 +212,14 @@
   font-size: 16px;
 }
 
-.error {
+/* .error {
   text-align: center;
   padding: 20px;
   color: #f44336;
   background: #ffebee;
   border-radius: 6px;
   margin: 20px 0;
-}
+} */
 
 .retry-btn {
   margin-left: 12px;
