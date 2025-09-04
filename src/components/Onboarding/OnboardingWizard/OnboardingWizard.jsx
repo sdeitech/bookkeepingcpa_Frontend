@@ -51,46 +51,69 @@ const OnboardingWizard = () => {
   }
 
   const renderStepContent = () => {
-    switch (currentStep) {
-      case 1:
-        return (
-          <BusinessNeedsStep 
-            value={stepData.businessNeeds}
-            onChange={handleFieldChange} 
-            fieldErrors={fieldErrors}
-            isSubmitting={isSubmitting}
-          />
-        );
-      case 2:
-        return (
-          <PreviousBookkeeperStep
-            value={stepData.previousBookkeeper}
-            onChange={handleFieldChange}
-            fieldErrors={fieldErrors}
-            isSubmitting={isSubmitting}
-          />
-        );
-      case 3:
-        return (
-          <BusinessDetailsStep
-            value={stepData.businessDetails}
-            onChange={handleFieldChange}
-            fieldErrors={fieldErrors}
-            isSubmitting={isSubmitting}
-          />
-        );
-      case 4:
-        return (
-          <IndustryStep
-            value={stepData.industry}
-            onChange={handleFieldChange}
-            fieldErrors={fieldErrors}
-            isSubmitting={isSubmitting}
-          />
-        );
-      default:
-        return null;
-    }
+    // Show validation error message at the top if there are errors
+    const hasErrors = Object.keys(fieldErrors).length > 0;
+    
+    const stepContent = (() => {
+      switch (currentStep) {
+        case 1:
+          return (
+            <BusinessNeedsStep
+              value={stepData.businessNeeds}
+              onChange={handleFieldChange}
+              fieldErrors={fieldErrors}
+              isSubmitting={isSubmitting}
+            />
+          );
+        case 2:
+          return (
+            <PreviousBookkeeperStep
+              value={stepData.previousBookkeeper}
+              onChange={handleFieldChange}
+              fieldErrors={fieldErrors}
+              isSubmitting={isSubmitting}
+            />
+          );
+        case 3:
+          return (
+            <BusinessDetailsStep
+              value={stepData.businessDetails}
+              onChange={handleFieldChange}
+              fieldErrors={fieldErrors}
+              isSubmitting={isSubmitting}
+            />
+          );
+        case 4:
+          return (
+            <IndustryStep
+              value={stepData.industry}
+              onChange={handleFieldChange}
+              fieldErrors={fieldErrors}
+              isSubmitting={isSubmitting}
+            />
+          );
+        default:
+          return null;
+      }
+    })();
+    
+    return (
+      <>
+        {hasErrors && currentStep !== 3 && (
+          <div className="validation-error-banner" style={{
+            backgroundColor: '#fee',
+            border: '1px solid #fcc',
+            borderRadius: '4px',
+            padding: '12px',
+            marginBottom: '16px',
+            color: '#c00'
+          }}>
+            Please select an option to continue.
+          </div>
+        )}
+        {stepContent}
+      </>
+    );
   };
 
   const currentStepConfig = stepsConfig[currentStep - 1];

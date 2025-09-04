@@ -10,7 +10,8 @@
  * @returns {string|null} Error message or null if valid
  */
 export const validateBusinessNeeds = (value) => {
-  if (!value || value.trim() === '') {
+  // Check for null, undefined, or empty string
+  if (value === null || value === undefined || value === '' || (typeof value === 'string' && value.trim() === '')) {
     return 'Please select what kind of help your business needs';
   }
   return null;
@@ -22,7 +23,8 @@ export const validateBusinessNeeds = (value) => {
  * @returns {string|null} Error message or null if valid
  */
 export const validatePreviousBookkeeper = (value) => {
-  if (!value || value.trim() === '') {
+  // Check for null, undefined, or empty string
+  if (value === null || value === undefined || value === '' || (typeof value === 'string' && value.trim() === '')) {
     return 'Please indicate if you had a previous bookkeeper';
   }
   if (value !== 'yes' && value !== 'no') {
@@ -90,7 +92,8 @@ export const validateBusinessDetails = (details) => {
  * @returns {string|null} Error message or null if valid
  */
 export const validateIndustry = (value) => {
-  if (!value || value.trim() === '') {
+  // Check for null, undefined, or empty string
+  if (value === null || value === undefined || value === '' || (typeof value === 'string' && value.trim() === '')) {
     return 'Please select your industry';
   }
   

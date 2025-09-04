@@ -49,12 +49,6 @@ const BusinessNeedsStep = ({
           </div>
         ))}
       </div>
-      
-      {error && (
-        <div className="error-message" role="alert">
-          {error}
-        </div>
-      )}
     </div>
   );
 };

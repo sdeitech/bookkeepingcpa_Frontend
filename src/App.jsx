@@ -11,13 +11,15 @@ import ClientDashboard from './pages/ClientDashboard';
 import AmazonCallback from './pages/AmazonCallback';
 import ProtectedRoute from './components/ProtectedRoute';
 
+// Custom hook for onboarding sync
+import { useOnboardingSync } from './hooks/useOnboardingSync';
+
 // Onboarding Components
 import OnboardingWizard  from './components/Onboarding/OnboardingWizard';
 import OnboardingRouteGuard from './components/Onboarding/OnboardingRouteGuard';
 
 // Stripe Components
-import PricingPlans from './components/Stripe/PricingPlans/PricingPlans';
-import CheckoutPage from './components/Stripe/Checkout/CheckoutPage';
+import PricingCheckout from './components/Stripe/PricingCheckout/PricingCheckout';
 import SubscriptionManagement from './components/Stripe/SubscriptionManagement/SubscriptionManagement';
 import SubscriptionPlanManager from './components/Admin/SubscriptionPlanManager/SubscriptionPlanManager';
 
@@ -46,10 +48,23 @@ function App() {
   const user = useSelector(selectCurrentUser);
   const isOnboardingCompleted = useSelector(selectIsOnboardingCompleted);
   
+  // Sync onboarding status from API to Redux
+  // This ensures Redux state matches the backend truth
+  const { isLoading: isLoadingOnboarding } = useOnboardingSync();
+  
   // Helper to check user role
   const isAdmin = user?.role_id === '1';
   const isStaff = user?.role_id === '2';
   const isClient = user?.role_id === '3';
+
+  // Show loading state while syncing onboarding status
+  if (isAuthenticated && isClient && isLoadingOnboarding) {
+    return (
+      <div className="app-loading">
+        <div>Loading application state...</div>
+      </div>
+    );
+  }
 
   return (
     <Router>
@@ -61,8 +76,11 @@ function App() {
             path="/login"
             element={
               isAuthenticated ?
-                (isClient && !isOnboardingCompleted ?
-                  <Navigate to="/onboarding" replace /> :
+                (isClient ?
+                  (!isOnboardingCompleted ?
+                    <Navigate to="/onboarding" replace /> :
+                    <Navigate to="/dashboard" replace />
+                  ) :
                   <Navigate to="/dashboard" replace />
                 ) :
                 <Login />
@@ -73,7 +91,10 @@ function App() {
             element={
               isAuthenticated ?
                 (isClient ?
-                  <Navigate to="/onboarding" replace /> :
+                  (!isOnboardingCompleted ?
+                    <Navigate to="/onboarding" replace /> :
+                    <Navigate to="/dashboard" replace />
+                  ) :
                   <Navigate to="/dashboard" replace />
                 ) :
                 <Signup />
@@ -98,18 +119,8 @@ function App() {
           
           {/* Stripe/Subscription Routes */}
           
-          {/* Pricing Plans - Public: anyone can view plans, but only logged-in users can select */}
-          <Route path="/pricing" element={<PricingPlans />} />
-          
-          {/* Checkout - Protected: requires login */}
-          <Route
-            path="/checkout"
-            element={
-              <ProtectedRoute>
-                <CheckoutPage />
-              </ProtectedRoute>
-            }
-          />
+          {/* Unified Pricing & Checkout - Public: anyone can view plans, checkout requires login */}
+          <Route path="/pricing" element={<PricingCheckout />} />
           
           {/* Subscription Management - Protected: for users to manage their subscription */}
           <Route

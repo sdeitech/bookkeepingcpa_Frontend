@@ -78,7 +78,14 @@ const Signup = () => {
       if (result.success) {
         // Auto-login after successful signup
         dispatch(setCredentials(result));
-        navigate('/dashboard');
+        
+        // For client users (role_id === '3'), redirect to onboarding
+        // For admin/staff, redirect to dashboard
+        if (result.user && result.user.role_id === '3') {
+          navigate('/onboarding');
+        } else {
+          navigate('/dashboard');
+        }
       }
     } catch (err) {
       console.error('Signup failed:', err);
