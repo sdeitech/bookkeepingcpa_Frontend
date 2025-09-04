@@ -1,4 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit';
+import { onboardingStorage } from '../../utils/onboardingStorage';
 
 const initialState = {
   currentStep: 1,
@@ -26,7 +27,9 @@ const initialState = {
   validationErrors: {},
   isSubmitting: false,
   lastSavedAt: null,
-  hasUnsavedChanges: false
+  hasUnsavedChanges: false,
+  isLoadingFromStorage: false,
+  storageError: null
 };
 
 const onboardingSlice = createSlice({
@@ -55,18 +58,34 @@ const onboardingSlice = createSlice({
       }
     },
     
-    // Data update actions
+    // Data update actions with localStorage sync
     updateBusinessNeeds: (state, action) => {
       state.data.businessNeeds = action.payload;
       state.hasUnsavedChanges = true;
       // Clear validation errors for this step
       delete state.validationErrors.businessNeeds;
+      // Save to localStorage
+      const savedData = {
+        ...state.data,
+        businessNeeds: action.payload,
+        currentStep: state.currentStep
+      };
+      onboardingStorage.save(savedData);
+      state.lastSavedAt = new Date().toISOString();
     },
     
     updatePreviousBookkeeper: (state, action) => {
       state.data.previousBookkeeper = action.payload;
       state.hasUnsavedChanges = true;
       delete state.validationErrors.previousBookkeeper;
+      // Save to localStorage
+      const savedData = {
+        ...state.data,
+        previousBookkeeper: action.payload,
+        currentStep: state.currentStep
+      };
+      onboardingStorage.save(savedData);
+      state.lastSavedAt = new Date().toISOString();
     },
     
     updateBusinessDetails: (state, action) => {
@@ -76,12 +95,28 @@ const onboardingSlice = createSlice({
       };
       state.hasUnsavedChanges = true;
       delete state.validationErrors.businessDetails;
+      // Save to localStorage
+      const savedData = {
+        ...state.data,
+        businessDetails: state.data.businessDetails,
+        currentStep: state.currentStep
+      };
+      onboardingStorage.save(savedData);
+      state.lastSavedAt = new Date().toISOString();
     },
     
     updateIndustry: (state, action) => {
       state.data.industry = action.payload;
       state.hasUnsavedChanges = true;
       delete state.validationErrors.industry;
+      // Save to localStorage
+      const savedData = {
+        ...state.data,
+        industry: action.payload,
+        currentStep: state.currentStep
+      };
+      onboardingStorage.save(savedData);
+      state.lastSavedAt = new Date().toISOString();
     },
     
     // Validation actions
@@ -109,10 +144,13 @@ const onboardingSlice = createSlice({
       state.hasUnsavedChanges = false;
     },
     
-    // Reset action
-    resetOnboarding: () => initialState,
+    // Reset action with localStorage clear
+    resetOnboarding: () => {
+      onboardingStorage.clear();
+      return initialState;
+    },
     
-    // Load saved data
+    // Load saved data from API (for initial check)
     loadOnboardingData: (state, action) => {
       const savedData = action.payload;
       if (savedData) {
@@ -122,6 +160,62 @@ const onboardingSlice = createSlice({
         state.lastSavedAt = savedData.lastSavedAt;
         state.hasUnsavedChanges = false;
       }
+    },
+    
+    // Load data from localStorage
+    loadFromLocalStorage: (state) => {
+      state.isLoadingFromStorage = true;
+      state.storageError = null;
+      
+      try {
+        const storedData = onboardingStorage.get();
+        if (storedData) {
+          state.data = {
+            businessNeeds: storedData.businessNeeds || null,
+            previousBookkeeper: storedData.previousBookkeeper || null,
+            businessDetails: storedData.businessDetails || initialState.data.businessDetails,
+            industry: storedData.industry || null
+          };
+          state.currentStep = storedData.currentStep || 1;
+          state.lastSavedAt = onboardingStorage.getLastSaved();
+          state.hasUnsavedChanges = false;
+        }
+      } catch (error) {
+        state.storageError = error.message;
+        console.error('Failed to load from localStorage:', error);
+      } finally {
+        state.isLoadingFromStorage = false;
+      }
+    },
+    
+    // Save current state to localStorage
+    saveToLocalStorage: (state) => {
+      try {
+        const dataToSave = {
+          ...state.data,
+          currentStep: state.currentStep
+        };
+        const success = onboardingStorage.save(dataToSave);
+        if (success) {
+          state.lastSavedAt = new Date().toISOString();
+          state.hasUnsavedChanges = false;
+        }
+      } catch (error) {
+        state.storageError = error.message;
+        console.error('Failed to save to localStorage:', error);
+      }
+    },
+    
+    // Clear localStorage data
+    clearLocalStorage: (state) => {
+      onboardingStorage.clear();
+      state.lastSavedAt = null;
+      state.hasUnsavedChanges = false;
+    },
+    
+    // Set storage error
+    setStorageError: (state, action) => {
+      state.storageError = action.payload;
     }
   }
 });
@@ -141,7 +235,11 @@ export const {
   markSaved,
   markCompleted,
   resetOnboarding,
-  loadOnboardingData
+  loadOnboardingData,
+  loadFromLocalStorage,
+  saveToLocalStorage,
+  clearLocalStorage,
+  setStorageError
 } = onboardingSlice.actions;
 
 // Selectors
@@ -152,6 +250,8 @@ export const selectIsOnboardingCompleted = (state) => state.onboarding.completed
 export const selectValidationErrors = (state) => state.onboarding.validationErrors;
 export const selectIsSubmitting = (state) => state.onboarding.isSubmitting;
 export const selectHasUnsavedChanges = (state) => state.onboarding.hasUnsavedChanges;
+export const selectIsLoadingFromStorage = (state) => state.onboarding.isLoadingFromStorage;
+export const selectStorageError = (state) => state.onboarding.storageError;
 
 // Export reducer
 export default onboardingSlice.reducer;

@@ -12,7 +12,8 @@ import AmazonCallback from './pages/AmazonCallback';
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Onboarding Components
-import OnboardingWizard from './components/Onboarding/OnboardingWizard/OnboardingWizard';
+import OnboardingWizard  from './components/Onboarding/OnboardingWizard';
+import OnboardingRouteGuard from './components/Onboarding/OnboardingRouteGuard';
 
 // Stripe Components
 import PricingPlans from './components/Stripe/PricingPlans/PricingPlans';
@@ -22,7 +23,6 @@ import SubscriptionPlanManager from './components/Admin/SubscriptionPlanManager/
 
 // Subscription Protected Route Component
 import { RequireSubscription } from './routes/ProtectedRoute';
-import Industry from './components/Onboarding/Industry';
 import './App.css';
 
 // Helper component to check onboarding and redirect
@@ -86,11 +86,9 @@ function App() {
             element={
               <ProtectedRoute>
                 {isClient ? (
-                  isOnboardingCompleted ? (
-                    <Navigate to="/pricing" replace />
-                  ) : (
+                  <OnboardingRouteGuard>
                     <OnboardingWizard />
-                  )
+                  </OnboardingRouteGuard>
                 ) : (
                   <Navigate to="/dashboard" replace />
                 )}
