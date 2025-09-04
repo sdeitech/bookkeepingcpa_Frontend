@@ -151,7 +151,12 @@ button {
   font-weight: 300;
 }
 
-.question_sec {
+// .question_sec {
+//   display: flex;
+//   flex-direction: column;
+//   gap: 2rem;
+// }
+.options-container {
   display: flex;
   flex-direction: column;
   gap: 2rem;
@@ -165,9 +170,9 @@ button {
   background-color: var(--slide-bg);
   cursor: pointer;
   font-size: var(--font-sm);
-  display: flex;
-  align-items: center;
-  gap: 1rem;
+  // display: flex;
+  // align-items: center;
+  // gap: 1rem;
   transition: 0.30s;
 }
 
