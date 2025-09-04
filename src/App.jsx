@@ -76,8 +76,11 @@ function App() {
             path="/login"
             element={
               isAuthenticated ?
-                (isClient && !isOnboardingCompleted ?
-                  <Navigate to="/onboarding" replace /> :
+                (isClient ?
+                  (!isOnboardingCompleted ?
+                    <Navigate to="/onboarding" replace /> :
+                    <Navigate to="/dashboard" replace />
+                  ) :
                   <Navigate to="/dashboard" replace />
                 ) :
                 <Login />
@@ -88,7 +91,10 @@ function App() {
             element={
               isAuthenticated ?
                 (isClient ?
-                  <Navigate to="/onboarding" replace /> :
+                  (!isOnboardingCompleted ?
+                    <Navigate to="/onboarding" replace /> :
+                    <Navigate to="/dashboard" replace />
+                  ) :
                   <Navigate to="/dashboard" replace />
                 ) :
                 <Signup />
