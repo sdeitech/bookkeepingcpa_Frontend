@@ -1,5 +1,6 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import { logout } from './authSlice';
+import config from '../../config';
 
 // Custom base query that handles 401 errors
 const baseQueryWithReauth = async (args, api, extraOptions) => {
@@ -8,7 +9,8 @@ const baseQueryWithReauth = async (args, api, extraOptions) => {
   
   // Prepare the request with token
   const baseQuery = fetchBaseQuery({
-    baseUrl: 'http://localhost:8080/api',
+    baseUrl: config.api.baseUrl,
+    timeout: config.api.timeout,
     prepareHeaders: (headers) => {
       if (token) {
         // Clean token if needed

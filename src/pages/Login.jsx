@@ -56,9 +56,29 @@ const Login = () => {
     try {
       const result = await login(formData).unwrap();
       
-      if (result.success) {
-        dispatch(setCredentials(result));
-        navigate('/dashboard');
+      if (result.success && result.data) {
+        // STEP 1: Store token and user in localStorage FIRST
+        const { token, user } = result.data;
+        
+        // Store in localStorage first
+        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(user));
+        
+        // Then update Redux state
+        dispatch(setCredentials({ data: { token, user } }));
+        
+        // STEP 2: Small delay to ensure storage is complete
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // STEP 3: Now safe to navigate based on user role and onboarding status
+        // For client users (role_id === '3'), check if they need onboarding
+        if (user?.role_id === '3') {
+          // The onboarding check will happen in the route guards
+          navigate('/dashboard');
+        } else {
+          // Admin and staff go directly to dashboard
+          navigate('/dashboard');
+        }
       }
     } catch (err) {
       console.error('Login failed:', err);

@@ -1,3 +1,4 @@
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { selectIsAuthenticated, selectCurrentUser } from './features/auth/authSlice';
@@ -13,6 +14,9 @@ import ProtectedRoute from './components/ProtectedRoute';
 
 // Custom hook for onboarding sync
 import { useOnboardingSync } from './hooks/useOnboardingSync';
+
+// User role constants and helpers
+import { USER_ROLES, isAdmin, isStaff, isClient } from './constants/userRoles';
 
 // Onboarding Components
 import OnboardingWizard  from './components/Onboarding/OnboardingWizard';
@@ -52,13 +56,32 @@ function App() {
   // This ensures Redux state matches the backend truth
   const { isLoading: isLoadingOnboarding } = useOnboardingSync();
   
-  // Helper to check user role
-  const isAdmin = user?.role_id === '1';
-  const isStaff = user?.role_id === '2';
-  const isClient = user?.role_id === '3';
+  // Log environment variables on app mount
+  React.useEffect(() => {
+    if (import.meta.env.VITE_ENV === 'development') {
+      console.group('🔧 Environment Variables');
+      console.log('API Base URL:', import.meta.env.VITE_API_BASE_URL);
+      console.log('Environment:', import.meta.env.VITE_ENV);
+      console.log('App Name:', import.meta.env.VITE_APP_NAME);
+      console.log('Features:', {
+        stripe: import.meta.env.VITE_ENABLE_STRIPE === 'true',
+        amazon: import.meta.env.VITE_ENABLE_AMAZON === 'true',
+        walmart: import.meta.env.VITE_ENABLE_WALMART === 'true',
+        onboarding: import.meta.env.VITE_ENABLE_ONBOARDING === 'true'
+      });
+      
+      console.log('All Vite Env Vars:', Object.keys(import.meta.env).filter(key => key.startsWith('VITE_')));
+      console.groupEnd();
+    }
+  }, []); // Run once on mount
+  
+  // Check user roles using helper functions
+  const userIsAdmin = isAdmin(user);
+  const userIsStaff = isStaff(user);
+  const userIsClient = isClient(user);
 
   // Show loading state while syncing onboarding status
-  if (isAuthenticated && isClient && isLoadingOnboarding) {
+  if (isAuthenticated && userIsClient && isLoadingOnboarding) {
     return (
       <div className="app-loading">
         <div>Loading application state...</div>
@@ -76,7 +99,7 @@ function App() {
             path="/login"
             element={
               isAuthenticated ?
-                (isClient ?
+                (userIsClient ?
                   (!isOnboardingCompleted ?
                     <Navigate to="/onboarding" replace /> :
                     <Navigate to="/dashboard" replace />
@@ -90,7 +113,7 @@ function App() {
             path="/signup"
             element={
               isAuthenticated ?
-                (isClient ?
+                (userIsClient ?
                   (!isOnboardingCompleted ?
                     <Navigate to="/onboarding" replace /> :
                     <Navigate to="/dashboard" replace />
@@ -106,7 +129,7 @@ function App() {
             path="/onboarding"
             element={
               <ProtectedRoute>
-                {isClient ? (
+                {userIsClient ? (
                   <OnboardingRouteGuard>
                     <OnboardingWizard />
                   </OnboardingRouteGuard>
@@ -137,7 +160,7 @@ function App() {
             path="/admin/plans"
             element={
               <ProtectedRoute>
-                {isAdmin ? (
+                {userIsAdmin ? (
                   <SubscriptionPlanManager />
                 ) : (
                   <Navigate to="/dashboard" replace />
@@ -153,7 +176,7 @@ function App() {
             path="/dashboard"
             element={
               <ProtectedRoute>
-                {isClient ? (
+                {userIsClient ? (
                   <RequireOnboarding>
                     <RequireSubscription>
                       <DashboardRouter />
@@ -172,7 +195,7 @@ function App() {
             path="/admin-dashboard"
             element={
               <ProtectedRoute>
-                {isAdmin ? <AdminDashboard /> : <Navigate to="/dashboard" replace />}
+                {userIsAdmin ? <AdminDashboard /> : <Navigate to="/dashboard" replace />}
               </ProtectedRoute>
             }
           />
@@ -181,7 +204,7 @@ function App() {
             path="/staff-dashboard"
             element={
               <ProtectedRoute>
-                {isStaff ? <StaffDashboard /> : <Navigate to="/dashboard" replace />}
+                {userIsStaff ? <StaffDashboard /> : <Navigate to="/dashboard" replace />}
               </ProtectedRoute>
             }
           />
@@ -190,7 +213,7 @@ function App() {
             path="/client-dashboard"
             element={
               <ProtectedRoute>
-                {isClient ? (
+                {userIsClient ? (
                   <RequireOnboarding>
                     <RequireSubscription>
                       <ClientDashboard />
@@ -215,7 +238,7 @@ function App() {
             element={
               isAuthenticated ? (
                 // For clients: check onboarding first, then subscription
-                isClient ? (
+                userIsClient ? (
                   !isOnboardingCompleted ? (
                     <Navigate to="/onboarding" replace />
                   ) : (

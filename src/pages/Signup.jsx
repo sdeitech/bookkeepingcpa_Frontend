@@ -76,13 +76,24 @@ const Signup = () => {
       const result = await signup(formData).unwrap();
       
       if (result.success && result.data) {
-        // Auto-login after successful signup
-        // Pass the data object which contains { token, user }
-        dispatch(setCredentials({ data: result.data }));
+        // STEP 1: Store token and user in Redux/localStorage
+        // This MUST happen before any navigation or API calls
+        const { token, user } = result.data;
         
+        // Store in localStorage first
+        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(user));
+        
+        // Then update Redux state
+        dispatch(setCredentials({ data: { token, user } }));
+        
+        // STEP 2: Small delay to ensure storage is complete
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // STEP 3: Now safe to navigate (which may trigger authenticated API calls)
         // For client users (role_id === '3'), redirect to onboarding
         // For admin/staff, redirect to dashboard
-        if (result.data?.user?.role_id === '3') {
+        if (user?.role_id === '3') {
           navigate('/onboarding');
         } else {
           navigate('/dashboard');
