@@ -4,11 +4,11 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --mode development --port 4000",
+    "dev": "vite --mode development --port 8002",
     "build": "vite build",
     "preview": "vite preview",
     "staging:build": "vite build --mode staging",
-    "staging:start": "vite preview --mode staging --port 4000"
+    "staging:start": "vite preview --mode staging --port 8002"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.0.1",
