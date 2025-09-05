@@ -88,7 +88,7 @@ const Login = () => {
   return (
     <div className="auth-container">
       <div className="auth-card">
-        <h2 className="auth-title">Login to Plurify</h2>
+        <h2 className="auth-title">Login to Plutify</h2>
         
         {error && (
           <div className="error-message">

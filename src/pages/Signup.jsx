@@ -114,7 +114,7 @@ const Signup = () => {
   return (
     <div className="auth-container">
       <div className="auth-card">
-        <h2 className="auth-title">Sign Up for Plurify</h2>
+        <h2 className="auth-title">Sign Up for Plutify</h2>
         
         {error && (
           <div className="error-message">
