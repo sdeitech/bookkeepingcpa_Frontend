@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "staging:build": "vite build --mode staging",
-    "staging:start": "vite preview --mode staging --port 8002"
+    "staging:start": "vite preview --mode staging --port 8002",
+    "staging": "serve -s dist/ -p 8082"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.0.1",
