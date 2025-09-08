@@ -224,8 +224,7 @@ const CheckoutForm = ({ plan, billingPeriod, onSuccess, onCancel }) => {
   
   return (
     <div className="checkout-form-container">
-      <h1 className="checkout-title">Complete Your Purchase</h1>
-      
+
       {/* Success Message */}
       {successMessage && (
         <div className="alert alert-success">

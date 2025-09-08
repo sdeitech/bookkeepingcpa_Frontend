@@ -1,14 +1,17 @@
 .checkout-form-container {
   max-width: 600px;
-  margin: 0 auto;
-  
+  background: white;
+  padding: 40px;
+  border-radius: 3rem;
+
+
   .checkout-title {
     font-size: 1.875rem;
     font-weight: 700;
     color: #1a202c;
     margin-bottom: 2rem;
   }
-  
+
   // Alert Messages
   .alert {
     display: flex;
@@ -18,109 +21,101 @@
     border-radius: 8px;
     margin-bottom: 1.5rem;
     animation: slideDown 0.3s ease;
-    
+
     svg {
       width: 20px;
       height: 20px;
       flex-shrink: 0;
     }
-    
+
     &.alert-success {
       background-color: #f0fdf4;
       border: 1px solid #86efac;
       color: #166534;
-      
+
       svg {
         color: #22c55e;
       }
     }
-    
+
     &.alert-error {
       background-color: #fef2f2;
       border: 1px solid #fecaca;
       color: #991b1b;
-      
+
       svg {
         color: #ef4444;
       }
     }
   }
-  
+
   .checkout-form {
     .form-section {
-      background: white;
-      border: 1px solid #e5e7eb;
-      border-radius: 12px;
-      padding: 1.5rem;
-      margin-bottom: 1.5rem;
-      
+
       .section-title {
         display: flex;
         align-items: center;
         gap: 0.5rem;
-        font-size: 1.25rem;
-        font-weight: 600;
-        color: #1f2937;
+        font-size: 1.8rem;
+        font-weight: 500;
+        color: var(--color-heading);
         margin-bottom: 1.5rem;
-        padding-bottom: 0.75rem;
-        border-bottom: 1px solid #f3f4f6;
-        
+
         svg {
           width: 24px;
           height: 24px;
           color: #667eea;
         }
       }
-      
+
       .form-grid {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
         gap: 1rem;
-        
+
         @media (max-width: 640px) {
           grid-template-columns: 1fr;
         }
-        
+
         .form-group {
           &.full-width {
             grid-column: 1 / -1;
           }
-          
+
           label {
             display: block;
-            font-size: 0.875rem;
+            font-size: 1.4rem;
             font-weight: 500;
-            color: #374151;
-            margin-bottom: 0.5rem;
+            color: #585858;
           }
-          
+
           input,
           select {
             width: 100%;
-            padding: 0.625rem 0.875rem;
-            border: 1px solid #d1d5db;
-            border-radius: 6px;
-            font-size: 0.875rem;
+            padding: 1rem 1.4rem;
+            border: 1px solid var(--stroke-color);
+            border-radius: 0.8rem;
+            font-size: 1.2rem;
             transition: all 0.2s;
             background-color: white;
-            
+
             &:focus {
               outline: none;
-              border-color: #667eea;
-              box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+              border-color: var(--color-primary);
+              box-shadow: 0 0 0 3px rgba(221, 228, 255, 0.1);
             }
-            
+
             &:disabled {
               background-color: #f9fafb;
               cursor: not-allowed;
               opacity: 0.7;
             }
-            
+
             &::placeholder {
               color: #9ca3af;
             }
           }
-          
+
           select {
             appearance: none;
             background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
@@ -132,7 +127,7 @@
         }
       }
     }
-    
+
     // Card Element Wrapper
     .card-element-wrapper {
       padding: 1rem;
@@ -140,50 +135,50 @@
       border-radius: 6px;
       background-color: white;
       transition: all 0.2s;
-      
+
       &:hover {
         border-color: #9ca3af;
       }
-      
+
       &:focus-within {
-        border-color: #667eea;
+        border-color: var(--color-primary);
         box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
       }
-      
+
       .StripeElement {
         padding: 0;
       }
-      
+
       .StripeElement--focus {
         // Stripe handles its own focus styles
       }
-      
+
       .StripeElement--invalid {
         // Error state handled by Stripe
       }
     }
-    
+
     .security-badges {
       display: flex;
       justify-content: center;
       gap: 1.5rem;
       margin-top: 1rem;
-      
+
       .badge {
         display: flex;
         align-items: center;
         gap: 0.375rem;
-        font-size: 0.813rem;
-        color: #6b7280;
-        
+        font-size: 1.2rem;
+        color: var(--color-text);
+
         svg {
           width: 16px;
           height: 16px;
-          color: #667eea;
+          color: var(--color-primary);
         }
       }
     }
-    
+
     // Inline Order Summary
     .order-summary-inline {
       background: #f9fafb;
@@ -191,21 +186,21 @@
       border-radius: 8px;
       padding: 1.25rem;
       margin-bottom: 1.5rem;
-      
+
       .summary-row {
         display: flex;
         justify-content: space-between;
         align-items: center;
         font-size: 1rem;
         color: #374151;
-        
+
         .total-amount {
           font-size: 1.5rem;
           font-weight: 700;
           color: #1f2937;
         }
       }
-      
+
       .trial-note {
         margin-top: 0.5rem;
         font-size: 0.875rem;
@@ -214,7 +209,7 @@
         font-style: italic;
       }
     }
-    
+
     // Submit Button
     .submit-button {
       width: 100%;
@@ -230,32 +225,32 @@
       font-weight: 600;
       cursor: pointer;
       transition: all 0.3s ease;
-      
+
       svg {
         width: 20px;
         height: 20px;
-        
+
         &.spinner {
           animation: spin 1s linear infinite;
         }
       }
-      
+
       &:hover:not(:disabled) {
         transform: translateY(-2px);
         box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
       }
-      
+
       &:active:not(:disabled) {
         transform: translateY(0);
       }
-      
+
       &:disabled {
         opacity: 0.6;
         cursor: not-allowed;
         transform: none;
       }
     }
-    
+
     // Terms Text
     .terms-text {
       margin-top: 1.5rem;
@@ -263,19 +258,19 @@
       font-size: 0.813rem;
       color: #6b7280;
       line-height: 1.5;
-      
+
       a {
         color: #667eea;
         text-decoration: underline;
         transition: color 0.2s;
-        
+
         &:hover {
           color: #5a67d8;
         }
       }
     }
   }
-  
+
   // Need Help Section
   .need-help {
     margin-top: 2rem;
@@ -284,26 +279,26 @@
     border: 1px solid #e5e7eb;
     border-radius: 8px;
     text-align: center;
-    
+
     h3 {
       font-size: 1.125rem;
       font-weight: 600;
       color: #1f2937;
       margin-bottom: 0.5rem;
     }
-    
+
     p {
       font-size: 0.875rem;
       color: #6b7280;
       margin-bottom: 0.5rem;
     }
-    
+
     a {
       color: #667eea;
       font-weight: 500;
       text-decoration: none;
       transition: color 0.2s;
-      
+
       &:hover {
         color: #5a67d8;
         text-decoration: underline;
@@ -318,6 +313,7 @@
     opacity: 0;
     transform: translateY(-10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -328,6 +324,7 @@
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -340,16 +337,16 @@
       font-size: 1.5rem;
       text-align: center;
     }
-    
+
     .checkout-form {
       .form-section {
         padding: 1rem;
-        
+
         .section-title {
-          font-size: 1.125rem;
+          font-size: 1.8rem;
         }
       }
-      
+
       .security-badges {
         flex-direction: column;
         align-items: center;
@@ -357,4 +354,11 @@
       }
     }
   }
+}
+
+// new css 
+form.checkout-form {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
 }
