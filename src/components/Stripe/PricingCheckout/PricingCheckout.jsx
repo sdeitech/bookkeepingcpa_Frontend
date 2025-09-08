@@ -20,7 +20,7 @@ import CheckoutForm from './components/CheckoutForm';
 import './PricingCheckout.scss';
 
 // Initialize Stripe
-const stripePromise = loadStripe('pk_test_51S0gniDBKob6EriCGAcsv8r6PFJX9I0Vi8EnjXpew9qfEg64YgKzbpj2TjC31piigQNSlv0Tw9bUBDJBWQMelQt600e8nOWh6Q');
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 const PricingCheckout = () => {
   const navigate = useNavigate();
