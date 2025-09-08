@@ -24,15 +24,15 @@ const stripePromise = loadStripe('pk_test_51S0gniDBKob6EriCGAcsv8r6PFJX9I0Vi8Enj
 
 const PricingCheckout = () => {
   const navigate = useNavigate();
-  
+
   // State management
   const [selectedPlanId, setSelectedPlanId] = useState(null);
   const [billingPeriod, setBillingPeriod] = useState('monthly');
   const [showCheckout, setShowCheckout] = useState(false);
-  
+
   // Redux state
   const { isAuthenticated, user } = useSelector(state => state.auth);
-  
+
   // RTK Query hooks
   const {
     data: plansData,
@@ -42,7 +42,7 @@ const PricingCheckout = () => {
   } = useGetSubscriptionPlansQuery(undefined, {
     refetchOnMountOrArgChange: true
   });
-  
+
   const {
     data: subscriptionData,
     isLoading: subscriptionLoading
@@ -50,14 +50,14 @@ const PricingCheckout = () => {
     skip: !isAuthenticated,
     refetchOnMountOrArgChange: true
   });
-  
+
   const plans = plansData?.data || [];
   const currentSubscription = subscriptionData?.data;
   const selectedPlan = plans.find(plan => plan._id === selectedPlanId);
-  
+
   const handleSelectPlan = (plan) => {
     if (isCurrentPlan(plan)) return;
-    
+
     if (!isAuthenticated) {
       // Save selection to session storage before redirecting to login
       sessionStorage.setItem('selectedPlan', JSON.stringify(plan));
@@ -70,12 +70,12 @@ const PricingCheckout = () => {
       });
       return;
     }
-    
+
     // Set selected plan and show checkout
     setSelectedPlanId(plan._id);
     setShowCheckout(true);
   };
-  
+
   const handleBackToPlans = () => {
     setShowCheckout(false);
     // Small delay to reset selected plan after animation
@@ -83,7 +83,7 @@ const PricingCheckout = () => {
       setSelectedPlanId(null);
     }, 600);
   };
-  
+
   const handlePaymentSuccess = () => {
     // Redirect to dashboard after successful payment
     navigate('/dashboard', {
@@ -93,20 +93,20 @@ const PricingCheckout = () => {
       }
     });
   };
-  
+
   const isCurrentPlan = (plan) => {
     return currentSubscription?.subscriptionPlanId?._id === plan._id;
   };
-  
+
   const getPlanPrice = (plan) => {
     return billingPeriod === 'yearly' ? plan.pricePerYear : plan.pricePerMonth;
   };
-  
+
   const getPlanFeatures = (plan) => {
     if (plan.features && Array.isArray(plan.features) && typeof plan.features[0] === 'string') {
       return plan.features;
     }
-    
+
     const integrationFeatures = [];
     if (plan.features) {
       if (plan.features.amazonIntegration) integrationFeatures.push('Amazon Integration');
@@ -116,10 +116,10 @@ const PricingCheckout = () => {
       if (plan.features.prioritySupport) integrationFeatures.push('Priority Support');
       if (plan.features.customReports) integrationFeatures.push('Custom Reports');
     }
-    
+
     return integrationFeatures;
   };
-  
+
   const getPlanIcon = (planName) => {
     const name = planName.toLowerCase();
     if (name.includes('starter') || name.includes('basic')) return <Zap className="w-8 h-8" />;
@@ -128,7 +128,7 @@ const PricingCheckout = () => {
     if (name.includes('team')) return <Users className="w-8 h-8" />;
     return <Star className="w-8 h-8" />;
   };
-  
+
   const calculateSavings = (plan) => {
     const monthlyTotal = (plan.pricePerMonth || 0) * 12;
     const yearlyTotal = plan.pricePerYear || monthlyTotal;
@@ -136,7 +136,7 @@ const PricingCheckout = () => {
     const percentSaved = monthlyTotal > 0 ? Math.round((savings / monthlyTotal) * 100) : 0;
     return { amount: savings, percent: percentSaved };
   };
-  
+
   if (plansLoading || subscriptionLoading) {
     return (
       <div className="pricing-loading">
@@ -145,7 +145,7 @@ const PricingCheckout = () => {
       </div>
     );
   }
-  
+
   if (plansError) {
     return (
       <div className="pricing-error">
@@ -154,18 +154,21 @@ const PricingCheckout = () => {
       </div>
     );
   }
-  
+
   return (
     <div className={`pricing-checkout-container ${showCheckout ? 'checkout-mode' : 'plans-mode'}`}>
       {/* Header - Always visible */}
       <div className="pricing-header">
         {!showCheckout ? (
           <>
-            <h1 className="pricing-title">Choose Your Plan</h1>
-            <p className="pricing-subtitle">
-              Select the perfect plan for your e-commerce business
-            </p>
-            
+            <div className="pricing_header_innerwrapper">
+              <h1 className="pricing-title" >Choose the <span> Best Plan </span>for you</h1>
+              <p className="pricing-subtitle">
+                Select the perfect plan for your e-commerce business
+              </p>
+            </div>
+
+
             {/* Current subscription info */}
             {currentSubscription && (
               <div className="current-subscription-info">
@@ -182,7 +185,7 @@ const PricingCheckout = () => {
                 </p>
               </div>
             )}
-            
+
             {/* Billing Period Toggle */}
             <div className="billing-toggle">
               <button
@@ -211,130 +214,141 @@ const PricingCheckout = () => {
           </button>
         )}
       </div>
-      
+
       {/* Main Content Area */}
-      <div className="content-area">
-        {/* Plans Grid with selected plan moving to left */}
-        <div className="plans-section">
-          <div className="plans-grid">
-            {plans.map((plan) => {
-              const savings = calculateSavings(plan);
-              const isCurrentUserPlan = isCurrentPlan(plan);
-              const isSelected = plan._id === selectedPlanId;
-              
-              return (
-                <div
-                  key={plan._id}
-                  className={`plan-card ${plan.isPopular ? 'popular' : ''} ${isCurrentUserPlan ? 'current' : ''} ${isSelected ? 'selected' : ''} ${showCheckout && !isSelected ? 'hidden' : ''}`}
-                >
-                  {/* Popular Badge */}
-                  {plan.isPopular && (
-                    <div className="popular-badge">
-                      <Star className="w-4 h-4 mr-1" />
-                      Most Popular
+      <div className="content_container">
+        <div className="content-area">
+          {/* Plans Grid with selected plan moving to left */}
+          <div className="plans-section payment_sec">
+            <div className="plans-grid">
+              {plans.map((plan) => {
+                const savings = calculateSavings(plan);
+                const isCurrentUserPlan = isCurrentPlan(plan);
+                const isSelected = plan._id === selectedPlanId;
+
+                return (
+                  <div
+                    key={plan._id}
+                    className={`plan-card ${plan.isPopular ? 'popular' : ''} ${isCurrentUserPlan ? 'current' : ''} ${isSelected ? 'selected' : ''} ${showCheckout && !isSelected ? 'hidden' : ''}`}
+                  >
+                    {/* Popular Badge */}
+                    {plan.isPopular && (
+                      <div className="popular-badge">
+                        <Star className="w-4 h-4 mr-1" />
+                        Most Popular
+                      </div>
+                    )}
+
+                    {/* Current Plan Badge */}
+                    {isCurrentUserPlan && (
+                      <div className="current-badge">Your Current Plan</div>
+                    )}
+                    <div className="plan_upperwrapper">
+                      <div className="plan-icon">{getPlanIcon(plan.name)}</div>
+                      <div className="plan_wrapper">
+                        <h3 className="plan-name">{plan.name}</h3>
+                        {plan.description && (
+                          <p className="plan-description">{plan.description}</p>
+                        )}
+                      </div>
+
+
+                      <div className="plan-pricing">
+                        <div className="price-container">
+                          <span className="currency">$</span>
+                          <span className="price">{getPlanPrice(plan)}</span>
+                          <span className="period">/{billingPeriod === 'yearly' ? 'year' : 'month'}</span>
+                        </div>
+
+                        {billingPeriod === 'yearly' && savings.amount > 0 && (
+                          <div className="savings-text">
+                            Save ${savings.amount.toFixed(2)} ({savings.percent}% off)
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  )}
-                  
-                  {/* Current Plan Badge */}
-                  {isCurrentUserPlan && (
-                    <div className="current-badge">Your Current Plan</div>
-                  )}
-                  
-                  {/* Plan Icon */}
-                  <div className="plan-icon">{getPlanIcon(plan.name)}</div>
-                  
-                  {/* Plan Name */}
-                  <h3 className="plan-name">{plan.name}</h3>
-                  
-                  {/* Plan Description */}
-                  {plan.description && (
-                    <p className="plan-description">{plan.description}</p>
-                  )}
-                  
-                  {/* Pricing */}
-                  <div className="plan-pricing">
-                    <div className="price-container">
-                      <span className="currency">$</span>
-                      <span className="price">{getPlanPrice(plan)}</span>
-                      <span className="period">/{billingPeriod === 'yearly' ? 'year' : 'month'}</span>
+
+
+
+                    <div className="mid_wrapper">
+                      {(!showCheckout || !isSelected) && (
+                        <button
+                          className={`plan-button ${isCurrentUserPlan ? 'current' : ''}`}
+                          onClick={() => handleSelectPlan(plan)}
+                          disabled={isCurrentUserPlan}
+                        >
+                          {isCurrentUserPlan ? 'Current Plan' : 'Choose This Plan'}
+                        </button>
+                      )}
                     </div>
-                    
-                    {billingPeriod === 'yearly' && savings.amount > 0 && (
-                      <div className="savings-text">
-                        Save ${savings.amount.toFixed(2)} ({savings.percent}% off)
+
+
+                    {/* Features List */}
+                    <div className="bottom_wrapper">
+                      <h4 class="includes">Startup Plan Includes</h4>
+                      <ul className="features-list">
+                        {getPlanFeatures(plan).map((feature, idx) => (
+                          <li key={idx} className="feature-item">
+                            <Check className="feature-check" />
+                            <span>{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+
+                    {/* Trial Info */}
+                    {plan.trialDays > 0 && !isCurrentUserPlan && (
+                      <div className="trial-info">
+                        <span className="trial-badge">{plan.trialDays} day free trial</span>
+                      </div>
+                    )}
+
+
+
+                    {/* Billing toggle when selected */}
+                    {showCheckout && isSelected && (
+                      <div className="billing-toggle-selected">
+                        <label>Billing Period:</label>
+                        <div className="toggle-buttons">
+                          <button
+                            className={billingPeriod === 'monthly' ? 'active' : ''}
+                            onClick={() => setBillingPeriod('monthly')}
+                          >
+                            Monthly
+                          </button>
+                          <button
+                            className={billingPeriod === 'yearly' ? 'active' : ''}
+                            onClick={() => setBillingPeriod('yearly')}
+                          >
+                            Yearly
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
-                  
-                  {/* Features List */}
-                  <ul className="features-list">
-                    {getPlanFeatures(plan).map((feature, idx) => (
-                      <li key={idx} className="feature-item">
-                        <Check className="feature-check" />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  
-                  {/* Trial Info */}
-                  {plan.trialDays > 0 && !isCurrentUserPlan && (
-                    <div className="trial-info">
-                      <span className="trial-badge">{plan.trialDays} day free trial</span>
-                    </div>
-                  )}
-                  
-                  {/* CTA Button - Hide when in checkout mode for selected plan */}
-                  {(!showCheckout || !isSelected) && (
-                    <button
-                      className={`plan-button ${isCurrentUserPlan ? 'current' : ''}`}
-                      onClick={() => handleSelectPlan(plan)}
-                      disabled={isCurrentUserPlan}
-                    >
-                      {isCurrentUserPlan ? 'Current Plan' : 'Choose This Plan'}
-                    </button>
-                  )}
-                  
-                  {/* Billing toggle when selected */}
-                  {showCheckout && isSelected && (
-                    <div className="billing-toggle-selected">
-                      <label>Billing Period:</label>
-                      <div className="toggle-buttons">
-                        <button
-                          className={billingPeriod === 'monthly' ? 'active' : ''}
-                          onClick={() => setBillingPeriod('monthly')}
-                        >
-                          Monthly
-                        </button>
-                        <button
-                          className={billingPeriod === 'yearly' ? 'active' : ''}
-                          onClick={() => setBillingPeriod('yearly')}
-                        >
-                          Yearly
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Checkout Form - Slides in from right */}
+          <div className={`checkout-section ${showCheckout ? 'visible' : ''}`}>
+            {showCheckout && selectedPlan && (
+              <Elements stripe={stripePromise}>
+                <CheckoutForm
+                  plan={selectedPlan}
+                  billingPeriod={billingPeriod}
+                  onSuccess={handlePaymentSuccess}
+                  onCancel={handleBackToPlans}
+                />
+              </Elements>
+            )}
           </div>
         </div>
-        
-        {/* Checkout Form - Slides in from right */}
-        <div className={`checkout-section ${showCheckout ? 'visible' : ''}`}>
-          {showCheckout && selectedPlan && (
-            <Elements stripe={stripePromise}>
-              <CheckoutForm
-                plan={selectedPlan}
-                billingPeriod={billingPeriod}
-                onSuccess={handlePaymentSuccess}
-                onCancel={handleBackToPlans}
-              />
-            </Elements>
-          )}
-        </div>
       </div>
-      
+
+
       {/* Trust Badges - Only show in plans mode */}
       {!showCheckout && (
         <div className="trust-section">
