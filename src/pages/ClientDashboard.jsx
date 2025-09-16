@@ -5,6 +5,10 @@ import { logout, selectCurrentUser } from '../features/auth/authSlice';
 import AmazonIntegration from '../components/Amazon/AmazonIntegration';
 import AmazonSandbox from '../components/Amazon/AmazonSandbox';
 import ProfileEdit from '../components/Profile/ProfileEdit';
+import NotificationBell from '../components/Notifications/NotificationBell';
+import '../components/Notifications/NotificationBell.css';
+import '../components/Notifications/NotificationPanel.css';
+import '../components/Notifications/NotificationItem.css';
 
 const ClientDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -28,6 +32,8 @@ const ClientDashboard = () => {
               Welcome, {user?.first_name} {user?.last_name}!
             </span>
             <span className="role-badge">Client</span>
+            {/* Notification Bell */}
+            <NotificationBell />
             <button onClick={handleLogout} className="logout-button">
               Logout
             </button>

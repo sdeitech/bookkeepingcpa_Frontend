@@ -1,0 +1,144 @@
+/**
+ * NotificationBell Component Styles
+ */
+
+.notification-container {
+  position: relative;
+  display: inline-block;
+}
+
+.notification-bell {
+  position: relative;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #495057;
+  transition: all 0.3s ease;
+  border-radius: 50%;
+}
+
+.notification-bell:hover {
+  background-color: rgba(0, 123, 255, 0.1);
+  color: #007bff;
+}
+
+.notification-bell:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+}
+
+.notification-bell.animate {
+  animation: bellShake 0.5s ease-in-out;
+}
+
+@keyframes bellShake {
+  0%, 100% { transform: rotate(0); }
+  10%, 30%, 50%, 70%, 90% { transform: rotate(-10deg); }
+  20%, 40%, 60%, 80% { transform: rotate(10deg); }
+}
+
+.notification-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  background-color: #dc3545;
+  color: white;
+  font-size: 11px;
+  font-weight: bold;
+  padding: 2px 5px;
+  border-radius: 10px;
+  min-width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  animation: badgePulse 2s infinite;
+}
+
+@keyframes badgePulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .notification-bell {
+    color: #adb5bd;
+  }
+  
+  .notification-bell:hover {
+    background-color: rgba(0, 123, 255, 0.2);
+    color: #4dabff;
+  }
+}
+
+/* Connection status indicator */
+.connection-indicator {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px white;
+  animation: pulse 2s infinite;
+}
+
+.connection-indicator.disconnected {
+  background-color: #f44336;
+  animation: none;
+}
+
+.connection-indicator.initializing {
+  background-color: #ff9800;
+  animation: pulse 1s infinite;
+}
+
+.connection-indicator.connected {
+  background-color: #4caf50;
+  animation: none;
+  display: none; /* Hide when connected */
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 2px white, 0 0 0 4px rgba(255, 152, 0, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 2px white, 0 0 0 8px rgba(255, 152, 0, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 2px white, 0 0 0 4px rgba(255, 152, 0, 0.4);
+  }
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .notification-bell {
+    padding: 6px;
+  }
+  
+  .notification-badge {
+    font-size: 10px;
+    padding: 1px 4px;
+    min-width: 16px;
+    height: 16px;
+  }
+  
+  .connection-indicator {
+    width: 6px;
+    height: 6px;
+  }
+}

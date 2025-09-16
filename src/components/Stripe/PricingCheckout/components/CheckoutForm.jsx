@@ -5,6 +5,7 @@ import {
   useStripe,
   useElements
 } from '@stripe/react-stripe-js';
+import config from '../../../../config';
 import {
   CreditCard,
   Lock,
@@ -116,6 +117,15 @@ const CheckoutForm = ({ plan, billingPeriod, onSuccess, onCancel }) => {
     setProcessing(true);
     setErrorMessage('');
     
+    // Debug logging for checkout process
+    console.log('[DEBUG] Starting checkout process:', {
+      planId: plan._id,
+      planName: plan.name,
+      billingPeriod,
+      stripeLoaded: !!stripe,
+      elementsLoaded: !!elements
+    });
+    
     try {
       // Step 1: Create payment method
       const { error: stripeError, paymentMethod } = await stripe.createPaymentMethod({
@@ -147,12 +157,25 @@ const CheckoutForm = ({ plan, billingPeriod, onSuccess, onCancel }) => {
       }).unwrap();
       
       // Step 3: Create subscription
+      console.log('[DEBUG] Creating subscription with:', {
+        planId: plan._id,
+        billingPeriod,
+        paymentMethodId: paymentMethod.id,
+        apiEndpoint: config?.api?.baseUrl
+      });
+      
       const subscriptionResult = await createSubscription({
         planId: plan._id,
         billingPeriod: billingPeriod,
         paymentMethodId: paymentMethod.id,
         billingInfo
       }).unwrap();
+      
+      console.log('[DEBUG] Subscription API Response:', {
+        status: subscriptionResult?.data?.status || subscriptionResult?.status,
+        requiresAction: subscriptionResult?.data?.requiresAction || subscriptionResult?.requiresAction,
+        hasClientSecret: !!(subscriptionResult?.data?.clientSecret || subscriptionResult?.clientSecret)
+      });
       
       const subscriptionData = subscriptionResult.data || subscriptionResult;
       
@@ -205,8 +228,22 @@ const CheckoutForm = ({ plan, billingPeriod, onSuccess, onCancel }) => {
       }, 2000);
       
     } catch (error) {
-      console.error('Payment error:', error);
-      setErrorMessage(error?.data?.message || error?.message || 'Payment failed. Please try again.');
+      console.error('[DEBUG] Payment error full details:', {
+        errorType: error?.data?.error?.type,
+        errorMessage: error?.data?.error?.message || error?.data?.message,
+        errorStatus: error?.status,
+        fullError: error
+      });
+      
+      // Check if it's specifically a Stripe API key error
+      if (error?.data?.error?.message?.includes('Invalid API Key')) {
+        console.error('[CRITICAL] Stripe API Key Error Detected!', {
+          errorMessage: error.data.error.message,
+          suggestedFix: 'Backend is likely using publishable key (pk_) instead of secret key (sk_)'
+        });
+      }
+      
+      setErrorMessage(error?.data?.error?.message || error?.data?.message || error?.message || 'Payment failed. Please try again.');
       setProcessing(false);
     }
   };

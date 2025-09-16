@@ -84,18 +84,27 @@ const Signup = () => {
         localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify(user));
         
-        // Then update Redux state
+        // Then update Redux state (which now includes onboarding_completed)
         dispatch(setCredentials({ data: { token, user } }));
         
         // STEP 2: Small delay to ensure storage is complete
         await new Promise(resolve => setTimeout(resolve, 100));
         
-        // STEP 3: Now safe to navigate (which may trigger authenticated API calls)
-        // For client users (role_id === '3'), redirect to onboarding
-        // For admin/staff, redirect to dashboard
+        // STEP 3: Navigate based on user role and onboarding status from backend
+        // For client users (role_id === '3'), new signups always go to onboarding
+        // The backend should return onboarding_completed: false for new clients
         if (user?.role_id === '3') {
-          navigate('/onboarding');
+          // Check onboarding status from backend response
+          // New signups should have onboarding_completed: false
+          if (user.onboarding_completed) {
+            // Rare case: if they already have onboarding completed (shouldn't happen for new signup)
+            navigate('/dashboard');
+          } else {
+            // Normal flow: new client signups go to onboarding
+            navigate('/onboarding');
+          }
         } else {
+          // Admin and staff go directly to dashboard
           navigate('/dashboard');
         }
       } else {

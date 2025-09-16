@@ -2,18 +2,21 @@ import { configureStore } from '@reduxjs/toolkit';
 import { setupListeners } from '@reduxjs/toolkit/query';
 import authReducer from '../features/auth/authSlice';
 import onboardingReducer from '../features/onboarding/onboardingSlice';
+import notificationReducer from '../features/notifications/notificationSlice';
 import { authApi } from '../features/auth/authApi';
 import { subscriptionApi } from '../features/subscription/subscriptionApi';
 import { onboardingApi } from '../features/onboarding/onboardingApi';
 import { amazonApi } from '../features/amazon/amazonApi';
 import { amazonSandboxApi } from '../features/amazon/amazonSandboxApi';
 import { userApi } from '../features/user/userApi';
+import { notificationApi } from '../features/notifications/notificationApi';
 
 export const store = configureStore({
   reducer: {
     // Regular reducers
     auth: authReducer,
     onboarding: onboardingReducer,
+    notifications: notificationReducer,
 
     // RTK Query reducers
     [authApi.reducerPath]: authApi.reducer,
@@ -22,6 +25,7 @@ export const store = configureStore({
     [amazonApi.reducerPath]: amazonApi.reducer,
     [amazonSandboxApi.reducerPath]: amazonSandboxApi.reducer,
     [userApi.reducerPath]: userApi.reducer,
+    [notificationApi.reducerPath]: notificationApi.reducer,
    
   },
 
@@ -45,6 +49,7 @@ export const store = configureStore({
       .concat(amazonApi.middleware)
       .concat(amazonSandboxApi.middleware)
       .concat(userApi.middleware)
+      .concat(notificationApi.middleware)
 });
 
 // optional, but required for refetchOnFocus/refetchOnReconnect behaviors
