@@ -1,0 +1,298 @@
+/* QuickBooks Callback Page Styles */
+
+.quickbooks-callback-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+}
+
+.callback-card {
+  background: white;
+  border-radius: 16px;
+  padding: 50px;
+  max-width: 500px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  text-align: center;
+  animation: fadeInUp 0.5s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* QuickBooks Logo */
+.qb-logo-container {
+  margin-bottom: 30px;
+}
+
+.qb-logo-large {
+  font-size: 64px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+/* Spinner */
+.spinner-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 25px;
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid #e2e8f0;
+  border-top-color: #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Progress Bar */
+.progress-bar {
+  height: 4px;
+  background-color: #e2e8f0;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 30px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  border-radius: 2px;
+  animation: progressAnimation 2s ease-in-out infinite;
+}
+
+@keyframes progressAnimation {
+  0% {
+    width: 0%;
+  }
+  50% {
+    width: 70%;
+  }
+  100% {
+    width: 95%;
+  }
+}
+
+/* Success Icon */
+.success-icon {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 25px;
+  animation: successScale 0.5s ease-out;
+}
+
+@keyframes successScale {
+  0% {
+    transform: scale(0);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.success-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Error Icon */
+.error-icon {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 25px;
+  animation: errorShake 0.5s ease-out;
+}
+
+@keyframes errorShake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-5px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(5px);
+  }
+}
+
+.error-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Text Styles */
+.callback-card h2 {
+  margin: 0 0 15px 0;
+  color: #2d3748;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.callback-card p {
+  margin: 0 0 10px 0;
+  color: #718096;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.error-message {
+  color: #e53e3e;
+  background-color: #fed7d7;
+  padding: 12px 20px;
+  border-radius: 8px;
+  margin: 15px 0;
+  font-weight: 500;
+}
+
+.redirect-message {
+  color: #4a5568;
+  font-size: 14px;
+  margin-top: 20px;
+  font-style: italic;
+  animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Manual Navigation */
+.manual-nav {
+  margin-top: 40px;
+  padding-top: 30px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.back-btn {
+  background: transparent;
+  color: #667eea;
+  border: 2px solid #667eea;
+  padding: 12px 24px;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.back-btn:hover {
+  background-color: #667eea;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+/* Responsive Design */
+@media (max-width: 640px) {
+  .callback-card {
+    padding: 30px 20px;
+  }
+  
+  .qb-logo-large {
+    font-size: 48px;
+  }
+  
+  .callback-card h2 {
+    font-size: 24px;
+  }
+  
+  .callback-card p {
+    font-size: 14px;
+  }
+  
+  .success-icon,
+  .error-icon {
+    width: 60px;
+    height: 60px;
+  }
+}
+
+/* Dark mode support (if needed) */
+@media (prefers-color-scheme: dark) {
+  .quickbooks-callback-container {
+    background: linear-gradient(135deg, #4c51bf 0%, #5a328a 100%);
+  }
+}
+
+/* Loading dots animation */
+.loading-dots {
+  display: inline-block;
+  position: relative;
+  width: 60px;
+  height: 13px;
+}
+
+.loading-dots::before,
+.loading-dots::after,
+.loading-dots span {
+  content: '';
+  position: absolute;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background-color: #667eea;
+  animation: loadingDots 1.4s infinite ease-in-out both;
+}
+
+.loading-dots::before {
+  left: 0;
+  animation-delay: -0.32s;
+}
+
+.loading-dots span {
+  left: 24px;
+  animation-delay: -0.16s;
+}
+
+.loading-dots::after {
+  left: 48px;
+  animation-delay: 0;
+}
+
+@keyframes loadingDots {
+  0%, 80%, 100% {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}

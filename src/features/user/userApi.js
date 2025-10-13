@@ -13,7 +13,7 @@ export const userApi = createApi({
       return headers;
     },
   }),
-  tagTypes: ['Profile'],
+  tagTypes: ['Profile', 'ClientList', 'ClientProfile'],
   endpoints: (builder) => ({
     // Get current user profile
     getUserProfile: builder.query({
@@ -40,6 +40,19 @@ export const userApi = createApi({
       }),
       invalidatesTags: ['Profile'],
     }),
+
+    // ADMIN ENDPOINTS
+    // Get all clients (admin only)
+    getAllClients: builder.query({
+      query: () => '/admin/clients-list',
+      providesTags: ['ClientList'],
+    }),
+
+    // Get specific client profile (admin only)
+    getClientProfile: builder.query({
+      query: (clientId) => `/admin/client/${clientId}/profile`,
+      providesTags: (result, error, clientId) => [{ type: 'ClientProfile', id: clientId }],
+    }),
   }),
 });
 
@@ -48,4 +61,7 @@ export const {
   useUpdateUserProfileMutation,
   useUploadProfilePictureMutation,
   useLazyGetUserProfileQuery,
+  // Admin hooks
+  useGetAllClientsQuery,
+  useGetClientProfileQuery,
 } = userApi;

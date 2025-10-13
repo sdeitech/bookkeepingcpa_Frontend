@@ -4,8 +4,11 @@ import { useNavigate } from 'react-router-dom';
 import { logout, selectCurrentUser } from '../features/auth/authSlice';
 import AmazonIntegration from '../components/Amazon/AmazonIntegration';
 import AmazonSandbox from '../components/Amazon/AmazonSandbox';
+import ShopifyIntegration from '../components/Shopify/ShopifyIntegration';
+import QuickBooksIntegration from '../components/QuickBooks/QuickBooksIntegration';
 import ProfileEdit from '../components/Profile/ProfileEdit';
 import NotificationBell from '../components/Notifications/NotificationBell';
+import DocumentManagement from './DocumentManagement';
 import '../components/Notifications/NotificationBell.css';
 import '../components/Notifications/NotificationPanel.css';
 import '../components/Notifications/NotificationItem.css';
@@ -170,6 +173,18 @@ const ClientDashboard = () => {
               >
                 Amazon Sandbox
               </button>
+              <button
+                className={`action-btn ${activeTab === 'shopify' ? 'active' : ''}`}
+                onClick={() => setActiveTab('shopify')}
+              >
+                Shopify Integration
+              </button>
+              <button
+                className={`action-btn ${activeTab === 'quickbooks' ? 'active' : ''}`}
+                onClick={() => setActiveTab('quickbooks')}
+              >
+                QuickBooks Integration
+              </button>
             </div>
           </section>
           
@@ -209,16 +224,7 @@ const ClientDashboard = () => {
           
           {activeTab === 'documents' && (
             <section className="documents-section">
-              <h2>My Documents</h2>
-              <div className="documents-header">
-                <button className="btn-primary">Upload Document</button>
-              </div>
-              <div className="documents-list">
-                <div className="empty-state">
-                  <p>No documents uploaded yet.</p>
-                  <span>Upload your first document to get started.</span>
-                </div>
-              </div>
+              <DocumentManagement />
             </section>
           )}
           
@@ -326,6 +332,18 @@ const ClientDashboard = () => {
           {activeTab === 'amazon-sandbox' && (
             <section className="amazon-sandbox-section">
               <AmazonSandbox />
+            </section>
+          )}
+          
+          {activeTab === 'shopify' && (
+            <section className="shopify-section">
+              <ShopifyIntegration />
+            </section>
+          )}
+          
+          {activeTab === 'quickbooks' && (
+            <section className="quickbooks-section">
+              <QuickBooksIntegration />
             </section>
           )}
           

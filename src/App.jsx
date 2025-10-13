@@ -21,6 +21,8 @@ import PricingCheckout from './components/Stripe/PricingCheckout/PricingCheckout
 import SubscriptionManagement from './components/Stripe/SubscriptionManagement/SubscriptionManagement';
 import SubscriptionPlanManager from './components/Admin/SubscriptionPlanManager/SubscriptionPlanManager';
 import AmazonCallback from './pages/AmazonCallback';
+import ShopifyCallback from './pages/ShopifyCallback';
+import QuickBooksCallback from './pages/QuickBooksCallback';
 
 // Import Firebase utilities
 import './utils/testFirebaseConnection';
@@ -90,6 +92,8 @@ function App() {
           
           {/* OAuth callbacks */}
           <Route path="/amazon-callback" element={<AmazonCallback />} />
+          <Route path="/shopify-callback" element={<ShopifyCallback />} />
+          <Route path="/quickbooks-callback" element={<QuickBooksCallback />} />
 
           {/* ============ Protected Routes ============ */}
           
@@ -161,7 +165,7 @@ function App() {
                 <h2>404 - Page Not Found</h2>
                 <p>The page you're looking for doesn't exist.</p>
               </div>
-            } 
+            }  
           />
         </Routes>
       </div>

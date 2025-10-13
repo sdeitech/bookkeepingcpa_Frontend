@@ -30,10 +30,14 @@ export const amazonApi = createApi({
       invalidatesTags: ['AmazonConnection'],
     }),
 
-    // Check Amazon connection status
+    // Check Amazon connection status (supports admin override)
     getAmazonConnectionStatus: builder.query({
-      query: () => '/amazon/auth/status',
-      providesTags: ['AmazonConnection'],
+      query: (clientId) => ({
+        url: '/amazon/auth/status',
+        params: clientId ? { clientId } : {},
+      }),
+      providesTags: (result, error, clientId) =>
+        clientId ? [{ type: 'AmazonConnection', id: clientId }] : ['AmazonConnection'],
     }),
 
     // Disconnect Amazon account
@@ -54,7 +58,7 @@ export const amazonApi = createApi({
       invalidatesTags: ['AmazonConnection'],
     }),
 
-    // Get Amazon orders
+    // Get Amazon orders (supports admin override)
     getAmazonOrders: builder.query({
       query: (params = {}) => ({
         url: '/amazon/orders',
@@ -63,23 +67,26 @@ export const amazonApi = createApi({
           createdBefore: params.createdBefore,
           orderStatuses: params.orderStatuses,
           maxResults: params.maxResults || 50,
+          ...(params.clientId && { clientId: params.clientId }), // Add clientId for admin override
         },
       }),
-      providesTags: ['AmazonOrders'],
+      providesTags: (result, error, params) =>
+        params?.clientId ? [{ type: 'AmazonOrders', id: params.clientId }] : ['AmazonOrders'],
     }),
 
-    // Get Amazon inventory
+    // Get Amazon inventory (supports admin override)
     getAmazonInventory: builder.query({
       query: (params = {}) => ({
         url: '/amazon/inventory',
         params: {
           marketplaceId: params.marketplaceId,
           skus: params.skus,
+          ...(params.clientId && { clientId: params.clientId }), // Add clientId for admin override
         },
       }),
     }),
 
-    // Get Amazon financial events
+    // Get Amazon financial events (supports admin override)
     getAmazonFinancialEvents: builder.query({
       query: (params = {}) => ({
         url: '/amazon/finance',
@@ -87,6 +94,7 @@ export const amazonApi = createApi({
           postedAfter: params.postedAfter,
           postedBefore: params.postedBefore,
           maxResults: params.maxResults,
+          ...(params.clientId && { clientId: params.clientId }), // Add clientId for admin override
         },
       }),
     }),
@@ -104,9 +112,12 @@ export const amazonApi = createApi({
       }),
     }),
 
-    // Get Amazon dashboard data
+    // Get Amazon dashboard data (supports admin override)
     getAmazonDashboard: builder.query({
-      query: () => '/amazon/dashboard',
+      query: (clientId) => ({
+        url: '/amazon/dashboard',
+        params: clientId ? { clientId } : {},
+      }),
     }),
   }),
 });

@@ -10,6 +10,9 @@ import { amazonApi } from '../features/amazon/amazonApi';
 import { amazonSandboxApi } from '../features/amazon/amazonSandboxApi';
 import { userApi } from '../features/user/userApi';
 import { notificationApi } from '../features/notifications/notificationApi';
+import { shopifyApi } from '../features/shopify/shopifyApi';
+import { documentApi } from '../features/document/documentApi';
+import { quickbooksApi } from '../features/quickbooks/quickbooksApi';
 
 export const store = configureStore({
   reducer: {
@@ -26,6 +29,9 @@ export const store = configureStore({
     [amazonSandboxApi.reducerPath]: amazonSandboxApi.reducer,
     [userApi.reducerPath]: userApi.reducer,
     [notificationApi.reducerPath]: notificationApi.reducer,
+    [shopifyApi.reducerPath]: shopifyApi.reducer,
+    [documentApi.reducerPath]: documentApi.reducer,
+    [quickbooksApi.reducerPath]: quickbooksApi.reducer,
    
   },
 
@@ -50,6 +56,9 @@ export const store = configureStore({
       .concat(amazonSandboxApi.middleware)
       .concat(userApi.middleware)
       .concat(notificationApi.middleware)
+      .concat(shopifyApi.middleware)
+      .concat(documentApi.middleware)
+      .concat(quickbooksApi.middleware)
 });
 
 // optional, but required for refetchOnFocus/refetchOnReconnect behaviors
