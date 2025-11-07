@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  useGetUserProfileQuery, 
-  useUpdateUserProfileMutation, 
-  useUploadProfilePictureMutation 
+import {
+  useGetUserProfileQuery,
+  useUpdateUserProfileMutation,
+  useUploadProfilePictureMutation
 } from '../../features/user/userApi';
+import config from '../../config';
 import './ProfileEdit.css';
 
 const ProfileEdit = ({ onClose }) => {
@@ -38,7 +39,7 @@ const ProfileEdit = ({ onClose }) => {
       
       // Set profile picture if exists
       if (user.profile) {
-        setPreviewImage(`http://localhost:8080${user.profile}`);
+        setPreviewImage(`${config.api.baseUrl}${user.profile}`);
       }
     }
   }, [profileData]);

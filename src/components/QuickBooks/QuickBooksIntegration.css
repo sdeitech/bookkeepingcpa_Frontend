@@ -1,0 +1,512 @@
+/* QuickBooks Integration Styles */
+
+.quickbooks-integration-container {
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Header Section */
+.quickbooks-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.qb-logo {
+  font-size: 32px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.header-title h2 {
+  margin: 0;
+  color: #2d3748;
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.connection-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.connection-status.connected {
+  background-color: #c6f6d5;
+  color: #22543d;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #48bb78;
+  animation: blink 2s infinite;
+}
+
+@keyframes blink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Error Message */
+.error-message {
+  background-color: #fed7d7;
+  color: #742a2a;
+  padding: 12px 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.error-icon {
+  font-size: 20px;
+}
+
+/* Success Message */
+.success-message {
+  background-color: #c6f6d5;
+  color: #22543d;
+  padding: 12px 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: slideDown 0.3s ease-out;
+}
+
+.success-icon {
+  font-size: 20px;
+}
+
+/* Connect Section */
+.quickbooks-connect-section {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16px;
+  padding: 40px;
+  color: white;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+}
+
+.connect-info h3 {
+  margin-top: 0;
+  font-size: 24px;
+  margin-bottom: 16px;
+}
+
+.connect-info p {
+  margin-bottom: 24px;
+  line-height: 1.6;
+  opacity: 0.95;
+}
+
+.benefits-list {
+  list-style: none;
+  padding: 0;
+  margin-bottom: 30px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 12px;
+}
+
+.benefits-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+}
+
+.quickbooks-badges {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 30px;
+}
+
+.badge {
+  background-color: rgba(255, 255, 255, 0.2);
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.quickbooks-connect-btn {
+  background-color: white;
+  color: #667eea;
+  border: none;
+  padding: 14px 32px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.quickbooks-connect-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.quickbooks-connect-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.qb-icon {
+  font-size: 20px;
+}
+
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #667eea;
+  border-radius: 50%;
+  border-top-color: transparent;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Connected Section */
+.quickbooks-connected-section {
+  background: white;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.connection-details {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.company-info {
+  background: #f7fafc;
+  padding: 25px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+
+.company-info h3 {
+  margin-top: 0;
+  color: #2d3748;
+  font-size: 20px;
+  margin-bottom: 20px;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 15px;
+  margin-bottom: 25px;
+}
+
+.info-row {
+  display: flex;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.label {
+  font-weight: 600;
+  color: #4a5568;
+  min-width: 140px;
+}
+
+.value {
+  color: #2d3748;
+  word-break: break-word;
+}
+
+.status-active {
+  color: #22543d;
+  background-color: #c6f6d5;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.status-paused {
+  color: #744210;
+  background-color: #feebc8;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.status-expired {
+  color: #742a2a;
+  background-color: #fed7d7;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+/* Company Stats */
+.company-stats {
+  margin-top: 25px;
+  padding-top: 20px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.company-stats h4 {
+  margin: 0 0 15px 0;
+  color: #2d3748;
+  font-size: 18px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 15px;
+}
+
+.stat-card {
+  background: white;
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  text-align: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.stat-value {
+  display: block;
+  font-size: 28px;
+  font-weight: bold;
+  color: #667eea;
+  margin-bottom: 5px;
+}
+
+.stat-label {
+  display: block;
+  font-size: 14px;
+  color: #718096;
+}
+
+/* Action Buttons */
+.action-buttons {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.view-data-btn {
+  background-color: #667eea;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.view-data-btn:hover {
+  background-color: #5a67d8;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.disconnect-btn {
+  background-color: #f56565;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.disconnect-btn:hover:not(:disabled) {
+  background-color: #e53e3e;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(245, 101, 101, 0.3);
+}
+
+.disconnect-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Data Section */
+.quickbooks-data-section {
+  margin-top: 30px;
+  padding-top: 30px;
+  border-top: 2px solid #e2e8f0;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.data-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 25px;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 0;
+}
+
+.tab-btn {
+  background: transparent;
+  border: none;
+  padding: 12px 20px;
+  font-size: 15px;
+  font-weight: 500;
+  color: #718096;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-bottom: 3px solid transparent;
+  position: relative;
+  bottom: -2px;
+}
+
+.tab-btn:hover {
+  color: #4a5568;
+  background-color: #f7fafc;
+}
+
+.tab-btn.active {
+  color: #667eea;
+  border-bottom-color: #667eea;
+  background-color: transparent;
+}
+
+/* Loading State */
+.loading {
+  text-align: center;
+  padding: 40px;
+  color: #718096;
+  font-size: 16px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .quickbooks-integration-container {
+    padding: 15px;
+  }
+  
+  .quickbooks-connect-section {
+    padding: 25px;
+  }
+  
+  .benefits-list {
+    grid-template-columns: 1fr;
+  }
+  
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .data-tabs {
+    flex-wrap: wrap;
+  }
+  
+  .tab-btn {
+    flex: 1 0 45%;
+  }
+}
+
+/* Additional utility classes */
+.text-center {
+  text-align: center;
+}
+
+.mt-20 {
+  margin-top: 20px;
+}
+
+.mb-20 {
+  margin-bottom: 20px;
+}

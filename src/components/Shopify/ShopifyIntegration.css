@@ -1,0 +1,324 @@
+/* Shopify Integration Styles */
+.shopify-integration-container {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Header */
+.shopify-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.shopify-header h2 {
+  font-size: 24px;
+  color: #333;
+  margin: 0;
+}
+
+/* Connection Status */
+.connection-status {
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.connection-status.connected {
+  background-color: #d4f4dd;
+  color: #28a745;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #28a745;
+  margin-right: 8px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+/* Error Message */
+.error-message {
+  background-color: #fee;
+  border: 1px solid #fcc;
+  color: #c33;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+}
+
+.error-icon {
+  margin-right: 10px;
+  font-size: 18px;
+}
+
+/* Loading State */
+.loading {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+  font-size: 16px;
+}
+
+/* Connect Section */
+.shopify-connect-section {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 30px;
+}
+
+.connect-info {
+  margin-bottom: 30px;
+}
+
+.connect-info h3 {
+  color: #333;
+  margin-bottom: 15px;
+  font-size: 20px;
+}
+
+.connect-info p {
+  color: #666;
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.benefits-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 30px 0;
+}
+
+.benefits-list li {
+  padding: 10px 0;
+  color: #555;
+  display: flex;
+  align-items: center;
+}
+
+.benefits-list li::before {
+  margin-right: 10px;
+}
+
+/* Connect Form */
+.connect-form {
+  background: #f8f9fa;
+  padding: 25px;
+  border-radius: 8px;
+}
+
+.connect-form label {
+  display: block;
+  margin-bottom: 8px;
+  color: #333;
+  font-weight: 500;
+}
+
+.shop-domain-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: border-color 0.3s;
+  margin-bottom: 8px;
+}
+
+.shop-domain-input:focus {
+  outline: none;
+  border-color: #96bf48;
+}
+
+.input-hint {
+  display: block;
+  color: #888;
+  font-size: 13px;
+  margin-bottom: 20px;
+}
+
+.shopify-connect-btn {
+  background: #96bf48;
+  color: white;
+  border: none;
+  padding: 14px 32px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  width: 100%;
+}
+
+.shopify-connect-btn:hover:not(:disabled) {
+  background: #7fa03a;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(150, 191, 72, 0.3);
+}
+
+.shopify-connect-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Connected Section */
+.shopify-connected-section {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 30px;
+}
+
+.connection-details {
+  margin-bottom: 30px;
+}
+
+.store-info {
+  background: #f8f9fa;
+  padding: 25px;
+  border-radius: 8px;
+  margin-bottom: 25px;
+}
+
+.store-info h3 {
+  color: #333;
+  margin-bottom: 20px;
+  font-size: 18px;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-row .label {
+  font-weight: 500;
+  color: #555;
+  min-width: 140px;
+}
+
+.info-row .value {
+  color: #333;
+  text-align: right;
+  flex: 1;
+  font-weight: 400;
+}
+
+/* Action Buttons */
+.action-buttons {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.view-orders-btn,
+.disconnect-btn {
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+  border: none;
+}
+
+.view-orders-btn {
+  background: #007bff;
+  color: white;
+  flex: 1;
+}
+
+.view-orders-btn:hover {
+  background: #0056b3;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+.disconnect-btn {
+  background: #dc3545;
+  color: white;
+  min-width: 150px;
+}
+
+.disconnect-btn:hover:not(:disabled) {
+  background: #c82333;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+}
+
+.disconnect-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .shopify-integration-container {
+    padding: 15px;
+  }
+  
+  .shopify-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+  
+  .info-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .info-row .value {
+    text-align: left;
+    margin-top: 5px;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+  }
+  
+  .view-orders-btn,
+  .disconnect-btn {
+    width: 100%;
+  }
+}
+
+/* Text utilities */
+.text-muted {
+  color: #6c757d;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.shopify-connect-section,
+.shopify-connected-section {
+  animation: fadeIn 0.3s ease-in-out;
+}

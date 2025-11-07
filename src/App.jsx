@@ -1,63 +1,52 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { selectIsAuthenticated, selectCurrentUser } from './features/auth/authSlice';
-import { selectIsOnboardingCompleted } from './features/onboarding/onboardingSlice';
+import { selectIsAuthenticated, selectCurrentUser, selectIsOnboardingCompleted } from './features/auth/authSlice';
+import { initializeFirebase } from './config/firebase';
+import { USER_ROLES, isClient } from './constants/userRoles';
+
+// Route Guards
+import AuthGuard from './components/guards/AuthGuard';
+import RoleGuard from './components/guards/RoleGuard';
+import OnboardingGuard from './components/guards/OnboardingGuard';
+import SubscriptionGuard from './components/guards/SubscriptionGuard';
+import PublicRoute from './components/guards/PublicRoute';
+
+// Regular imports (not lazy) to avoid UI issues
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import DashboardRouter from './components/DashboardRouter';
-import AdminDashboard from './pages/AdminDashboard';
-import StaffDashboard from './pages/StaffDashboard';
-import ClientDashboard from './pages/ClientDashboard';
-import AmazonCallback from './pages/AmazonCallback';
-import ProtectedRoute from './components/ProtectedRoute';
-
-// Custom hook for onboarding sync
-import { useOnboardingSync } from './hooks/useOnboardingSync';
-
-// User role constants and helpers
-import { USER_ROLES, isAdmin, isStaff, isClient } from './constants/userRoles';
-
-// Onboarding Components
-import OnboardingWizard  from './components/Onboarding/OnboardingWizard';
-import OnboardingRouteGuard from './components/Onboarding/OnboardingRouteGuard';
-
-// Stripe Components
+import OnboardingWizard from './components/Onboarding/OnboardingWizard';
 import PricingCheckout from './components/Stripe/PricingCheckout/PricingCheckout';
 import SubscriptionManagement from './components/Stripe/SubscriptionManagement/SubscriptionManagement';
 import SubscriptionPlanManager from './components/Admin/SubscriptionPlanManager/SubscriptionPlanManager';
+import AmazonCallback from './pages/AmazonCallback';
+import ShopifyCallback from './pages/ShopifyCallback';
+import QuickBooksCallback from './pages/QuickBooksCallback';
 
-// Subscription Protected Route Component
-import { RequireSubscription } from './routes/ProtectedRoute';
+// Import Firebase utilities
+import './utils/testFirebaseConnection';
+import './utils/debugFirebaseConnection';
+
 import './App.css';
 
-// Helper component to check onboarding and redirect
-const RequireOnboarding = ({ children }) => {
-  const isOnboardingCompleted = useSelector(selectIsOnboardingCompleted);
-  const isAuthenticated = useSelector(selectIsAuthenticated);
-  
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-  
-  if (!isOnboardingCompleted) {
-    return <Navigate to="/onboarding" replace />;
-  }
-  
-  return children;
+// Simple redirect helper
+const getDefaultRedirect = (user, isAuth, isOnboarded) => {
+  if (!isAuth) return '/login';
+  if (isClient(user) && !isOnboarded) return '/onboarding';
+  return '/dashboard';
 };
 
 function App() {
   const isAuthenticated = useSelector(selectIsAuthenticated);
   const user = useSelector(selectCurrentUser);
   const isOnboardingCompleted = useSelector(selectIsOnboardingCompleted);
-  
-  // Sync onboarding status from API to Redux
-  // This ensures Redux state matches the backend truth
-  const { isLoading: isLoadingOnboarding } = useOnboardingSync();
-  
-  // Log environment variables on app mount
+
+  // Initialize Firebase once
   React.useEffect(() => {
+    initializeFirebase();
+    console.log('🔥 Firebase initialized');
+    
     if (import.meta.env.VITE_ENV === 'development') {
       console.group('🔧 Environment Variables');
       console.log('API Base URL:', import.meta.env.VITE_API_BASE_URL);
@@ -69,202 +58,114 @@ function App() {
         walmart: import.meta.env.VITE_ENABLE_WALMART === 'true',
         onboarding: import.meta.env.VITE_ENABLE_ONBOARDING === 'true'
       });
-      
-      console.log('All Vite Env Vars:', Object.keys(import.meta.env).filter(key => key.startsWith('VITE_')));
       console.groupEnd();
     }
-  }, []); // Run once on mount
-  
-  // Check user roles using helper functions
-  const userIsAdmin = isAdmin(user);
-  const userIsStaff = isStaff(user);
-  const userIsClient = isClient(user);
+  }, []);
 
-  // Show loading state while syncing onboarding status
-  if (isAuthenticated && userIsClient && isLoadingOnboarding) {
-    return (
-      <div className="app-loading">
-        <div>Loading application state...</div>
-      </div>
-    );
-  }
+  const defaultRedirect = getDefaultRedirect(user, isAuthenticated, isOnboardingCompleted);
 
   return (
     <Router>
-     
       <div className="app">
         <Routes>
-          {/* Public routes */}
-          <Route
-            path="/login"
+          {/* ============ Public Routes ============ */}
+          <Route 
+            path="/login" 
             element={
-              isAuthenticated ?
-                (userIsClient ?
-                  (!isOnboardingCompleted ?
-                    <Navigate to="/onboarding" replace /> :
-                    <Navigate to="/dashboard" replace />
-                  ) :
-                  <Navigate to="/dashboard" replace />
-                ) :
+              <PublicRoute>
                 <Login />
-            }
+              </PublicRoute>
+            } 
           />
-          <Route
-            path="/signup"
+          
+          <Route 
+            path="/signup" 
             element={
-              isAuthenticated ?
-                (userIsClient ?
-                  (!isOnboardingCompleted ?
-                    <Navigate to="/onboarding" replace /> :
-                    <Navigate to="/dashboard" replace />
-                  ) :
-                  <Navigate to="/dashboard" replace />
-                ) :
+              <PublicRoute>
                 <Signup />
-            }
+              </PublicRoute>
+            } 
           />
           
-          {/* Onboarding Route - Protected, for clients only */}
-          <Route
-            path="/onboarding"
-            element={
-              <ProtectedRoute>
-                {userIsClient ? (
-                  <OnboardingRouteGuard>
-                    <OnboardingWizard />
-                  </OnboardingRouteGuard>
-                ) : (
-                  <Navigate to="/dashboard" replace />
-                )}
-              </ProtectedRoute>
-            }
-          />
-          
-          {/* Stripe/Subscription Routes */}
-          
-          {/* Unified Pricing & Checkout - Public: anyone can view plans, checkout requires login */}
+          {/* Pricing is public but checkout requires auth */}
           <Route path="/pricing" element={<PricingCheckout />} />
           
-          {/* Subscription Management - Protected: for users to manage their subscription */}
-          <Route
-            path="/subscription"
-            element={
-              <ProtectedRoute>
-                <SubscriptionManagement />
-              </ProtectedRoute>
-            }
-          />
+          {/* OAuth callbacks */}
+          <Route path="/amazon-callback" element={<AmazonCallback />} />
+          <Route path="/shopify-callback" element={<ShopifyCallback />} />
+          <Route path="/quickbooks-callback" element={<QuickBooksCallback />} />
+
+          {/* ============ Protected Routes ============ */}
           
-          {/* Admin Plan Management - Only Admin can access (Staff has no role in payments) */}
-          <Route
-            path="/admin/plans"
+          {/* Onboarding - Client only, blocks if completed */}
+          <Route 
+            path="/onboarding" 
             element={
-              <ProtectedRoute>
-                {userIsAdmin ? (
+              <AuthGuard>
+                <RoleGuard allowedRoles={[USER_ROLES.CLIENT]}>
+                  <OnboardingGuard requireIncomplete>
+                    <OnboardingWizard />
+                  </OnboardingGuard>
+                </RoleGuard>
+              </AuthGuard>
+            } 
+          />
+
+          {/* Subscription Management - Clients and Admins */}
+          <Route 
+            path="/subscription" 
+            element={
+              <AuthGuard>
+                <RoleGuard allowedRoles={[USER_ROLES.CLIENT, USER_ROLES.ADMIN]}>
+                  <SubscriptionManagement />
+                </RoleGuard>
+              </AuthGuard>
+            } 
+          />
+
+          {/* Admin Plan Management */}
+          <Route 
+            path="/admin/plans" 
+            element={
+              <AuthGuard>
+                <RoleGuard allowedRoles={[USER_ROLES.ADMIN]}>
                   <SubscriptionPlanManager />
-                ) : (
-                  <Navigate to="/dashboard" replace />
-                )}
-              </ProtectedRoute>
-            }
+                </RoleGuard>
+              </AuthGuard>
+            } 
           />
+
+          {/* Main dashboard - DashboardRouter handles role-based rendering */}
+          <Route 
+            path="/dashboard" 
+            element={
+              <AuthGuard>
+                <OnboardingGuard>
+                  <SubscriptionGuard>
+                    <DashboardRouter />
+                  </SubscriptionGuard>
+                </OnboardingGuard>
+              </AuthGuard>
+            } 
+          />
+
+          {/* ============ Default Routes ============ */}
           
-
-          {/* Protected routes - Main dashboard router */}
-          {/* Dashboard requires onboarding completion and active subscription for clients */}
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                {userIsClient ? (
-                  <RequireOnboarding>
-                    <RequireSubscription>
-                      <DashboardRouter />
-                    </RequireSubscription>
-                  </RequireOnboarding>
-                ) : (
-                  // Admin and Staff don't need onboarding or subscription
-                  <DashboardRouter />
-                )}
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Individual dashboard routes for direct navigation */}
-          <Route
-            path="/admin-dashboard"
-            element={
-              <ProtectedRoute>
-                {userIsAdmin ? <AdminDashboard /> : <Navigate to="/dashboard" replace />}
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/staff-dashboard"
-            element={
-              <ProtectedRoute>
-                {userIsStaff ? <StaffDashboard /> : <Navigate to="/dashboard" replace />}
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/client-dashboard"
-            element={
-              <ProtectedRoute>
-                {userIsClient ? (
-                  <RequireOnboarding>
-                    <RequireSubscription>
-                      <ClientDashboard />
-                    </RequireSubscription>
-                  </RequireOnboarding>
-                ) : (
-                  <Navigate to="/dashboard" replace />
-                )}
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Amazon OAuth Callback Route */}
-          <Route
-            path="/amazon-callback"
-            element={<AmazonCallback />}
-          />
-
           {/* Default redirect */}
-          <Route
-            path="/"
-            element={
-              isAuthenticated ? (
-                // For clients: check onboarding first, then subscription
-                userIsClient ? (
-                  !isOnboardingCompleted ? (
-                    <Navigate to="/onboarding" replace />
-                  ) : (
-                    <RequireSubscription fallbackPath="/pricing">
-                      <Navigate to="/dashboard" replace />
-                    </RequireSubscription>
-                  )
-                ) : (
-                  // Admin and Staff go directly to dashboard
-                  <Navigate to="/dashboard" replace />
-                )
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
+          <Route 
+            path="/" 
+            element={<Navigate to={defaultRedirect} replace />} 
           />
 
           {/* 404 catch-all */}
-          <Route
-            path="*"
+          <Route 
+            path="*" 
             element={
               <div className="not-found">
                 <h2>404 - Page Not Found</h2>
                 <p>The page you're looking for doesn't exist.</p>
               </div>
-            }
+            }  
           />
         </Routes>
       </div>

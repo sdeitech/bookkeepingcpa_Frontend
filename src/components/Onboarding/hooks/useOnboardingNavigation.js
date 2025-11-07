@@ -7,7 +7,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { 
+import {
   goToStep,
   setSubmitting,
   loadFromLocalStorage,
@@ -19,6 +19,7 @@ import {
   updateIndustry,
   markCompleted
 } from '../../../features/onboarding/onboardingSlice';
+import { updateOnboardingStatus } from '../../../features/auth/authSlice';
 import {
   useCompleteOnboardingMutation,
   useGetOnboardingDataQuery
@@ -182,8 +183,16 @@ const useOnboardingNavigation = () => {
         console.log('Onboarding completion result:', result);
         
         if (result.success) {
+          // Update onboarding slice
           dispatch(markCompleted());
+          
+          // IMPORTANT: Update auth state with onboarding completion
+          dispatch(updateOnboardingStatus(true));
+          
+          // Clear localStorage for onboarding data
           dispatch(clearLocalStorage());
+          
+          // Navigate to pricing
           navigate('/pricing');
           return true;
         } else {

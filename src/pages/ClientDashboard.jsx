@@ -1,17 +1,60 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { logout, selectCurrentUser } from '../features/auth/authSlice';
 import AmazonIntegration from '../components/Amazon/AmazonIntegration';
 import AmazonSandbox from '../components/Amazon/AmazonSandbox';
+import ShopifyIntegration from '../components/Shopify/ShopifyIntegration';
+import QuickBooksIntegration from '../components/QuickBooks/QuickBooksIntegration';
 import ProfileEdit from '../components/Profile/ProfileEdit';
+import NotificationBell from '../components/Notifications/NotificationBell';
+import DocumentManagement from './DocumentManagement';
+import '../components/Notifications/NotificationBell.css';
+import '../components/Notifications/NotificationPanel.css';
+import '../components/Notifications/NotificationItem.css';
 
 const ClientDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [showProfileEdit, setShowProfileEdit] = useState(false);
+  const [qbConnectionStatus, setQbConnectionStatus] = useState(null);
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useDispatch();
   const user = useSelector(selectCurrentUser);
+  
+  // Handle URL parameters for OAuth callback
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const tab = searchParams.get('tab');
+    const connected = searchParams.get('connected');
+    const error = searchParams.get('error');
+    const company = searchParams.get('company');
+    
+    if (tab === 'quickbooks') {
+      setActiveTab('quickbooks');
+      
+      if (connected === 'true') {
+        setQbConnectionStatus({
+          success: true,
+          message: 'QuickBooks connected successfully!',
+          company
+        });
+      } else if (error) {
+        setQbConnectionStatus({
+          success: false,
+          message: 'QuickBooks connection failed. Please try again.'
+        });
+      }
+      
+      // Clean up URL after handling parameters
+      window.history.replaceState({}, '', '/dashboard');
+      
+      // Clear status message after 5 seconds
+      setTimeout(() => {
+        setQbConnectionStatus(null);
+      }, 5000);
+    }
+  }, [location.search]);
   
   const handleLogout = () => {
     dispatch(logout());
@@ -28,6 +71,8 @@ const ClientDashboard = () => {
               Welcome, {user?.first_name} {user?.last_name}!
             </span>
             <span className="role-badge">Client</span>
+            {/* Notification Bell */}
+            <NotificationBell />
             <button onClick={handleLogout} className="logout-button">
               Logout
             </button>
@@ -164,6 +209,18 @@ const ClientDashboard = () => {
               >
                 Amazon Sandbox
               </button>
+              <button
+                className={`action-btn ${activeTab === 'shopify' ? 'active' : ''}`}
+                onClick={() => setActiveTab('shopify')}
+              >
+                Shopify Integration
+              </button>
+              <button
+                className={`action-btn ${activeTab === 'quickbooks' ? 'active' : ''}`}
+                onClick={() => setActiveTab('quickbooks')}
+              >
+                QuickBooks Integration
+              </button>
             </div>
           </section>
           
@@ -203,16 +260,7 @@ const ClientDashboard = () => {
           
           {activeTab === 'documents' && (
             <section className="documents-section">
-              <h2>My Documents</h2>
-              <div className="documents-header">
-                <button className="btn-primary">Upload Document</button>
-              </div>
-              <div className="documents-list">
-                <div className="empty-state">
-                  <p>No documents uploaded yet.</p>
-                  <span>Upload your first document to get started.</span>
-                </div>
-              </div>
+              <DocumentManagement />
             </section>
           )}
           
@@ -320,6 +368,42 @@ const ClientDashboard = () => {
           {activeTab === 'amazon-sandbox' && (
             <section className="amazon-sandbox-section">
               <AmazonSandbox />
+            </section>
+          )}
+          
+          {activeTab === 'shopify' && (
+            <section className="shopify-section">
+              <ShopifyIntegration />
+            </section>
+          )}
+          
+          {activeTab === 'quickbooks' && (
+            <section className="quickbooks-section">
+              {qbConnectionStatus && (
+                <div style={{
+                  padding: '12px 16px',
+                  borderRadius: '8px',
+                  marginBottom: '16px',
+                  backgroundColor: qbConnectionStatus.success ? '#D1FAE5' : '#FEE2E2',
+                  color: qbConnectionStatus.success ? '#065F46' : '#991B1B',
+                  border: `1px solid ${qbConnectionStatus.success ? '#34D399' : '#F87171'}`
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '18px' }}>
+                      {qbConnectionStatus.success ? '✅' : '❌'}
+                    </span>
+                    <div>
+                      <strong>{qbConnectionStatus.message}</strong>
+                      {qbConnectionStatus.company && (
+                        <div style={{ fontSize: '14px', marginTop: '4px' }}>
+                          Company: {qbConnectionStatus.company}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+              <QuickBooksIntegration />
             </section>
           )}
           

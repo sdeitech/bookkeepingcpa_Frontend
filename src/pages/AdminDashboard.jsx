@@ -5,6 +5,7 @@ import { logout, selectCurrentUser } from '../features/auth/authSlice';
 import { useGetUsersQuery } from '../features/auth/authApi';
 import StaffManagement from '../components/StaffManagement';
 import ClientAssignment from '../components/ClientAssignment';
+import AdminClientViewer from '../components/Admin/ClientViewer/AdminClientViewer';
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -119,6 +120,12 @@ const AdminDashboard = () => {
               >
                 Client Assignments
               </button>
+              <button
+                className={`action-btn ${activeTab === 'client-viewer' ? 'active' : ''}`}
+                onClick={() => setActiveTab('client-viewer')}
+              >
+                Client Viewer
+              </button>
               <button className="action-btn">System Settings</button>
               <button className="action-btn">Reports</button>
             </div>
@@ -128,6 +135,8 @@ const AdminDashboard = () => {
           {activeTab === 'staff' && <StaffManagement />}
           
           {activeTab === 'assignments' && <ClientAssignment />}
+          
+          {activeTab === 'client-viewer' && <AdminClientViewer />}
           
           {activeTab === 'users' && (
             <section className="users-section">

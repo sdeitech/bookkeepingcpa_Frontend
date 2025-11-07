@@ -64,17 +64,21 @@ const Login = () => {
         localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify(user));
         
-        // Then update Redux state
+        // Then update Redux state (which now includes onboarding_completed)
         dispatch(setCredentials({ data: { token, user } }));
         
         // STEP 2: Small delay to ensure storage is complete
         await new Promise(resolve => setTimeout(resolve, 100));
         
-        // STEP 3: Now safe to navigate based on user role and onboarding status
-        // For client users (role_id === '3'), check if they need onboarding
+        // STEP 3: Navigate based on user role and onboarding status
+        // For client users (role_id === '3'), check onboarding status from response
         if (user?.role_id === '3') {
-          // The onboarding check will happen in the route guards
-          navigate('/dashboard');
+          // Check onboarding status from backend response
+          if (user.onboarding_completed) {
+            navigate('/dashboard');
+          } else {
+            navigate('/onboarding');
+          }
         } else {
           // Admin and staff go directly to dashboard
           navigate('/dashboard');
