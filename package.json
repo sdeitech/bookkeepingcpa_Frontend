@@ -4,11 +4,11 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --mode development --port 8002",
+    "dev": "vite --mode development --port 8082",
     "build": "vite build",
     "preview": "vite preview",
     "staging:build": "vite build --mode staging",
-    "staging:start": "vite preview --mode staging --port 8002",
+    "staging:start": "vite preview --mode staging --port 8082",
     "staging": "serve -s dist/ -p 8082"
   },
   "dependencies": {
