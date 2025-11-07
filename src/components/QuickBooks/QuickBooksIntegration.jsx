@@ -16,18 +16,46 @@ const QuickBooksIntegration = () => {
   const [showData, setShowData] = useState(false);
   const [activeTab, setActiveTab] = useState('invoices'); // 'invoices', 'customers', 'expenses', 'reports'
   const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
   
   // Check if we're connected
   const isConnected = connectionStatus?.data?.connected;
   const companyInfo = connectionStatus?.data;
   
-  // Clear error after 5 seconds
+  // Handle query parameters from OAuth callback
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const qbConnected = urlParams.get('qb_connected');
+    const company = urlParams.get('company');
+    const qbError = urlParams.get('qb_error');
+    
+    if (qbConnected === 'true' && company) {
+      setSuccessMessage(`QuickBooks account "${company}" connected successfully!`);
+      // Clean up URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
+    if (qbError) {
+      setError(decodeURIComponent(qbError));
+      // Clean up URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+  
+  // Clear messages after 5 seconds
   useEffect(() => {
     if (error) {
       const timer = setTimeout(() => setError(null), 5000);
       return () => clearTimeout(timer);
     }
   }, [error]);
+  
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => setSuccessMessage(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
   
   // Handle Connect with QuickBooks button click
   const handleConnectQuickBooks = async () => {
@@ -108,6 +136,13 @@ const QuickBooksIntegration = () => {
         <div className="error-message">
           <span className="error-icon">⚠️</span>
           {error}
+        </div>
+      )}
+      
+      {successMessage && (
+        <div className="success-message">
+          <span className="success-icon">✅</span>
+          {successMessage}
         </div>
       )}
       

@@ -115,6 +115,23 @@
   font-size: 20px;
 }
 
+/* Success Message */
+.success-message {
+  background-color: #c6f6d5;
+  color: #22543d;
+  padding: 12px 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: slideDown 0.3s ease-out;
+}
+
+.success-icon {
+  font-size: 20px;
+}
+
 /* Connect Section */
 .quickbooks-connect-section {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);

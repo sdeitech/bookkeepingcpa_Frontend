@@ -21,6 +21,8 @@ const QuickBooksCallback = () => {
       const realmId = searchParams.get('realmId');
       const error = searchParams.get('error');
       const errorDescription = searchParams.get('error_description');
+      const qbConnected = searchParams.get('qb_connected');
+      const company = searchParams.get('company');
       
       // Check for OAuth errors
       if (error) {
@@ -28,9 +30,9 @@ const QuickBooksCallback = () => {
         setStatus('error');
         setErrorMessage(errorDescription || 'Authorization denied or cancelled.');
         
-        // Redirect after delay
+        // Redirect to dashboard with quickbooks tab after delay
         setTimeout(() => {
-          navigate('/dashboard/integrations/quickbooks');
+          navigate('/dashboard?tab=quickbooks&error=true');
         }, 3000);
         return;
       }
@@ -42,7 +44,7 @@ const QuickBooksCallback = () => {
         setErrorMessage('Invalid authorization response. Missing required parameters.');
         
         setTimeout(() => {
-          navigate('/dashboard/integrations/quickbooks');
+          navigate('/dashboard?tab=quickbooks&error=true');
         }, 3000);
         return;
       }
@@ -65,23 +67,29 @@ const QuickBooksCallback = () => {
         
         setStatus('success');
         
-        // Redirect to QuickBooks integration page after success
+        // Redirect to dashboard with quickbooks tab after success
+        const successParams = new URLSearchParams({
+          tab: 'quickbooks',
+          connected: 'true',
+          ...(company && { company })
+        });
+        
         setTimeout(() => {
-          navigate('/dashboard/integrations/quickbooks');
+          navigate(`/dashboard?${successParams.toString()}`);
         }, 2000);
         
       } catch (error) {
         console.error('Failed to connect QuickBooks:', error);
         setStatus('error');
         setErrorMessage(
-          error?.data?.message || 
-          error?.message || 
+          error?.data?.message ||
+          error?.message ||
           'Failed to connect your QuickBooks account. Please try again.'
         );
         
         // Redirect after error
         setTimeout(() => {
-          navigate('/dashboard/integrations/quickbooks');
+          navigate('/dashboard?tab=quickbooks&error=true');
         }, 3000);
       }
     };
@@ -140,8 +148,8 @@ const QuickBooksCallback = () => {
         
         {/* Manual navigation option */}
         <div className="manual-nav">
-          <button 
-            onClick={() => navigate('/dashboard/integrations/quickbooks')}
+          <button
+            onClick={() => navigate('/dashboard?tab=quickbooks')}
             className="back-btn"
           >
             Return to QuickBooks Integration

@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { logout, selectCurrentUser } from '../features/auth/authSlice';
 import AmazonIntegration from '../components/Amazon/AmazonIntegration';
 import AmazonSandbox from '../components/Amazon/AmazonSandbox';
@@ -16,9 +16,45 @@ import '../components/Notifications/NotificationItem.css';
 const ClientDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [showProfileEdit, setShowProfileEdit] = useState(false);
+  const [qbConnectionStatus, setQbConnectionStatus] = useState(null);
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useDispatch();
   const user = useSelector(selectCurrentUser);
+  
+  // Handle URL parameters for OAuth callback
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const tab = searchParams.get('tab');
+    const connected = searchParams.get('connected');
+    const error = searchParams.get('error');
+    const company = searchParams.get('company');
+    
+    if (tab === 'quickbooks') {
+      setActiveTab('quickbooks');
+      
+      if (connected === 'true') {
+        setQbConnectionStatus({
+          success: true,
+          message: 'QuickBooks connected successfully!',
+          company
+        });
+      } else if (error) {
+        setQbConnectionStatus({
+          success: false,
+          message: 'QuickBooks connection failed. Please try again.'
+        });
+      }
+      
+      // Clean up URL after handling parameters
+      window.history.replaceState({}, '', '/dashboard');
+      
+      // Clear status message after 5 seconds
+      setTimeout(() => {
+        setQbConnectionStatus(null);
+      }, 5000);
+    }
+  }, [location.search]);
   
   const handleLogout = () => {
     dispatch(logout());
@@ -343,6 +379,30 @@ const ClientDashboard = () => {
           
           {activeTab === 'quickbooks' && (
             <section className="quickbooks-section">
+              {qbConnectionStatus && (
+                <div style={{
+                  padding: '12px 16px',
+                  borderRadius: '8px',
+                  marginBottom: '16px',
+                  backgroundColor: qbConnectionStatus.success ? '#D1FAE5' : '#FEE2E2',
+                  color: qbConnectionStatus.success ? '#065F46' : '#991B1B',
+                  border: `1px solid ${qbConnectionStatus.success ? '#34D399' : '#F87171'}`
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '18px' }}>
+                      {qbConnectionStatus.success ? '✅' : '❌'}
+                    </span>
+                    <div>
+                      <strong>{qbConnectionStatus.message}</strong>
+                      {qbConnectionStatus.company && (
+                        <div style={{ fontSize: '14px', marginTop: '4px' }}>
+                          Company: {qbConnectionStatus.company}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
               <QuickBooksIntegration />
             </section>
           )}

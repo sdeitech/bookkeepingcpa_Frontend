@@ -4,6 +4,7 @@ import {
   useDeleteDocumentMutation,
   useGetCategoriesQuery
 } from '../../features/document/documentApi';
+import config from '../../config';
 import './DocumentList.css';
 
 const DocumentList = ({ onDocumentSelect }) => {
@@ -84,10 +85,7 @@ const DocumentList = ({ onDocumentSelect }) => {
   // Handle document download
   const handleDownload = (documentId, fileName) => {
     const token = localStorage.getItem('token');
-    // Import config at the top of the file if not already imported
-    const baseUrl = window.location.hostname === 'localhost'
-      ? 'http://localhost:8080/api'
-      : `${window.location.protocol}//${window.location.hostname}/api`;
+    const baseUrl = config.api.baseUrl;
     const downloadUrl = `${baseUrl}/documents/${documentId}/download`;
     
     // Create a temporary anchor element to trigger download
