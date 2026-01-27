@@ -20,6 +20,10 @@ import {
   recommendPlan,
   planDetails,
 } from '../lib/questionnaire-types';
+import {
+  useSubmitQuestionnaireMutation,
+  useCreateClientInIgnitionMutation,
+} from '../features/questionnaire/questionnaireApi';
 
 const TOTAL_STEPS = 3;
 
@@ -37,8 +41,19 @@ const Questionnaire = () => {
   const [showProposalForm, setShowProposalForm] = useState(false);
   const [proposalData, setProposalData] = useState({ name: '', email: '' });
   
+  // Step 3.5.2: Add Enterprise Consultation Form State (for Calendly pre-fill)
+  const [showEnterpriseForm, setShowEnterpriseForm] = useState(false);
+  const [enterpriseData, setEnterpriseData] = useState({ name: '', email: '' });
+  
   // Step 2.8.1: Add Success Dialog State
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  
+  // Step 3.4.1: Add API Hooks
+  const [submitQuestionnaire, { isLoading: isSubmitting }] = useSubmitQuestionnaireMutation();
+  const [createClientInIgnition, { isLoading: isCreatingClient }] = useCreateClientInIgnitionMutation();
+  
+  // Step 3.4.4: Add Error State
+  const [submitError, setSubmitError] = useState(null);
   
   // Calculate progress percentage
   const progress = recommendedPlan ? 100 : (currentStep / TOTAL_STEPS) * 100;
@@ -71,6 +86,9 @@ const Questionnaire = () => {
     if (showProposalForm) {
       // If on proposal form, go back to recommendation screen
       setShowProposalForm(false);
+    } else if (showEnterpriseForm) {
+      // If on Enterprise form, go back to recommendation screen
+      setShowEnterpriseForm(false);
     } else if (recommendedPlan) {
       // If on recommendation screen, go back to Step 3
       setRecommendedPlan(null);
@@ -87,10 +105,65 @@ const Questionnaire = () => {
     setShowProposalForm(true);
   };
 
-  // Step 2.7.6: Handle proposal form submission
-  const handleSubmitProposal = () => {
-    // Show success dialog
-    setShowSuccessDialog(true);
+  // Step 3.4.2: Handle proposal form submission
+  const handleSubmitProposal = async () => {
+    try {
+      // Clear any previous errors
+      setSubmitError(null);
+
+      // Prepare questionnaire data
+      const questionnaireData = {
+        email: proposalData.email.trim(),
+        name: proposalData.name.trim(),
+        answers: {
+          q1Revenue: answers.q1Revenue,
+          q2Support: answers.q2Support,
+          q3Customization: answers.q3Customization,
+          q4Structure: answers.q4Structure,
+          q5Cleanup: answers.q5Cleanup,
+          q6Tax: answers.q6Tax,
+        },
+        recommendedPlan: recommendedPlan,
+      };
+
+      // Step 3.4.2: Submit questionnaire to backend
+      const submitResult = await submitQuestionnaire(questionnaireData).unwrap();
+
+      console.log('Questionnaire submitted:', submitResult);
+
+      // Step 3.4.3: Trigger Zapier webhook to create client in Ignition
+      try {
+        const zapierData = {
+          questionnaireId: submitResult.data.id, // Use ID from submission
+          // Alternative: can also send direct data
+          // email: proposalData.email.trim(),
+          // name: proposalData.name.trim(),
+          // answers: questionnaireData.answers,
+          // recommendedPlan: recommendedPlan,
+        };
+
+        const zapierResult = await createClientInIgnition(zapierData).unwrap();
+        console.log('Zapier webhook called:', zapierResult);
+      } catch (zapierError) {
+        // Don't fail the entire flow if Zapier fails
+        // Log error but continue to success dialog
+        console.error('Zapier webhook error (non-fatal):', zapierError);
+        // The questionnaire is still saved, so we show success
+      }
+
+      // Show success dialog
+      setShowSuccessDialog(true);
+
+    } catch (error) {
+      console.error('Error submitting questionnaire:', error);
+      
+      // Set error message for user
+      setSubmitError(
+        error.data?.message || 
+        error.message || 
+        'Failed to submit questionnaire. Please try again.'
+      );
+    }
   };
 
   // Step 2.7.6: Validate proposal form
@@ -100,20 +173,64 @@ const Questionnaire = () => {
            proposalData.email.includes('@');
   };
 
-  // Step 2.8.3: Handle success dialog close
+  // Step 3.6.1: Handle success dialog close - Navigate to dashboard
   const handleSuccessDialogClose = () => {
     setShowSuccessDialog(false);
-    // For now, navigate to login. Later this will navigate to dashboard
-    navigate('/login');
+    // Navigate to dashboard after proposal submission
+    navigate('/dashboard');
   };
 
-  // Step 2.6.4: Handle Enterprise "Book a Call" button
+  // Step 3.5.1: Handle Enterprise "Book a Call" button - show form first
   const handleBookCall = () => {
-    // Placeholder for Calendly integration
-    // For now, open a placeholder link or show a message
-    alert('Calendly booking will be integrated here. This will open the consultation scheduling page.');
-    // TODO: Replace with actual Calendly link/embed
-    // window.open('CALENDLY_LINK_HERE', '_blank');
+    // Step 3.5.2: Show form to collect name/email for Calendly pre-fill
+    setShowEnterpriseForm(true);
+  };
+
+  // Step 3.5.2: Handle Enterprise form submission and open Calendly with pre-filled data
+  const handleEnterpriseFormSubmit = () => {
+    if (!canSubmitEnterpriseForm()) {
+      return;
+    }
+
+    const calendlyUrl = import.meta.env.VITE_CALENDLY_EVENT_URL;
+    
+    if (!calendlyUrl || calendlyUrl.includes('your-username')) {
+      // Fallback if Calendly URL is not configured
+      alert('Calendly is not configured yet. Please contact support to schedule a consultation.');
+      console.warn('Calendly URL not configured. Set VITE_CALENDLY_EVENT_URL in .env.development');
+      setShowEnterpriseForm(false);
+      return;
+    }
+
+    // Step 3.5.2: Build Calendly URL with pre-filled data
+    const name = enterpriseData.name.trim();
+    const email = enterpriseData.email.trim();
+    
+    // Calendly URL parameters for pre-filling
+    // a1, a2, etc. are custom fields (if configured in Calendly)
+    const params = new URLSearchParams({
+      name: name,
+      email: email,
+      a1: 'Enterprise Plan', // Custom field: Plan Type
+    });
+    
+    const calendlyUrlWithParams = `${calendlyUrl}?${params.toString()}`;
+    
+    // Open Calendly in a new window/tab with pre-filled data
+    window.open(calendlyUrlWithParams, '_blank', 'noopener,noreferrer');
+    
+    // Close the form
+    setShowEnterpriseForm(false);
+    
+    // Optionally: Save to backend (similar to proposal submission)
+    // This can be added later if needed
+  };
+
+  // Step 3.5.2: Validate Enterprise form
+  const canSubmitEnterpriseForm = () => {
+    return enterpriseData.name.trim() !== '' && 
+           enterpriseData.email.trim() !== '' && 
+           enterpriseData.email.includes('@');
   };
 
   return (
@@ -145,8 +262,74 @@ const Questionnaire = () => {
         </div>
       )}
 
-      {/* Step 2.7.2: Proposal Form (for Startup/Essential plans) */}
-      {showProposalForm && recommendedPlan && recommendedPlan !== 'enterprise' ? (
+      {/* Step 3.5.2: Enterprise Consultation Form (for Calendly pre-fill) */}
+      {showEnterpriseForm && recommendedPlan === 'enterprise' ? (
+        <main className="flex-1 flex items-center justify-center p-8">
+          <div className="max-w-lg w-full animate-fade-in">
+            <div className="text-center mb-8">
+              <h1 className="text-3xl font-bold text-foreground mb-2">
+                Schedule Your Consultation
+              </h1>
+              <p className="text-muted-foreground">
+                Enter your details to pre-fill your consultation booking.
+              </p>
+            </div>
+
+            <div className="bg-card border border-border rounded-xl p-6 space-y-6">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="enterprise-name" className="text-sm font-medium flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    Full Name
+                  </Label>
+                  <Input
+                    id="enterprise-name"
+                    type="text"
+                    placeholder="Enter your full name"
+                    value={enterpriseData.name}
+                    onChange={(e) => setEnterpriseData({ ...enterpriseData, name: e.target.value })}
+                    className="h-12"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="enterprise-email" className="text-sm font-medium flex items-center gap-2">
+                    <Mail className="h-4 w-4" />
+                    Email Address
+                  </Label>
+                  <Input
+                    id="enterprise-email"
+                    type="email"
+                    placeholder="Enter your email address"
+                    value={enterpriseData.email}
+                    onChange={(e) => setEnterpriseData({ ...enterpriseData, email: e.target.value })}
+                    className="h-12"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowEnterpriseForm(false)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleEnterpriseFormSubmit} 
+                  size="lg" 
+                  className="flex-1"
+                  disabled={!canSubmitEnterpriseForm()}
+                >
+                  Continue to Booking
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </main>
+      ) : showProposalForm && recommendedPlan && recommendedPlan !== 'enterprise' ? (
         <main className="flex-1 flex items-center justify-center p-8">
           <div className="max-w-lg w-full animate-fade-in">
             <div className="text-center mb-8">
@@ -223,15 +406,32 @@ const Questionnaire = () => {
                 </div>
               </div>
 
+              {/* Step 3.4.4: Error Display */}
+              {submitError && (
+                <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
+                  <p className="text-sm text-destructive font-medium">Error</p>
+                  <p className="text-sm text-destructive/80 mt-1">{submitError}</p>
+                </div>
+              )}
+
               {/* Step 2.7.6: Submit Button */}
               <Button 
                 onClick={handleSubmitProposal} 
                 size="lg" 
                 className="w-full"
-                disabled={!canSubmitProposal()}
+                disabled={!canSubmitProposal() || isSubmitting || isCreatingClient}
               >
-                Submit & View Proposal
-                <ArrowRight className="ml-2 h-5 w-5" />
+                {isSubmitting || isCreatingClient ? (
+                  <>
+                    Submitting...
+                    <ArrowRight className="ml-2 h-5 w-5 animate-pulse" />
+                  </>
+                ) : (
+                  <>
+                    Submit & View Proposal
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </>
+                )}
               </Button>
             </div>
           </div>
@@ -264,7 +464,7 @@ const Questionnaire = () => {
               <CheckCircle2 className="w-10 h-10 text-success" />
             </div>
 
-            {recommendedPlan === 'enterprise' ? (
+            {recommendedPlan === 'enterprise' && !showEnterpriseForm ? (
               <>
                 <h1 className="text-3xl font-bold text-foreground mb-4">
                   Your business qualifies for our custom Enterprise solution
@@ -273,18 +473,18 @@ const Questionnaire = () => {
                   Let's discuss your complex needs in a dedicated strategy call.
                 </p>
 
-                {/* Step 2.6.4: Calendly Placeholder */}
+                {/* Step 3.5.1: Calendly Integration */}
                 <div className="bg-card border border-border rounded-xl p-8 mb-6">
                   <h3 className="font-semibold text-foreground mb-4">Schedule Your Consultation</h3>
-                  <div className="aspect-video bg-muted rounded-lg flex items-center justify-center mb-4">
-                    <p className="text-muted-foreground">Calendly Widget Placeholder</p>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      (Calendly integration will be added here)
-                    </p>
-                  </div>
+                  <p className="text-muted-foreground mb-6 text-center">
+                    Book a personalized strategy call with our team to discuss your Enterprise solution needs.
+                  </p>
                   <Button onClick={handleBookCall} size="lg" className="w-full">
                     Book a Call
                   </Button>
+                  <p className="text-xs text-muted-foreground mt-4 text-center">
+                    You'll be redirected to our scheduling page
+                  </p>
                 </div>
               </>
             ) : (
