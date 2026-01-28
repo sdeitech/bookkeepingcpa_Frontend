@@ -46,6 +46,7 @@ const Questionnaire = () => {
   // Step 3.5.2: Add Enterprise Consultation Form State (for Calendly pre-fill)
   const [showEnterpriseForm, setShowEnterpriseForm] = useState(false);
   const [enterpriseData, setEnterpriseData] = useState({ name: '', email: '' });
+  const [enterpriseStep, setEnterpriseStep] = useState('form'); // 'form' | 'calendly'
 
   // Step 2.8.1: Add Success Dialog State
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
@@ -56,6 +57,7 @@ const Questionnaire = () => {
 
   // Step 3.4.4: Add Error State
   const [submitError, setSubmitError] = useState(null);
+  const [enterpriseError, setEnterpriseError] = useState(null);
 
   // Calculate progress percentage
   const progress = recommendedPlan ? 100 : (currentStep / TOTAL_STEPS) * 100;
@@ -89,8 +91,14 @@ const Questionnaire = () => {
       // If on proposal form, go back to recommendation screen
       setShowProposalForm(false);
     } else if (showEnterpriseForm) {
-      // If on Enterprise form, go back to recommendation screen
-      setShowEnterpriseForm(false);
+      // If on Enterprise flow, step back within it first
+      if (enterpriseStep === 'calendly') {
+        setEnterpriseStep('form');
+      } else {
+        // If on Enterprise form, go back to recommendation screen
+        setShowEnterpriseForm(false);
+        setEnterpriseError(null);
+      }
     } else if (recommendedPlan) {
       // If on recommendation screen, go back to Step 3
       setRecommendedPlan(null);
@@ -179,6 +187,13 @@ const Questionnaire = () => {
   // Step 3.6.1: Handle success dialog close - Navigate to dashboard
   const handleSuccessDialogClose = () => {
     setShowSuccessDialog(false);
+    if (recommendedPlan === 'enterprise') {
+      // Option B: show Calendly only after user clicks Continue
+      setEnterpriseStep('calendly');
+      setShowEnterpriseForm(true);
+      return;
+    }
+
     // Navigate to dashboard after proposal submission
     navigate('/dashboard');
   };
@@ -187,6 +202,8 @@ const Questionnaire = () => {
   const handleBookCall = () => {
     // Step 3.5.2: Show form to collect name/email for Calendly pre-fill
     setShowEnterpriseForm(true);
+    setEnterpriseStep('form');
+    setEnterpriseError(null);
   };
 
   // Step 3.5.2: Handle Enterprise form submission and open Calendly with pre-filled data
@@ -229,11 +246,70 @@ const Questionnaire = () => {
   //   // This can be added later if needed
   // };
 
+  // Enterprise mini-form submission: save to backend → Zapier → success dialog.
+  const handleEnterpriseFormSubmit = async () => {
+    if (!canSubmitEnterpriseForm()) {
+      return;
+    }
+
+    try {
+      setEnterpriseError(null);
+
+      const questionnaireData = {
+        email: enterpriseData.email.trim(),
+        name: enterpriseData.name.trim(),
+        answers: {
+          q1Revenue: answers.q1Revenue,
+          q2Support: answers.q2Support,
+          q3Customization: answers.q3Customization,
+          q4Structure: answers.q4Structure,
+          q5Cleanup: answers.q5Cleanup,
+          q6Tax: answers.q6Tax,
+        },
+        recommendedPlan: 'enterprise',
+      };
+
+      const submitResult = await submitQuestionnaire(questionnaireData).unwrap();
+
+      // Trigger Zapier (non-fatal if it fails)
+      try {
+        await createClientInIgnition({ questionnaireId: submitResult.data.id }).unwrap();
+      } catch (zapierError) {
+        console.error('Zapier webhook error (non-fatal):', zapierError);
+      }
+
+      // Show success dialog; Calendly widget will display after user clicks Continue.
+      setShowSuccessDialog(true);
+    } catch (error) {
+      console.error('Error submitting Enterprise questionnaire:', error);
+      setEnterpriseError(
+        error.data?.message ||
+          error.message ||
+          'Failed to submit consultation request. Please try again.'
+      );
+    }
+  };
+
   // Step 3.5.2: Validate Enterprise form
   const canSubmitEnterpriseForm = () => {
     return enterpriseData.name.trim() !== '' &&
       enterpriseData.email.trim() !== '' &&
       enterpriseData.email.includes('@');
+  };
+
+  const getCalendlyUrlForInlineWidget = () => {
+    const calendlyUrl = import.meta.env.VITE_CALENDLY_EVENT_URL;
+    if (!calendlyUrl) return '';
+
+    const name = enterpriseData.name.trim();
+    const email = enterpriseData.email.trim();
+
+    const params = new URLSearchParams();
+    if (name) params.set('name', name);
+    if (email) params.set('email', email);
+    params.set('a1', 'Enterprise Plan');
+
+    return params.toString() ? `${calendlyUrl}?${params.toString()}` : calendlyUrl;
   };
 
   return (
@@ -295,18 +371,93 @@ const Questionnaire = () => {
                 </div>
               </div>
 
-              {/* RIGHT CALENDLY */}
-              {/* RIGHT CALENDLY */}
-              <div className="relative w-full">
-                <div className="bg-card border border-border rounded-2xl shadow-xl p-6 w-[500px]">
-                  <div className="rounded-xl overflow-hidden border border-border w-full">
-                    <InlineWidget
-                      url={import.meta.env.VITE_CALENDLY_EVENT_URL}
-                      styles={{ height: '500px' }}
-                    />
+              {enterpriseStep === 'form' ? (
+                <div className="space-y-6">
+                  <div className="bg-card border border-border rounded-2xl shadow-xl p-6">
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="enterprise-name" className="text-sm font-medium flex items-center gap-2">
+                          <User className="h-4 w-4" />
+                          Full Name
+                        </Label>
+                        <Input
+                          id="enterprise-name"
+                          type="text"
+                          placeholder="Enter your full name"
+                          value={enterpriseData.name}
+                          onChange={(e) => setEnterpriseData({ ...enterpriseData, name: e.target.value })}
+                          className="h-12"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="enterprise-email" className="text-sm font-medium flex items-center gap-2">
+                          <Mail className="h-4 w-4" />
+                          Email Address
+                        </Label>
+                        <Input
+                          id="enterprise-email"
+                          type="email"
+                          placeholder="Enter your email address"
+                          value={enterpriseData.email}
+                          onChange={(e) => setEnterpriseData({ ...enterpriseData, email: e.target.value })}
+                          className="h-12"
+                        />
+                      </div>
+
+                      {enterpriseError && (
+                        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
+                          <p className="text-sm text-destructive font-medium">Error</p>
+                          <p className="text-sm text-destructive/80 mt-1">{enterpriseError}</p>
+                        </div>
+                      )}
+
+                      <div className="flex gap-3 pt-2">
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setShowEnterpriseForm(false);
+                            setEnterpriseError(null);
+                          }}
+                          className="flex-1"
+                          disabled={isSubmitting || isCreatingClient}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          onClick={handleEnterpriseFormSubmit}
+                          size="lg"
+                          className="flex-1"
+                          disabled={!canSubmitEnterpriseForm() || isSubmitting || isCreatingClient}
+                        >
+                          {isSubmitting || isCreatingClient ? (
+                            <>
+                              Submitting...
+                              <ArrowRight className="ml-2 h-5 w-5 animate-pulse" />
+                            </>
+                          ) : (
+                            <>
+                              Continue
+                              <ArrowRight className="ml-2 h-5 w-5" />
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div className="relative w-full">
+                  <div className="bg-card border border-border rounded-2xl shadow-xl p-6 w-[500px]">
+                    <div className="rounded-xl overflow-hidden border border-border w-full">
+                      <InlineWidget
+                        url={getCalendlyUrlForInlineWidget()}
+                        styles={{ height: '500px' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
 
             </div>
           </div>
@@ -419,25 +570,6 @@ const Questionnaire = () => {
             </div>
           </div>
 
-          {/* Step 2.8.2: Success Dialog */}
-          <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader className="text-center">
-                <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-4">
-                  <CheckCircle2 className="w-8 h-8 text-success" />
-                </div>
-                <DialogTitle className="text-xl">Proposal Request Submitted!</DialogTitle>
-                <DialogDescription className="text-center pt-2">
-                  You will receive your personalized proposal on your email within 24 hours.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="flex justify-center pt-4">
-                <Button onClick={handleSuccessDialogClose} size="lg">
-                  Continue to Dashboard
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
         </main>
       ) : recommendedPlan ? (
         /* Step 2.6.2: Plan Recommendation Screen */
@@ -686,6 +818,34 @@ const Questionnaire = () => {
           </div>
         </main>
       )}
+
+      {/* Global Success Dialog (Enterprise + Proposal) */}
+      <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader className="text-center">
+            <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-4">
+              <CheckCircle2 className="w-8 h-8 text-success" />
+            </div>
+            <DialogTitle className="text-xl">
+              {recommendedPlan === 'enterprise'
+                ? 'Consultation Request Submitted!'
+                : 'Proposal Request Submitted!'}
+            </DialogTitle>
+            <DialogDescription className="text-center pt-2">
+              {recommendedPlan === 'enterprise'
+                ? "We've received your request. Click Continue to schedule your call in Calendly."
+                : 'You will receive your personalized proposal on your email within 24 hours.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-center pt-4">
+            <Button onClick={handleSuccessDialogClose} size="lg">
+              {recommendedPlan === 'enterprise'
+                ? 'Continue to Scheduling'
+                : 'Continue to Dashboard'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
