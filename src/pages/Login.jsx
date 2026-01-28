@@ -24,8 +24,10 @@ const Login = () => {
     <div className="min-h-screen flex">
       {/* LEFT COLUMN: Existing Client Login */}
       <div className="w-1/2 bg-card p-8 lg:p-12 flex flex-col justify-center animate-slide-in-left">
-        <PlutifyLogo className="mb-8" />
-        <LoginForm />
+        <div className="max-w-md mx-auto w-full">
+          <PlutifyLogo className="mb-8" />
+          <LoginForm />
+        </div>
       </div>
 
       {/* RIGHT COLUMN: New Prospect Acquisition */}
@@ -87,7 +89,7 @@ const Login = () => {
             <span className="font-medium">Existing Client?</span>{" "}
             <button
               onClick={handleExistingClientClick}
-              className="text-primary-foreground underline hover:no-underline transition-all"
+              className="text-primary-foreground underline hover:no-underline transition-all bg-transparent"
               type="button"
               aria-label="Focus on email input field"
             >
