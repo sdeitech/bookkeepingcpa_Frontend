@@ -15,6 +15,7 @@ import PublicRoute from './components/guards/PublicRoute';
 // Regular imports (not lazy) to avoid UI issues
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import Questionnaire from './pages/Questionnaire';
 import DashboardRouter from './components/DashboardRouter';
 import OnboardingWizard from './components/Onboarding/OnboardingWizard';
 import PricingCheckout from './components/Stripe/PricingCheckout/PricingCheckout';
@@ -89,6 +90,9 @@ function App() {
           
           {/* Pricing is public but checkout requires auth */}
           <Route path="/pricing" element={<PricingCheckout />} />
+          
+          {/* Questionnaire - Public route for pre-payment flow */}
+          <Route path="/questionnaire" element={<Questionnaire />} />
           
           {/* OAuth callbacks */}
           <Route path="/amazon-callback" element={<AmazonCallback />} />

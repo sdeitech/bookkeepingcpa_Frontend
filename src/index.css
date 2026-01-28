@@ -1,3 +1,85 @@
+/* Tailwind CSS Directives */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Plutify Brand Colors */
+    --background: 220 20% 97%;
+    --foreground: 220 30% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 30% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 30% 15%;
+
+    /* Primary - Plutify Blue */
+    --primary: 217 91% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary - Light Blue/Gray */
+    --secondary: 220 20% 96%;
+    --secondary-foreground: 220 30% 20%;
+
+    /* Muted - Subtle grays */
+    --muted: 220 15% 94%;
+    --muted-foreground: 220 10% 45%;
+
+    /* Accent - Highlight */
+    --accent: 217 91% 95%;
+    --accent-foreground: 217 91% 40%;
+
+    /* Status Colors */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    /* Borders & Inputs */
+    --border: 220 20% 88%;
+    --input: 220 20% 88%;
+    --ring: 217 91% 50%;
+
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 220 30% 10%;
+    --foreground: 220 10% 95%;
+
+    --card: 220 30% 12%;
+    --card-foreground: 220 10% 95%;
+
+    --popover: 220 30% 12%;
+    --popover-foreground: 220 10% 95%;
+
+    --primary: 217 91% 55%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 25% 18%;
+    --secondary-foreground: 220 10% 90%;
+
+    --muted: 220 25% 20%;
+    --muted-foreground: 220 10% 60%;
+
+    --accent: 217 50% 20%;
+    --accent-foreground: 217 91% 70%;
+
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 25% 22%;
+    --input: 220 25% 22%;
+    --ring: 217 91% 55%;
+  }
+}
+
 @import "./Assets/Styles/Variable/variable.css";
 
 * {

@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import path from 'path'
 
 // Auto-detect environment based on hostname or command line
 const detectEnvironment = (mode) => {
@@ -65,6 +66,11 @@ export default defineConfig(({ command, mode }) => {
 
   return {
     plugins: [react()],
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, './src'),
+      },
+    },
     server: {
       port: detectedMode === 'staging' ? 8082 : 4000,
       proxy: {
