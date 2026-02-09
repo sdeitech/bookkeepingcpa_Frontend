@@ -2,66 +2,24 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
-// Auto-detect environment based on hostname or command line
-const detectEnvironment = (mode) => {
-  // Priority 1: Explicit mode from command line
-  if (mode) {
-    return mode;
-  }
-  
-  // Priority 2: Host-based detection for deployment
-  const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
-  const isStagingHost = hostname === '44.211.113.36' || hostname.includes('44.211.113.36');
-  
-  if (isStagingHost) {
-    return 'staging';
-  }
-  
-  // Priority 3: Development by default
-  return 'development';
-};
-
-// Environment configuration
-const getEnvironmentInfo = (mode) => {
-  const isStaging = mode === 'staging';
-  return {
-    mode: mode,
-    envName: isStaging ? 'STAGING' : 'DEVELOPMENT',
-    port: isStaging ? 8082 : 4000,
-    backendUrl: isStaging ? 'https://meanstack.smartdatainc.com:8081' : 'http://localhost:8081',
-    frontendUrl: `http://localhost:${isStaging ? 8082 : 4000}`,
-    proxyTarget: isStaging ? 'https://meanstack.smartdatainc.com:8081' : 'http://localhost:8081',
-    isStaging
-  };
-};
-
-// Log environment info
-const logEnvironmentInfo = (mode) => {
-  const env = getEnvironmentInfo(mode);
-  const detectionMethod = mode ? 'Command Line' : 'Auto-Detected';
-  
-  console.log(`
-╔══════════════════════════════════════════════════════════════╗
-║                    🚀 SERVER STARTING 🚀                     ║
-╠══════════════════════════════════════════════════════════════╣
-║  Environment:    ${env.envName.padEnd(41)} ║
-║  Detection:      ${detectionMethod.padEnd(41)} ║
-║  Frontend URL:   ${env.frontendUrl.padEnd(41)} ║
-║  Backend URL:    ${env.backendUrl.padEnd(41)} ║
-║  API Proxy:      ${env.proxyTarget.padEnd(41)} ║
-║  Port:           ${env.port.toString().padEnd(41)} ║
-╚══════════════════════════════════════════════════════════════╝
-  `);
-};
-
 // https://vitejs.dev/config/
 export default defineConfig(({ command, mode }) => {
-  // Auto-detect environment if not explicitly set
-  const detectedMode = detectEnvironment(mode);
+  // Use mode to determine environment (development, staging, production)
+  const isStaging = mode === 'staging';
+  const isDevelopment = mode === 'development';
   
   // Log environment info when server starts
   if (command === 'serve') {
-    logEnvironmentInfo(detectedMode);
+    console.log(`
+╔══════════════════════════════════════════════════════════════╗
+║                    🚀 SERVER STARTING 🚀                     ║
+╠══════════════════════════════════════════════════════════════╣
+║  Environment:    ${(isStaging ? 'STAGING' : 'DEVELOPMENT').padEnd(41)} ║
+║  Detection:      Command Line Mode.                           ║
+║  Port:           ${(isStaging ? '8082' : '4000').padEnd(41)} ║
+║  Backend:        ${(isStaging ? 'https://meanstack.smartdatainc.com:8081' : 'http://localhost:8081').padEnd(41)} ║
+╚══════════════════════════════════════════════════════════════╝
+    `);
   }
 
   return {
@@ -72,16 +30,16 @@ export default defineConfig(({ command, mode }) => {
       },
     },
     server: {
-      port: detectedMode === 'staging' ? 8082 : 4000,
-      proxy: {
+      port: isStaging ? 8082 : 4000,
+      // Remove proxy for staging since we need direct API calls
+      // Proxy is only useful for development with same-origin policy
+      proxy: isDevelopment ? {
         '/api': {
-          target: detectedMode === 'staging'
-            ? 'https://meanstack.smartdatainc.com:8081'
-            : 'http://localhost:8081',
+          target: 'http://localhost:8081',
           changeOrigin: true,
-          secure: detectedMode === 'staging'
+          secure: false
         }
-      },
+      } : undefined,
     }
   };
 });
