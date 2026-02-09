@@ -41,6 +41,14 @@ export const questionnaireApi = createApi({
         body: data,
       }),
     }),
+    sendPandaDoc: builder.mutation({
+      query: (payload) => ({
+        url: "/integrations/zapier/pandadoc",
+        method: "POST",
+        body: payload,
+      }),
+    }),
+    
   }),
 });
 
@@ -49,6 +57,7 @@ export const {
   useSubmitQuestionnaireMutation,
   useGetQuestionnaireByEmailQuery,
   useCreateClientInIgnitionMutation,
+  useSendPandaDocMutation
 } = questionnaireApi;
 
 // Export the api for store configuration
