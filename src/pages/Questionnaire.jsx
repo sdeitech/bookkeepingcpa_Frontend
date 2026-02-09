@@ -25,12 +25,17 @@ import {
 import {
   useSubmitQuestionnaireMutation,
   useCreateClientInIgnitionMutation,
+  useSendPandaDocMutation,
 } from '../features/questionnaire/questionnaireApi';
 
 const TOTAL_STEPS = 3;
 
 const Questionnaire = () => {
   const navigate = useNavigate();
+
+  const [sendPandaDoc, { isLoading: isSendingDoc }] =
+    useSendPandaDocMutation();
+
 
   // Step 2.2.2: Add Step State Management
   const [currentStep, setCurrentStep] = useState(1);
@@ -118,64 +123,42 @@ const Questionnaire = () => {
   // Step 3.4.2: Handle proposal form submission
   const handleSubmitProposal = async () => {
     try {
-      // Clear any previous errors
       setSubmitError(null);
 
-      // Prepare questionnaire data
-      const questionnaireData = {
+      const questionnairePayload = {
         email: proposalData.email.trim(),
         name: proposalData.name.trim(),
-        answers: {
-          q1Revenue: answers.q1Revenue,
-          q2Support: answers.q2Support,
-          q3Customization: answers.q3Customization,
-          q4Structure: answers.q4Structure,
-          q5Cleanup: answers.q5Cleanup,
-          q6Tax: answers.q6Tax,
-        },
-        recommendedPlan: recommendedPlan,
+        answers,
+        recommendedPlan,
       };
 
-      // Step 3.4.2: Submit questionnaire to backend
-      const submitResult = await submitQuestionnaire(questionnaireData).unwrap();
+      // 1️⃣ Save questionnaire
+      const submitResult = await submitQuestionnaire(questionnairePayload).unwrap();
 
-      console.log('Questionnaire submitted:', submitResult);
+      // 2️⃣ Send PandaDoc via Zapier
+      await sendPandaDoc({
+        document_name: recommendedPlan,
+        client_first_name: proposalData.name.split(" ")[0],
+        client_last_name: proposalData.name.split(" ").slice(1).join(" ") || "",
+        client_email: proposalData.email,
+        client_company: "",
+        start_date: new Date().toISOString().split("T")[0],
+        questionnaireId: submitResult.data.id,
+        plan: recommendedPlan
+      }).unwrap();
 
-      // Step 3.4.3: Trigger Zapier webhook to create client in Ignition
-      try {
-        const zapierData = {
-          questionnaireId: submitResult.data.id, // Use ID from submission
-          // Alternative: can also send direct data
-          email: proposalData.email.trim(),
-          name: proposalData.name.trim(),
-          answers: questionnaireData.answers,
-          recommendedPlan: recommendedPlan,
-        };
-
-        const zapierResult = await createClientInIgnition(zapierData).unwrap();
-        console.log('Zapier webhook called:', zapierResult);
-        setShowSuccessDialog(true);
-      } catch (zapierError) {
-        // Don't fail the entire flow if Zapier fails
-        // Log error but continue to success dialog
-        console.error('Zapier webhook error (non-fatal):', zapierError);
-        setSubmitError(
-          zapierError.data.message)
-        // The questionnaire is still saved, so we show success
-      }
-
+      setShowSuccessDialog(true);
 
     } catch (error) {
-      console.error('Error submitting questionnaire:', error);
-
-      // Set error message for user
+      console.error("Proposal submission failed:", error);
       setSubmitError(
         error.data?.message ||
         error.message ||
-        'Failed to submit questionnaire. Please try again.'
+        "Failed to submit proposal request"
       );
     }
   };
+
 
   // Step 2.7.6: Validate proposal form
   const canSubmitProposal = () => {
@@ -195,7 +178,7 @@ const Questionnaire = () => {
     }
 
     // Navigate to dashboard after proposal submission
-    navigate('/dashboard');
+    // navigate('/dashboard');
   };
 
   // Step 3.5.1: Handle Enterprise "Book a Call" button - show form first
@@ -207,45 +190,6 @@ const Questionnaire = () => {
   };
 
   // Step 3.5.2: Handle Enterprise form submission and open Calendly with pre-filled data
-  // const handleEnterpriseFormSubmit = () => {
-  //   if (!canSubmitEnterpriseForm()) {
-  //     return;
-  //   }
-
-  //   const calendlyUrl = import.meta.env.VITE_CALENDLY_EVENT_URL;
-
-  //   if (!calendlyUrl || calendlyUrl.includes('your-username')) {
-  //     // Fallback if Calendly URL is not configured
-  //     alert('Calendly is not configured yet. Please contact support to schedule a consultation.');
-  //     console.warn('Calendly URL not configured. Set VITE_CALENDLY_EVENT_URL in .env.development');
-  //     setShowEnterpriseForm(false);
-  //     return;
-  //   }
-
-  //   // Step 3.5.2: Build Calendly URL with pre-filled data
-  //   const name = enterpriseData.name.trim();
-  //   const email = enterpriseData.email.trim();
-
-  //   // Calendly URL parameters for pre-filling
-  //   // a1, a2, etc. are custom fields (if configured in Calendly)
-  //   const params = new URLSearchParams({
-  //     name: name,
-  //     email: email,
-  //     a1: 'Enterprise Plan', // Custom field: Plan Type
-  //   });
-
-  //   const calendlyUrlWithParams = `${calendlyUrl}?${params.toString()}`;
-
-  //   // Open Calendly in a new window/tab with pre-filled data
-  //   window.open(calendlyUrlWithParams, '_blank', 'noopener,noreferrer');
-
-  //   // Close the form
-  //   setShowEnterpriseForm(false);
-
-  //   // Optionally: Save to backend (similar to proposal submission)
-  //   // This can be added later if needed
-  // };
-
   // Enterprise mini-form submission: save to backend → Zapier → success dialog.
   const handleEnterpriseFormSubmit = async () => {
     if (!canSubmitEnterpriseForm()) {
@@ -284,8 +228,8 @@ const Questionnaire = () => {
       console.error('Error submitting Enterprise questionnaire:', error);
       setEnterpriseError(
         error.data?.message ||
-          error.message ||
-          'Failed to submit consultation request. Please try again.'
+        error.message ||
+        'Failed to submit consultation request. Please try again.'
       );
     }
   };
@@ -553,20 +497,25 @@ const Questionnaire = () => {
                 onClick={handleSubmitProposal}
                 size="lg"
                 className="w-full"
-                disabled={!canSubmitProposal() || isSubmitting || isCreatingClient}
+                disabled={
+                  !canSubmitProposal() ||
+                  isSubmitting ||
+                  isSendingDoc
+                }
               >
-                {isSubmitting || isCreatingClient ? (
-                  <>
+                {isSubmitting || isSendingDoc ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
                     Submitting...
-                    <ArrowRight className="ml-2 h-5 w-5 animate-pulse" />
-                  </>
+                  </div>
                 ) : (
                   <>
-                    Submit & View Proposal
+                    Submit
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </>
                 )}
               </Button>
+
             </div>
           </div>
 
@@ -834,14 +783,14 @@ const Questionnaire = () => {
             <DialogDescription className="text-center pt-2">
               {recommendedPlan === 'enterprise'
                 ? "We've received your request. Click Continue to schedule your call in Calendly."
-                : 'You will receive your personalized proposal on your email within 24 hours.'}
+                : 'You will receive your personalized proposal on your email.'}
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-center pt-4">
             <Button onClick={handleSuccessDialogClose} size="lg">
               {recommendedPlan === 'enterprise'
                 ? 'Continue to Scheduling'
-                : 'Continue to Dashboard'}
+                : 'Close'}
             </Button>
           </div>
         </DialogContent>

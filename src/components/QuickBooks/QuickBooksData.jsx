@@ -129,7 +129,7 @@ const QuickBooksData = ({ activeTab }) => {
     if (invoicesLoading) return renderLoading();
     if (invoicesError) return renderError(invoicesError);
     
-    const invoices = invoicesData?.data || [];
+    const invoices = invoicesData?.data.invoices || [];
     
     return (
       <div className="data-content">
@@ -178,10 +178,10 @@ const QuickBooksData = ({ activeTab }) => {
                 </tr>
               </thead>
               <tbody>
-                {invoices.map((invoice) => (
+                {invoices?.map((invoice) => (
                   <tr key={invoice.Id}>
                     <td>{invoice.DocNumber || 'N/A'}</td>
-                    <td>{invoice.CustomerName || 'N/A'}</td>
+                    <td>{invoice.CustomerRef.name|| 'N/A'}</td>
                     <td>{formatDate(invoice.TxnDate)}</td>
                     <td>{formatDate(invoice.DueDate)}</td>
                     <td>{formatCurrency(invoice.TotalAmt)}</td>
@@ -223,7 +223,7 @@ const QuickBooksData = ({ activeTab }) => {
     if (customersLoading) return renderLoading();
     if (customersError) return renderError(customersError);
     
-    const customers = customersData?.data || [];
+    const customers = customersData?.data.customers || [];
     
     return (
       <div className="data-content">
@@ -258,7 +258,7 @@ const QuickBooksData = ({ activeTab }) => {
                 </tr>
               </thead>
               <tbody>
-                {customers.map((customer) => (
+                {customers?.map((customer) => (
                   <tr key={customer.Id}>
                     <td>{customer.DisplayName || 'N/A'}</td>
                     <td>{customer.CompanyName || '-'}</td>
@@ -302,7 +302,7 @@ const QuickBooksData = ({ activeTab }) => {
     if (expensesLoading) return renderLoading();
     if (expensesError) return renderError(expensesError);
     
-    const expenses = expensesData?.data || [];
+    const expenses = expensesData?.data.expenses || [];
     
     return (
       <div className="data-content">
@@ -350,7 +350,7 @@ const QuickBooksData = ({ activeTab }) => {
                 </tr>
               </thead>
               <tbody>
-                {expenses.map((expense) => (
+                {expenses?.map((expense) => (
                   <tr key={expense.Id}>
                     <td>{formatDate(expense.TxnDate)}</td>
                     <td>{expense.VendorName || expense.EntityRef?.name || '-'}</td>

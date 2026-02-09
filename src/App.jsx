@@ -30,6 +30,8 @@ import './utils/testFirebaseConnection';
 import './utils/debugFirebaseConnection';
 
 import './App.css';
+import Dashboard from './pages/Dashboard';
+// import Questionnaire from './pages/questionnaire/Questionnaire';
 
 // Simple redirect helper
 const getDefaultRedirect = (user, isAuth, isOnboarded) => {
@@ -87,7 +89,7 @@ function App() {
               </PublicRoute>
             } 
           />
-          
+          <Route path='/new-dashboard' element={<Dashboard/>} />
           {/* Pricing is public but checkout requires auth */}
           <Route path="/pricing" element={<PricingCheckout />} />
           
