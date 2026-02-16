@@ -60,7 +60,7 @@ const QuickBooksData = ({ activeTab }) => {
     isLoading: balanceSheetLoading, 
     error: balanceSheetError 
   } = useGetQuickBooksBalanceSheetQuery(
-    { date: dateRange.endDate },
+    { startDate: dateRange.startDate, endDate: dateRange.endDate },
     { skip: activeTab !== 'reports' }
   );
   
@@ -99,6 +99,13 @@ const QuickBooksData = ({ activeTab }) => {
       style: 'currency',
       currency: 'USD'
     }).format(amount || 0);
+  };
+
+  const formatMoneyValue = (value) => {
+    if (value === null || value === undefined || value === '') return '';
+    const numeric = Number(value);
+    if (Number.isFinite(numeric)) return formatCurrency(numeric);
+    return value;
   };
   
   // Format date
@@ -393,6 +400,84 @@ const QuickBooksData = ({ activeTab }) => {
     if (isLoading) return renderLoading();
     if (hasError) return renderError(profitLossError || balanceSheetError);
     
+    const extractLabelAmount = (colData = []) => ({
+      label: colData?.[0]?.value || '',
+      amount: colData?.[1]?.value || ''
+    });
+
+    const summaryDividerGroups = new Set([
+      'GrossProfit',
+      'NetOperatingIncome',
+      'NetOtherIncome',
+      'NetIncome'
+    ]);
+
+    const renderReportRows = (rows = [], depth = 0, keyPrefix = 'report') => {
+      if (!Array.isArray(rows) || rows.length === 0) return null;
+
+      return rows.flatMap((row, index) => {
+        const items = [];
+        const keyBase = `${keyPrefix}-${index}`;
+
+        if (row?.Header?.ColData) {
+          const { label, amount } = extractLabelAmount(row.Header.ColData);
+          items.push(
+            <div className="report-row section-header" key={`${keyBase}-header`}>
+              <span className="report-label" style={{ paddingLeft: `${depth * 16}px` }}>
+                {label}
+              </span>
+              <span className="amount">{formatMoneyValue(amount)}</span>
+            </div>
+          );
+        }
+
+        if (row?.Rows?.Row?.length) {
+          items.push(
+            ...renderReportRows(row.Rows.Row, depth + 1, `${keyBase}-rows`)
+          );
+        }
+
+        if (row?.ColData) {
+          const { label, amount } = extractLabelAmount(row.ColData);
+          items.push(
+            <div className="report-row" key={`${keyBase}-data`}>
+              <span className="report-label" style={{ paddingLeft: `${depth * 16}px` }}>
+                {label}
+              </span>
+              <span className="amount">{formatMoneyValue(amount)}</span>
+            </div>
+          );
+        }
+
+        if (row?.Summary?.ColData) {
+          const { label, amount } = extractLabelAmount(row.Summary.ColData);
+          const summaryClass = summaryDividerGroups.has(row.group) ? 'divider' : 'subtotal';
+          items.push(
+            <div className={`report-row ${summaryClass}`} key={`${keyBase}-summary`}>
+              <span className="report-label" style={{ paddingLeft: `${depth * 16}px` }}>
+                {label}
+              </span>
+              <span className="amount">{formatMoneyValue(amount)}</span>
+            </div>
+          );
+        }
+
+        return items;
+      });
+    };
+
+    const profitLossReport = profitLossData?.data;
+    const profitLossRows = profitLossReport?.Rows?.Row || [];
+    const profitLossPeriod = profitLossReport?.Header?.StartPeriod && profitLossReport?.Header?.EndPeriod
+      ? `${formatDate(profitLossReport.Header.StartPeriod)} to ${formatDate(profitLossReport.Header.EndPeriod)}`
+      : `${formatDate(dateRange.startDate)} to ${formatDate(dateRange.endDate)}`;
+
+    const balanceSheetReport = balanceSheetData?.data;
+    const balanceSheetRows = balanceSheetReport?.Rows?.Row || [];
+    const balanceSheetPeriod = balanceSheetReport?.Header?.EndPeriod
+      ? `${formatDate(balanceSheetReport.Header.EndPeriod)}`
+      : `${formatDate(dateRange.endDate)}`;
+
     return (
       <div className="data-content">
         <div className="data-header">
@@ -423,129 +508,142 @@ const QuickBooksData = ({ activeTab }) => {
         
         <div className="reports-container">
           {/* Profit & Loss Report */}
-          {profitLossData?.data && (
+          {profitLossReport && (
             <div className="report-section">
               <h4>📊 Profit & Loss Statement</h4>
               <div className="report-period">
-                Period: {formatDate(dateRange.startDate)} to {formatDate(dateRange.endDate)}
+                Period: {profitLossPeriod}
               </div>
               <div className="report-table">
                 <div className="report-row header">
                   <span>Item</span>
                   <span>Amount</span>
                 </div>
-                <div className="report-row">
-                  <span>Total Income</span>
-                  <span className="amount income">{formatCurrency(profitLossData.data.totalIncome)}</span>
-                </div>
-                <div className="report-row">
-                  <span>Total Expenses</span>
-                  <span className="amount expense">{formatCurrency(profitLossData.data.totalExpenses)}</span>
-                </div>
-                <div className="report-row divider">
-                  <span>Net Income</span>
-                  <span className={`amount ${profitLossData.data.netIncome >= 0 ? 'income' : 'expense'}`}>
-                    {formatCurrency(profitLossData.data.netIncome)}
-                  </span>
-                </div>
-                <div className="report-row">
-                  <span>Profit Margin</span>
-                  <span className="amount">
-                    {profitLossData.data.totalIncome > 0 
-                      ? `${((profitLossData.data.netIncome / profitLossData.data.totalIncome) * 100).toFixed(2)}%`
-                      : '0%'}
-                  </span>
-                </div>
+                {profitLossRows.length > 0 ? (
+                  renderReportRows(profitLossRows, 0, 'pl')
+                ) : (
+                  <>
+                    <div className="report-row">
+                      <span>Total Income</span>
+                      <span className="amount income">{formatCurrency(profitLossData.data.totalIncome)}</span>
+                    </div>
+                    <div className="report-row">
+                      <span>Total Expenses</span>
+                      <span className="amount expense">{formatCurrency(profitLossData.data.totalExpenses)}</span>
+                    </div>
+                    <div className="report-row divider">
+                      <span>Net Income</span>
+                      <span className={`amount ${profitLossData.data.netIncome >= 0 ? 'income' : 'expense'}`}>
+                        {formatCurrency(profitLossData.data.netIncome)}
+                      </span>
+                    </div>
+                    <div className="report-row">
+                      <span>Profit Margin</span>
+                      <span className="amount">
+                        {profitLossData.data.totalIncome > 0 
+                          ? `${((profitLossData.data.netIncome / profitLossData.data.totalIncome) * 100).toFixed(2)}%`
+                          : '0%'}
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           )}
           
           {/* Balance Sheet Report */}
-          {balanceSheetData?.data && (
+          {balanceSheetReport && (
             <div className="report-section">
               <h4>📋 Balance Sheet</h4>
               <div className="report-period">
-                As of: {formatDate(dateRange.endDate)}
+                As of: {balanceSheetPeriod}
               </div>
               <div className="report-table">
                 <div className="report-row header">
                   <span>Category</span>
                   <span>Amount</span>
                 </div>
-                
-                <div className="report-row section-header">
-                  <span>Assets</span>
-                  <span></span>
-                </div>
-                <div className="report-row">
-                  <span className="indent">Current Assets</span>
-                  <span className="amount">{formatCurrency(balanceSheetData.data.currentAssets)}</span>
-                </div>
-                <div className="report-row">
-                  <span className="indent">Fixed Assets</span>
-                  <span className="amount">{formatCurrency(balanceSheetData.data.fixedAssets)}</span>
-                </div>
-                <div className="report-row subtotal">
-                  <span>Total Assets</span>
-                  <span className="amount">{formatCurrency(balanceSheetData.data.totalAssets)}</span>
-                </div>
-                
-                <div className="report-row section-header">
-                  <span>Liabilities</span>
-                  <span></span>
-                </div>
-                <div className="report-row">
-                  <span className="indent">Current Liabilities</span>
-                  <span className="amount">{formatCurrency(balanceSheetData.data.currentLiabilities)}</span>
-                </div>
-                <div className="report-row">
-                  <span className="indent">Long-term Liabilities</span>
-                  <span className="amount">{formatCurrency(balanceSheetData.data.longTermLiabilities)}</span>
-                </div>
-                <div className="report-row subtotal">
-                  <span>Total Liabilities</span>
-                  <span className="amount">{formatCurrency(balanceSheetData.data.totalLiabilities)}</span>
-                </div>
-                
-                <div className="report-row divider">
-                  <span>Equity</span>
-                  <span className="amount income">{formatCurrency(balanceSheetData.data.equity)}</span>
-                </div>
-                
-                <div className="report-row total">
-                  <span>Total Liabilities & Equity</span>
-                  <span className="amount">{formatCurrency(balanceSheetData.data.totalLiabilities + balanceSheetData.data.equity)}</span>
-                </div>
+                {balanceSheetRows.length > 0 ? (
+                  renderReportRows(balanceSheetRows, 0, 'bs')
+                ) : (
+                  <>
+                    <div className="report-row section-header">
+                      <span>Assets</span>
+                      <span></span>
+                    </div>
+                    <div className="report-row">
+                      <span className="indent">Current Assets</span>
+                      <span className="amount">{formatCurrency(balanceSheetData.data.currentAssets)}</span>
+                    </div>
+                    <div className="report-row">
+                      <span className="indent">Fixed Assets</span>
+                      <span className="amount">{formatCurrency(balanceSheetData.data.fixedAssets)}</span>
+                    </div>
+                    <div className="report-row subtotal">
+                      <span>Total Assets</span>
+                      <span className="amount">{formatCurrency(balanceSheetData.data.totalAssets)}</span>
+                    </div>
+                    
+                    <div className="report-row section-header">
+                      <span>Liabilities</span>
+                      <span></span>
+                    </div>
+                    <div className="report-row">
+                      <span className="indent">Current Liabilities</span>
+                      <span className="amount">{formatCurrency(balanceSheetData.data.currentLiabilities)}</span>
+                    </div>
+                    <div className="report-row">
+                      <span className="indent">Long-term Liabilities</span>
+                      <span className="amount">{formatCurrency(balanceSheetData.data.longTermLiabilities)}</span>
+                    </div>
+                    <div className="report-row subtotal">
+                      <span>Total Liabilities</span>
+                      <span className="amount">{formatCurrency(balanceSheetData.data.totalLiabilities)}</span>
+                    </div>
+                    
+                    <div className="report-row divider">
+                      <span>Equity</span>
+                      <span className="amount income">{formatCurrency(balanceSheetData.data.equity)}</span>
+                    </div>
+                    
+                    <div className="report-row total">
+                      <span>Total Liabilities & Equity</span>
+                      <span className="amount">{formatCurrency(balanceSheetData.data.totalLiabilities + balanceSheetData.data.equity)}</span>
+                    </div>
+                  </>
+                )}
               </div>
               
               {/* Financial Ratios */}
-              <div className="financial-ratios">
-                <h5>Key Financial Ratios</h5>
-                <div className="ratio-grid">
-                  <div className="ratio-item">
-                    <span className="ratio-label">Current Ratio</span>
-                    <span className="ratio-value">
-                      {balanceSheetData.data.currentLiabilities > 0 
-                        ? (balanceSheetData.data.currentAssets / balanceSheetData.data.currentLiabilities).toFixed(2)
-                        : 'N/A'}
-                    </span>
-                  </div>
-                  <div className="ratio-item">
-                    <span className="ratio-label">Debt to Equity</span>
-                    <span className="ratio-value">
-                      {balanceSheetData.data.equity > 0 
-                        ? (balanceSheetData.data.totalLiabilities / balanceSheetData.data.equity).toFixed(2)
-                        : 'N/A'}
-                    </span>
-                  </div>
-                  <div className="ratio-item">
-                    <span className="ratio-label">Working Capital</span>
-                    <span className="ratio-value">
-                      {formatCurrency(balanceSheetData.data.currentAssets - balanceSheetData.data.currentLiabilities)}
-                    </span>
+              {balanceSheetRows.length === 0 && (
+                <div className="financial-ratios">
+                  <h5>Key Financial Ratios</h5>
+                  <div className="ratio-grid">
+                    <div className="ratio-item">
+                      <span className="ratio-label">Current Ratio</span>
+                      <span className="ratio-value">
+                        {balanceSheetData.data.currentLiabilities > 0 
+                          ? (balanceSheetData.data.currentAssets / balanceSheetData.data.currentLiabilities).toFixed(2)
+                          : 'N/A'}
+                      </span>
+                    </div>
+                    <div className="ratio-item">
+                      <span className="ratio-label">Debt to Equity</span>
+                      <span className="ratio-value">
+                        {balanceSheetData.data.equity > 0 
+                          ? (balanceSheetData.data.totalLiabilities / balanceSheetData.data.equity).toFixed(2)
+                          : 'N/A'}
+                      </span>
+                    </div>
+                    <div className="ratio-item">
+                      <span className="ratio-label">Working Capital</span>
+                      <span className="ratio-value">
+                        {formatCurrency(balanceSheetData.data.currentAssets - balanceSheetData.data.currentLiabilities)}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           )}
         </div>

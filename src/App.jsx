@@ -31,6 +31,7 @@ import './utils/debugFirebaseConnection';
 
 import './App.css';
 import Dashboard from './pages/Dashboard';
+import QuickBooksData from './pages/dashboard/QuickBooksData';
 // import Questionnaire from './pages/questionnaire/Questionnaire';
 
 // Simple redirect helper
@@ -49,7 +50,7 @@ function App() {
   React.useEffect(() => {
     initializeFirebase();
     console.log('🔥 Firebase initialized');
-    
+
     if (import.meta.env.VITE_ENV === 'development') {
       console.group('🔧 Environment Variables');
       console.log('API Base URL:', import.meta.env.VITE_API_BASE_URL);
@@ -72,40 +73,44 @@ function App() {
       <div className="app">
         <Routes>
           {/* ============ Public Routes ============ */}
-          <Route 
-            path="/login" 
+          <Route
+            path="/login"
             element={
               <PublicRoute>
                 <Login />
               </PublicRoute>
-            } 
+            }
           />
-          
-          <Route 
-            path="/signup" 
+
+          <Route
+            path="/signup"
             element={
               <PublicRoute>
                 <Signup />
               </PublicRoute>
-            } 
+            }
           />
-          <Route path='/new-dashboard' element={<Dashboard/>} />
+
+          <Route path='/new-dashboard' element={<Dashboard />} >
+            <Route path='quickbooks' element={<QuickBooksData />} />
+          </Route>
+
           {/* Pricing is public but checkout requires auth */}
           <Route path="/pricing" element={<PricingCheckout />} />
-          
+
           {/* Questionnaire - Public route for pre-payment flow */}
           <Route path="/questionnaire" element={<Questionnaire />} />
-          
+
           {/* OAuth callbacks */}
           <Route path="/amazon-callback" element={<AmazonCallback />} />
           <Route path="/shopify-callback" element={<ShopifyCallback />} />
           <Route path="/quickbooks-callback" element={<QuickBooksCallback />} />
 
           {/* ============ Protected Routes ============ */}
-          
+
           {/* Onboarding - Client only, blocks if completed */}
-          <Route 
-            path="/onboarding" 
+          <Route
+            path="/onboarding"
             element={
               <AuthGuard>
                 <RoleGuard allowedRoles={[USER_ROLES.CLIENT]}>
@@ -114,36 +119,36 @@ function App() {
                   </OnboardingGuard>
                 </RoleGuard>
               </AuthGuard>
-            } 
+            }
           />
 
           {/* Subscription Management - Clients and Admins */}
-          <Route 
-            path="/subscription" 
+          <Route
+            path="/subscription"
             element={
               <AuthGuard>
                 <RoleGuard allowedRoles={[USER_ROLES.CLIENT, USER_ROLES.ADMIN]}>
                   <SubscriptionManagement />
                 </RoleGuard>
               </AuthGuard>
-            } 
+            }
           />
 
           {/* Admin Plan Management */}
-          <Route 
-            path="/admin/plans" 
+          <Route
+            path="/admin/plans"
             element={
               <AuthGuard>
                 <RoleGuard allowedRoles={[USER_ROLES.ADMIN]}>
                   <SubscriptionPlanManager />
                 </RoleGuard>
               </AuthGuard>
-            } 
+            }
           />
 
           {/* Main dashboard - DashboardRouter handles role-based rendering */}
-          <Route 
-            path="/dashboard" 
+          <Route
+            path="/dashboard"
             element={
               <AuthGuard>
                 <OnboardingGuard>
@@ -152,26 +157,26 @@ function App() {
                   </SubscriptionGuard>
                 </OnboardingGuard>
               </AuthGuard>
-            } 
+            }
           />
 
           {/* ============ Default Routes ============ */}
-          
+
           {/* Default redirect */}
-          <Route 
-            path="/" 
-            element={<Navigate to={defaultRedirect} replace />} 
+          <Route
+            path="/"
+            element={<Navigate to={defaultRedirect} replace />}
           />
 
           {/* 404 catch-all */}
-          <Route 
-            path="*" 
+          <Route
+            path="*"
             element={
               <div className="not-found">
                 <h2>404 - Page Not Found</h2>
                 <p>The page you're looking for doesn't exist.</p>
               </div>
-            }  
+            }
           />
         </Routes>
       </div>
