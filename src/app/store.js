@@ -14,6 +14,7 @@ import { shopifyApi } from '../features/shopify/shopifyApi';
 import { documentApi } from '../features/document/documentApi';
 import { quickbooksApi } from '../features/quickbooks/quickbooksApi';
 import { questionnaireApi } from '../features/questionnaire/questionnaireApi';
+import { tasksApi } from '@/features/tasks/tasksApi';
 
 export const store = configureStore({
   reducer: {
@@ -34,6 +35,7 @@ export const store = configureStore({
     [documentApi.reducerPath]: documentApi.reducer,
     [quickbooksApi.reducerPath]: quickbooksApi.reducer,
     [questionnaireApi.reducerPath]: questionnaireApi.reducer,
+    [tasksApi.reducerPath]: tasksApi.reducer,
    
   },
 
@@ -62,6 +64,7 @@ export const store = configureStore({
       .concat(documentApi.middleware)
       .concat(quickbooksApi.middleware)
       .concat(questionnaireApi.middleware)
+      .concat(tasksApi.middleware),
 });
 
 // optional, but required for refetchOnFocus/refetchOnReconnect behaviors

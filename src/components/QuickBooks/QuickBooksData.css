@@ -336,6 +336,10 @@
   align-items: center;
 }
 
+.report-label {
+  padding-right: 12px;
+}
+
 .report-row:last-child {
   border-bottom: none;
 }

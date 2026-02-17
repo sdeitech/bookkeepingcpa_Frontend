@@ -22,7 +22,7 @@ export const quickbooksApi = createApi({
         method: 'GET',
       }),
     }),
-    
+
     getQuickBooksConnectionStatus: builder.query({
       query: (clientId) => ({
         url: '/quickbooks/auth/status',
@@ -31,7 +31,7 @@ export const quickbooksApi = createApi({
       providesTags: (result, error, clientId) =>
         clientId ? [{ type: 'QuickBooksStatus', id: clientId }] : ['QuickBooksStatus'],
     }),
-    
+
     refreshQuickBooksToken: builder.mutation({
       query: () => ({
         url: '/quickbooks/auth/refresh',
@@ -39,7 +39,7 @@ export const quickbooksApi = createApi({
       }),
       invalidatesTags: ['QuickBooksStatus'],
     }),
-    
+
     disconnectQuickBooks: builder.mutation({
       query: () => ({
         url: '/quickbooks/auth/disconnect',
@@ -47,7 +47,7 @@ export const quickbooksApi = createApi({
       }),
       invalidatesTags: ['QuickBooksStatus', 'Invoices', 'Customers', 'Expenses', 'Dashboard'],
     }),
-    
+
     // OAuth Callback Handler
     handleQuickBooksCallback: builder.mutation({
       query: (data) => ({
@@ -57,16 +57,16 @@ export const quickbooksApi = createApi({
       }),
       invalidatesTags: ['QuickBooksStatus'],
     }),
-    
+
     // Sync Data
     syncQuickBooksData: builder.mutation({
       query: () => ({
         url: '/quickbooks/sync',
-        method: 'POST',
+        method: 'GET',
       }),
       invalidatesTags: ['Invoices', 'Customers', 'Expenses', 'Dashboard'],
     }),
-    
+
     // Data Endpoints (supports admin override)
     getQuickBooksInvoices: builder.query({
       query: (params = {}) => ({
@@ -79,7 +79,7 @@ export const quickbooksApi = createApi({
       providesTags: (result, error, params) =>
         params?.clientId ? [{ type: 'Invoices', id: params.clientId }] : ['Invoices'],
     }),
-    
+
     getQuickBooksCustomers: builder.query({
       query: (params = {}) => ({
         url: '/quickbooks/customers',
@@ -91,7 +91,7 @@ export const quickbooksApi = createApi({
       providesTags: (result, error, params) =>
         params?.clientId ? [{ type: 'Customers', id: params.clientId }] : ['Customers'],
     }),
-    
+
     getQuickBooksExpenses: builder.query({
       query: (params = {}) => ({
         url: '/quickbooks/expenses',
@@ -103,21 +103,36 @@ export const quickbooksApi = createApi({
       providesTags: (result, error, params) =>
         params?.clientId ? [{ type: 'Expenses', id: params.clientId }] : ['Expenses'],
     }),
-    
+
     getQuickBooksVendors: builder.query({
       query: (params = {}) => ({
         url: '/quickbooks/vendors',
         params,
       }),
     }),
-    
+
     getQuickBooksBills: builder.query({
       query: (params = {}) => ({
         url: '/quickbooks/bills',
         params,
       }),
     }),
-    
+
+    getQuickBooksCashBalance: builder.query({
+      query: (params = {}) => ({
+        url: '/quickbooks/cashBalance',
+        params,
+      }),
+    }),
+
+    getQuickBooksEssentialStats: builder.query({
+      query: (params = {}) => ({
+        url: '/quickbooks/essentialStats',
+        params,
+      }),
+    }),
+
+
     // Reports (supports admin override)
     getQuickBooksProfitLoss: builder.query({
       query: (params = {}) => ({
@@ -128,7 +143,7 @@ export const quickbooksApi = createApi({
         },
       }),
     }),
-    
+
     getQuickBooksBalanceSheet: builder.query({
       query: (params = {}) => ({
         url: '/quickbooks/reports/balance-sheet',
@@ -138,7 +153,17 @@ export const quickbooksApi = createApi({
         },
       }),
     }),
-    
+
+    getQuickBooksGeneralLedger: builder.query({
+      query: (params = {}) => ({
+        url: '/quickbooks/reports/general-ledger',
+        params: {
+          ...params,
+          ...(params.clientId && { clientId: params.clientId }), // Add clientId for admin override
+        },
+      }),
+    }),
+
     // Dashboard (supports admin override)
     getQuickBooksDashboard: builder.query({
       query: (clientId) => ({
@@ -148,7 +173,7 @@ export const quickbooksApi = createApi({
       providesTags: (result, error, clientId) =>
         clientId ? [{ type: 'Dashboard', id: clientId }] : ['Dashboard'],
     }),
-    
+
     // Health Check
     getQuickBooksHealth: builder.query({
       query: () => '/quickbooks/health',
@@ -165,7 +190,7 @@ export const {
   useDisconnectQuickBooksMutation,
   useHandleQuickBooksCallbackMutation,
   useSyncQuickBooksDataMutation,
-  
+
   // Data
   useGetQuickBooksInvoicesQuery,
   useLazyGetQuickBooksInvoicesQuery,
@@ -175,16 +200,21 @@ export const {
   useLazyGetQuickBooksExpensesQuery,
   useGetQuickBooksVendorsQuery,
   useGetQuickBooksBillsQuery,
-  
+  useGetQuickBooksCashBalanceQuery,
+  useLazyGetQuickBooksCashBalanceQuery,
+  useGetQuickBooksEssentialStatsQuery,
+  useLazyGetQuickBooksEssentialStatsQuery,
+  useGetQuickBooksGeneralLedgerQuery,
+
   // Reports
   useGetQuickBooksProfitLossQuery,
   useLazyGetQuickBooksProfitLossQuery,
   useGetQuickBooksBalanceSheetQuery,
   useLazyGetQuickBooksBalanceSheetQuery,
-  
+
   // Dashboard
   useGetQuickBooksDashboardQuery,
-  
+
   // Health
   useGetQuickBooksHealthQuery,
 } = quickbooksApi;
