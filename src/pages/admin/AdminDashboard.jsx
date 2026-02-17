@@ -49,9 +49,9 @@ export default function AdminDashboard() {
 
   return (
     <div className="flex min-h-screen bg-background">
-      <DashboardSidebar />
+      {/* <DashboardSidebar /> */}
       <div className="flex-1 flex flex-col">
-        <DashboardHeader />
+        {/* <DashboardHeader /> */}
         <main className="flex-1 p-6">
           <div className="space-y-6 animate-fade-in">
             {/* Page Header */}

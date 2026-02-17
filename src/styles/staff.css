@@ -1,0 +1,53 @@
+.staff-scope {
+    --background: 220 20% 97%;
+    --foreground: 220 30% 15%;
+  
+    --card: 0 0% 100%;
+    --card-foreground: 220 30% 15%;
+  
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 30% 15%;
+  
+    --primary: 217 91% 50%;
+    --primary-foreground: 0 0% 100%;
+  
+    --secondary: 220 20% 96%;
+    --secondary-foreground: 220 30% 20%;
+  
+    --muted: 220 15% 94%;
+    --muted-foreground: 220 10% 45%;
+  
+    --accent: 217 91% 95%;
+    --accent-foreground: 217 91% 40%;
+  
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+  
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+  
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+  
+    --border: 220 20% 88%;
+    --input: 220 20% 88%;
+    --ring: 217 91% 50%;
+  
+    --radius: 0.75rem;
+  
+    --sidebar-background: 220 30% 15%;
+    --sidebar-foreground: 220 10% 90%;
+    --sidebar-primary: 217 91% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 30% 20%;
+    --sidebar-accent-foreground: 220 10% 95%;
+    --sidebar-border: 220 25% 25%;
+    --sidebar-ring: 217 91% 50%;
+  
+    --chart-1: 217 91% 50%;
+    --chart-2: 142 76% 36%;
+    --chart-3: 38 92% 50%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 0 84% 60%;
+  }
+  

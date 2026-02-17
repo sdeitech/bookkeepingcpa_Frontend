@@ -43,7 +43,7 @@ export const tasksApi = createApi({
     updateTask: builder.mutation({
       query: ({ id, body }) => ({
         url: `/tasks/${id}`,
-        method: "PUT",
+        method: "PATCH",
         body,
       }),
       invalidatesTags: ["Tasks"],
@@ -57,6 +57,11 @@ export const tasksApi = createApi({
         body: { status, notes },
       }),
       invalidatesTags: ["Tasks"],
+    }),
+
+    getTaskById: builder.query({
+      query: (taskId) => `/tasks/${taskId}`,
+      providesTags: (result, error, id) => [{ type: "Task", id }],
     }),
     
 

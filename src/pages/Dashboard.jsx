@@ -31,7 +31,8 @@ import {
 } from "lucide-react";
 
 import { Link } from "react-router-dom";
-import { useEffect } from "react";
+import { logout, selectCurrentUser } from '../features/auth/authSlice';
+import {useSelector } from "react-redux";
 
 const onboardingSteps = [
   { id: "business-info", label: "Complete Business Information", completed: false },
@@ -350,12 +351,13 @@ function DashboardHome() {
 export default function Dashboard() {
   const location = useLocation();
   const isRootDashboard = location.pathname === "/new-dashboard";
+  const user = useSelector(selectCurrentUser);
 
   return (
     <div className="flex min-h-screen bg-background">
       <DashboardSidebar />
       <div className="flex-1 flex flex-col">
-        <DashboardHeader />
+        <DashboardHeader user={user} logout={logout} />
         <main className="flex-1 p-6">
           {isRootDashboard ? <DashboardHome /> : <Outlet />}
         </main>

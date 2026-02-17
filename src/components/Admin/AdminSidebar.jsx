@@ -1,11 +1,12 @@
 import { Link, useLocation } from "react-router-dom";
-import { ClipboardList, Users, ArrowLeft } from "lucide-react";
+import { ClipboardList, Users, ArrowLeft, Home } from "lucide-react";
 import { PlutifyLogo } from "@/components/PlutifyLogo";
 import { cn } from "../../lib/utils";
 
 const navItems = [
-  { icon: ClipboardList, label: "Tasks", href: "/admin/tasks" },
-  { icon: Users, label: "Clients", href: "/admin/clients" },
+  { icon: Home, label: "Home", href: "/adminDashboard" },
+  { icon: ClipboardList, label: "Tasks", href: "/adminDashboard/tasks" },
+  { icon: Users, label: "Clients", href: "/adminDashboard/clients" },
 ];
 
 export function AdminSidebar() {
@@ -39,7 +40,7 @@ export function AdminSidebar() {
         })}
       </nav>
 
-      <div className="p-4 border-t border-sidebar-border">
+      {/* <div className="p-4 border-t border-sidebar-border">
         <Link
           to="/dashboard"
           className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-[#E2E4E8]/70 hover:bg-[#1A2231] hover:text-[#F0F1F3] transition-colors no-underline"
@@ -47,7 +48,7 @@ export function AdminSidebar() {
           <ArrowLeft className="w-5 h-5" />
           Back to Dashboard
         </Link>
-      </div>
+      </div> */}
     </aside>
   );
 }

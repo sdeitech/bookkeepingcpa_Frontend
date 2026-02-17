@@ -1,29 +1,54 @@
 import { Link } from "react-router-dom";
 import { Building2, ArrowRight } from "lucide-react";
 import { Badge } from "../../components/ui/badge";
+import { useGetAllClientsQuery } from "@/features/user/userApi";
+import { useGetTasksQuery } from "@/features/tasks/tasksApi";
 
 export default function AdminClients() {
-  const tasks=[]
-  const MOCK_CLIENTS = [
-    { id: "c1", name: "Acme Corp", email: "admin@acme.com", plan: "enterprise" },
-    { id: "c2", name: "Bloom Studio", email: "hello@bloom.io", plan: "essential" },
-    { id: "c3", name: "Nova Labs", email: "team@novalabs.com", plan: "startup" },
-    { id: "c4", name: "Greenfield Inc", email: "info@greenfield.com", plan: "essential" },
-    { id: "c5", name: "Pixel Works", email: "contact@pixelworks.co", plan: "startup" },
-  ];
-  
- 
+  /* ================= FETCH REAL DATA ================= */
+
+  const { data: clientsData, isLoading: clientsLoading } =
+    useGetAllClientsQuery();
+
+  const { data: tasksData, isLoading: tasksLoading } =
+    useGetTasksQuery({});
+
+  const clients = clientsData?.data || [];
+  const tasks = tasksData?.data?.tasks || [];
+
+  /* ================= UI ================= */
+
+  if (clientsLoading || tasksLoading) {
+    return (
+      <div className="p-6 text-muted-foreground">
+        Loading clients...
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Clients</h1>
-        <p className="text-sm text-muted-foreground">{MOCK_CLIENTS.length} clients</p>
+        <h1 className="text-2xl font-bold text-foreground">
+          Clients
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          {clients.length} clients
+        </p>
       </div>
 
       <div className="grid gap-4">
-        {MOCK_CLIENTS.map(client => {
-          const clientTasks = tasks.filter(t => t.clientId === client.id);
-          const completed = clientTasks.filter(t => t.status === "completed").length;
+        {clients.map((client) => {
+          // Filter tasks belonging to this client
+          const clientTasks = tasks.filter(
+            (t) =>
+              t.clientId?.id === client.id
+          );
+
+          const completed = clientTasks.filter(
+            (t) => t.status === "COMPLETED"
+          ).length;
+
           return (
             <Link
               key={client.id}
@@ -35,13 +60,27 @@ export default function AdminClients() {
                   <Building2 className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <p className="font-semibold text-foreground">{client.name}</p>
-                  <p className="text-sm text-muted-foreground">{client.email}</p>
+                  <p className="font-semibold text-foreground -mb-1 mt-3">
+                    {client.name}
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {client.email}
+                  </p>
                 </div>
               </div>
+
               <div className="flex items-center gap-4">
-                <Badge variant="outline" className="capitalize">{client.plan}</Badge>
-                <span className="text-sm text-muted-foreground">{completed}/{clientTasks.length} tasks done</span>
+                <Badge
+                  variant="outline"
+                  className="capitalize"
+                >
+                  {client.plan || "standard"}
+                </Badge>
+
+                <span className="text-sm text-muted-foreground">
+                  {completed}/{clientTasks.length} tasks done
+                </span>
+
                 <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
               </div>
             </Link>

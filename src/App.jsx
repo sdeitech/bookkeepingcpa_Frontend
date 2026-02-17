@@ -37,6 +37,13 @@ import AdminLayout from './pages/admin/AdminLayout';
 import AdminTasks from './pages/admin/AdminTasks';
 import AdminClients from './pages/admin/AdminClients';
 import AdminClientDetail from './pages/admin/AdminClientDetail';
+import StaffLayout from './pages/staff/StaffLayout';
+import StaffClients from './pages/staff/StaffClients';
+import StaffClientDetail from './pages/staff/StaffClientDetail';
+import StaffTasks from './pages/staff/StaffTasks';
+import StaffReports from './pages/staff/StaffReports';
+import StaffCreateTask from './pages/staff/StaffCreateTask';
+
 // import Questionnaire from './pages/questionnaire/Questionnaire';
 
 // Simple redirect helper
@@ -95,18 +102,45 @@ function App() {
               </PublicRoute>
             }
           />
-
-          <Route path='/new-dashboard' element={<Dashboard />} >
-            <Route path='quickbooks' element={<QuickBooksData />} />
+          <Route
+            path="/new-dashboard"
+            element={
+              <AuthGuard>
+                <RoleGuard allowedRoles={[USER_ROLES.CLIENT]}>
+                  <Dashboard />
+                </RoleGuard>
+              </AuthGuard>
+            }
+          >
+            <Route path="quickbooks" element={<QuickBooksData />} />
           </Route>
 
-          <Route path="/admin" element={<AdminLayout />}>
+
+          <Route path="/adminDashboard" element={
+            <AuthGuard>
+              <RoleGuard allowedRoles={[USER_ROLES.ADMIN]}>
+                <AdminLayout />
+              </RoleGuard>
+            </AuthGuard>
+          }>
+            <Route path="" element={<AdminDashboard />} />
             <Route path="tasks" element={<AdminTasks />} />
             <Route path="clients" element={<AdminClients />} />
             <Route path="clients/:clientId" element={<AdminClientDetail />} />
           </Route>
 
-          <Route path='/admin' element={<AdminDashboard />} />
+
+          <Route path="/staff" element={<StaffLayout />}>
+            <Route path="clients" element={<StaffClients />} />
+            <Route path="clients/:clientId" element={<StaffClientDetail />} />
+            <Route path="tasks" element={<StaffTasks />} />
+            <Route path="reports" element={<StaffReports />} />
+            <Route path="create-task" element={<StaffCreateTask />} />
+          </Route>
+
+
+         
+
           {/* Pricing is public but checkout requires auth */}
           <Route path="/pricing" element={<PricingCheckout />} />
 
