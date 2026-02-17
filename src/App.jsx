@@ -32,6 +32,11 @@ import './utils/debugFirebaseConnection';
 import './App.css';
 import Dashboard from './pages/Dashboard';
 import QuickBooksData from './pages/dashboard/QuickBooksData';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminLayout from './pages/admin/AdminLayout';
+import AdminTasks from './pages/admin/AdminTasks';
+import AdminClients from './pages/admin/AdminClients';
+import AdminClientDetail from './pages/admin/AdminClientDetail';
 // import Questionnaire from './pages/questionnaire/Questionnaire';
 
 // Simple redirect helper
@@ -95,6 +100,13 @@ function App() {
             <Route path='quickbooks' element={<QuickBooksData />} />
           </Route>
 
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route path="tasks" element={<AdminTasks />} />
+            <Route path="clients" element={<AdminClients />} />
+            <Route path="clients/:clientId" element={<AdminClientDetail />} />
+          </Route>
+
+          <Route path='/admin' element={<AdminDashboard />} />
           {/* Pricing is public but checkout requires auth */}
           <Route path="/pricing" element={<PricingCheckout />} />
 
