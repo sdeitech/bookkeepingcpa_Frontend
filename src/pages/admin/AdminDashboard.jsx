@@ -52,7 +52,7 @@ export default function AdminDashboard() {
       {/* <DashboardSidebar /> */}
       <div className="flex-1 flex flex-col">
         {/* <DashboardHeader /> */}
-        <main className="flex-1 p-6">
+        <main className="flex-1 p-1">
           <div className="space-y-6 animate-fade-in">
             {/* Page Header */}
             <div className="flex items-center justify-between">

@@ -13,12 +13,12 @@ const AdminDashboard = () => {
   const dispatch = useDispatch();
   const user = useSelector(selectCurrentUser);
   const { data: usersData, isLoading, error } = useGetUsersQuery();
-  
+
   const handleLogout = () => {
     dispatch(logout());
     navigate('/login');
   };
-  
+
   return (
     <div className="dashboard-container">
       <header className="dashboard-header">
@@ -35,7 +35,7 @@ const AdminDashboard = () => {
           </div>
         </div>
       </header>
-      
+
       <main className="dashboard-main">
         <div className="dashboard-content">
           {/* Admin Profile Section */}
@@ -60,7 +60,7 @@ const AdminDashboard = () => {
               </div>
             </div>
           </section>
-          
+
           {/* Admin Statistics */}
           <section className="stats-section">
             <h2>System Overview</h2>
@@ -91,7 +91,7 @@ const AdminDashboard = () => {
               </div>
             </div>
           </section>
-          
+
           {/* Admin Quick Actions */}
           <section className="admin-actions">
             <h2>Administration</h2>
@@ -108,7 +108,7 @@ const AdminDashboard = () => {
               >
                 Overview
               </button>
-              <button 
+              <button
                 className={`action-btn ${activeTab === 'users' ? 'active' : ''}`}
                 onClick={() => setActiveTab('users')}
               >
@@ -130,14 +130,14 @@ const AdminDashboard = () => {
               <button className="action-btn">Reports</button>
             </div>
           </section>
-          
+
           {/* Conditional Content Based on Active Tab */}
           {activeTab === 'staff' && <StaffManagement />}
-          
+
           {activeTab === 'assignments' && <ClientAssignment />}
-          
+
           {activeTab === 'client-viewer' && <AdminClientViewer />}
-          
+
           {activeTab === 'users' && (
             <section className="users-section">
               <h2>All System Users</h2>
@@ -166,8 +166,8 @@ const AdminDashboard = () => {
                           <td>{user.phoneNumber || 'N/A'}</td>
                           <td>
                             <span className="role-tag">
-                              {user.role_id === '1' ? 'Super Admin' : 
-                               user.role_id === '2' ? 'Staff' : 'Client'}
+                              {user.role_id === '1' ? 'Super Admin' :
+                                user.role_id === '2' ? 'Staff' : 'Client'}
                             </span>
                           </td>
                           <td>
@@ -184,7 +184,7 @@ const AdminDashboard = () => {
               )}
             </section>
           )}
-          
+
           {activeTab === 'overview' && (
             <>
               <section className="recent-activity">
@@ -213,7 +213,7 @@ const AdminDashboard = () => {
                   </div>
                 </div>
               </section>
-              
+
               <section className="system-health">
                 <h2>System Health</h2>
                 <div className="health-indicators">

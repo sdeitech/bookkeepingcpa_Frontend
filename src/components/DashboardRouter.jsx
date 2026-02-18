@@ -3,8 +3,8 @@ import { Navigate } from 'react-router-dom';
 import { selectCurrentUser } from '../features/auth/authSlice';
 import { USER_ROLES } from '../constants/userRoles';
 import AdminDashboard from '../pages/AdminDashboard';
-import StaffDashboard from '../pages/StaffDashboard';
 import ClientDashboard from '../pages/ClientDashboard';
+import StaffDashboard from '@/pages/StaffDashboard';
 
 const DashboardRouter = () => {
   const user = useSelector(selectCurrentUser);

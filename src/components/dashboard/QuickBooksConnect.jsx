@@ -28,8 +28,8 @@ export function QuickBooksConnect({
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-[#2CA01C] flex items-center justify-center">
-              <span className="text-white font-bold text-sm">QB</span>
+            <div className="w-10 h-10 rounded-lg bg-success flex items-center justify-center">
+              <span className="text-success-foreground font-bold text-sm">QB</span>
             </div>
             <div>
               <CardTitle className="text-lg">QuickBooks Online</CardTitle>

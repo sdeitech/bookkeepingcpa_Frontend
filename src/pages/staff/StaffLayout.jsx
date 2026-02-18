@@ -2,7 +2,6 @@ import { Outlet, useLocation } from "react-router-dom";
 import { StaffSidebar } from "@/components/Staff/StaffSidebar";
 import { StaffHeader } from "@/components/Staff/StaffHeader";
 import StaffDashboard from "./StaffDashboard";
-import "@/styles/staff.css";
 
 const routeTitles = {
   "/staff": "Dashboard",
@@ -22,7 +21,7 @@ export default function StaffLayout() {
   const isRoot = location.pathname === "/staff";
 
   return (
-    <div className="staff-scope flex min-h-screen bg-background">
+    <div className="flex min-h-screen bg-background">
       <StaffSidebar />
       <div className="flex-1 flex flex-col min-w-0">
         <StaffHeader title={title} />
