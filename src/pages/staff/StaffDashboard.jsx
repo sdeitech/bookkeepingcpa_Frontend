@@ -59,7 +59,7 @@ export default function StaffDashboard() {
         <h2 className="text-base font-semibold text-foreground mb-3">Quick Actions</h2>
         <div className="flex flex-wrap gap-3">
           <Link to="/staff/create-task">
-            <Button className="bg-gradient-to-r from-primary to-chart-4 text-primary-foreground hover:opacity-90 gap-2 shadow-md">
+            <Button className="bg-primary text-primary-foreground hover:opacity-90 gap-2 shadow-md">
               <PlusCircle className="w-4 h-4" /> Create Client Task
             </Button>
           </Link>

@@ -21,7 +21,10 @@ export function AdminSidebar() {
 
       <nav className="flex-1 p-4 space-y-1">
         {navItems.map((item) => {
-          const isActive = location.pathname.startsWith(item.href);
+          const isActive =
+            item.href === "/adminDashboard"
+              ? location.pathname === "/adminDashboard"
+              : location.pathname === item.href || location.pathname.startsWith(`${item.href}/`);
           return (
             <Link
               key={item.href}

@@ -52,7 +52,7 @@ export default function AdminClients() {
           return (
             <Link
               key={client.id}
-              to={`/admin/clients/${client.id}`}
+              to={`/adminDashboard/clients/${client.id}`}
               className="bg-card border border-border rounded-xl p-5 flex items-center justify-between hover:border-primary/40 transition-colors group no-underline"
             >
               <div className="flex items-center gap-4">

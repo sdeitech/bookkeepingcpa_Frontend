@@ -33,16 +33,28 @@ import './App.css';
 import Dashboard from './pages/Dashboard';
 import QuickBooksData from './pages/dashboard/QuickBooksData';
 import AdminDashboard from './pages/admin/AdminDashboard';
-import AdminLayout from './pages/admin/AdminLayout';
-import AdminTasks from './pages/admin/AdminTasks';
-import AdminClients from './pages/admin/AdminClients';
-import AdminClientDetail from './pages/admin/AdminClientDetail';
+// import AdminLayout from './pages/admin/AdminLayout';
+// import AdminTasks from './pages/admin/AdminTasks';
+// import AdminClients from './pages/admin/AdminClients';
+// import AdminClientDetail from './pages/admin/AdminClientDetail';
 import StaffLayout from './pages/staff/StaffLayout';
 import StaffClients from './pages/staff/StaffClients';
 import StaffClientDetail from './pages/staff/StaffClientDetail';
 import StaffTasks from './pages/staff/StaffTasks';
 import StaffReports from './pages/staff/StaffReports';
 import StaffCreateTask from './pages/staff/StaffCreateTask';
+
+// new admin layout and pages
+import AdminLayout from './pages/new_Admin/AdminLayout';
+import AdminDashboardHome from './pages/new_Admin/AdminDashboardHome';
+import AdminStaff from './pages/new_Admin/AdminStaff';
+import AdminDocuments from './pages/new_Admin/AdminDocuments';
+import AdminMessages from './pages/new_Admin/AdminMessages';
+import AdminSettings from './pages/new_Admin/AdminSettings';
+import AdminTasks from './pages/new_Admin/AdminTasks';
+import AdminClients from './pages/new_Admin/AdminClients';
+import AdminClientDetail from './pages/new_Admin/AdminClientDetail';
+
 
 // import Questionnaire from './pages/questionnaire/Questionnaire';
 
@@ -116,7 +128,7 @@ function App() {
           </Route>
 
 
-          <Route path="/adminDashboard" element={
+          {/* <Route path="/adminDashboard" element={
             <AuthGuard>
               <RoleGuard allowedRoles={[USER_ROLES.ADMIN]}>
                 <AdminLayout />
@@ -127,10 +139,27 @@ function App() {
             <Route path="tasks" element={<AdminTasks />} />
             <Route path="clients" element={<AdminClients />} />
             <Route path="clients/:clientId" element={<AdminClientDetail />} />
+          </Route> */}
+
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<AdminDashboardHome />} />
+            <Route path="tasks" element={<AdminTasks />} />
+            <Route path="clients" element={<AdminClients />} />
+            <Route path="clients/:clientId" element={<AdminClientDetail />} />
+            <Route path="staff" element={<AdminStaff />} />
+            <Route path="documents" element={<AdminDocuments />} />
+            <Route path="messages" element={<AdminMessages />} />
+            <Route path="settings" element={<AdminSettings />} />
           </Route>
 
 
-          <Route path="/staff" element={<StaffLayout />}>
+          <Route path="/staff" element={
+            <AuthGuard>
+              <RoleGuard allowedRoles={[USER_ROLES.STAFF]}>
+                <StaffLayout />
+              </RoleGuard>
+            </AuthGuard>
+          }>
             <Route path="clients" element={<StaffClients />} />
             <Route path="clients/:clientId" element={<StaffClientDetail />} />
             <Route path="tasks" element={<StaffTasks />} />
@@ -139,7 +168,7 @@ function App() {
           </Route>
 
 
-         
+
 
           {/* Pricing is public but checkout requires auth */}
           <Route path="/pricing" element={<PricingCheckout />} />

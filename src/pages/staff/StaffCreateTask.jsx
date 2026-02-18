@@ -130,7 +130,7 @@ export default function StaffCreateTask() {
         <div className="flex gap-3 pt-2">
           <Button
             type="submit"
-            className="bg-gradient-to-r from-primary to-chart-4 text-primary-foreground gap-2"
+            className="bg-primary text-primary-foreground hover:opacity-90 gap-2 shadow-md"
             disabled={!title || !clientId || !dueDate}
           >
             Create Task

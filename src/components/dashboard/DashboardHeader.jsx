@@ -9,6 +9,8 @@ import {
 } from "../ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
+import NotificationPanel from "../Notifications/Notification";
+
 
 
 export function DashboardHeader({user,logout}) {
@@ -27,10 +29,11 @@ export function DashboardHeader({user,logout}) {
       </div>
 
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" className="relative">
+        {/* <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />
           <span className="absolute top-1 right-1 w-2 h-2 bg-destructive rounded-full" />
-        </Button>
+        </Button> */}
+        <NotificationPanel />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

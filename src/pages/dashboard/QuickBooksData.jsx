@@ -274,8 +274,8 @@ export default function QuickBooksData() {
 
     const statusStyles = {
         active: "bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))]",
-        paused: "bg-yellow-500 text-white",
-        expired: "bg-red-500 text-white",
+        paused: "bg-warning text-warning-foreground",
+        expired: "bg-destructive text-destructive-foreground",
     };
 
     const invoices = invoicesData?.data?.invoices || [];
@@ -312,8 +312,8 @@ export default function QuickBooksData() {
                 <h1 className="text-2xl font-bold text-foreground">QuickBooks Data</h1>
                 <Card>
                     <CardContent className="flex flex-col items-center justify-center py-16 gap-4">
-                        <div className="w-16 h-16 rounded-2xl bg-[#2CA01C]/10 flex items-center justify-center">
-                            <span className="text-[#2CA01C] font-bold text-2xl">QB</span>
+                        <div className="w-16 h-16 rounded-2xl bg-success/10 flex items-center justify-center">
+                            <span className="text-success font-bold text-2xl">QB</span>
                         </div>
                         <h2 className="text-xl font-semibold text-foreground">QuickBooks Not Connected</h2>
                         <p className="text-muted-foreground text-center max-w-md">
@@ -1019,5 +1019,4 @@ const renderGeneralLegderReportRows = (rows = [], depth = 0, keyPrefix = 'report
         return items;
     });
 };
-
 
