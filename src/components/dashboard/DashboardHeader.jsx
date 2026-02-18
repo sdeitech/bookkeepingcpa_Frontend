@@ -8,15 +8,15 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
 
 
-export function DashboardHeader() {
+export function DashboardHeader({user,logout}) {
   const navigate = useNavigate();
-  const user = { name: "John Doe" }; // Replace with actual user data
-
+  const dispatch = useDispatch();
 
   const handleLogout = () => {
-    logout();
+    dispatch(logout());
     navigate("/");
   };
 
@@ -38,7 +38,7 @@ export function DashboardHeader() {
               <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
                 <User className="h-4 w-4 text-primary-foreground" />
               </div>
-              <span className="hidden sm:inline font-medium">{user?.name || "User"}</span>
+              <span className="hidden sm:inline font-medium">{user?.first_name} {user?.last_name}</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48 bg-popover">

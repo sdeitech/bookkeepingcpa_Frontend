@@ -2,114 +2,165 @@ import { useState, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Button } from "../../components/ui/button";
 import { Progress } from "../../components/ui/progress";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../components/ui/dropdown-menu";
-import { TaskStatusBadge, TaskPriorityBadge } from "../../components/Admin/TaskStatusBadge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../../components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../../components/ui/dropdown-menu";
+import {
+  TaskStatusBadge,
+  TaskPriorityBadge,
+} from "../../components/Admin/TaskStatusBadge";
 import { CreateTaskDialog } from "../../components/Admin/CreateTaskDialog";
-import { ArrowLeft, Plus, MoreHorizontal, Pencil, Trash2, Mail, Building2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Plus,
+  MoreHorizontal,
+  Trash2,
+  Mail,
+  Building2,
+} from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
+import {
+  useGetTasksQuery,
+  useUpdateTaskStatusMutation,
+  useDeleteTaskMutation,
+  useCreateTaskMutation,
+} from "@/features/tasks/tasksApi";
+
 export default function AdminClientDetail() {
   const { clientId } = useParams();
-  const [tasks, setTasks] = useState([]);
-  const MOCK_CLIENTS = [
-    { id: "c1", name: "Acme Corp", email: "admin@acme.com", plan: "enterprise" },
-    { id: "c2", name: "Bloom Studio", email: "hello@bloom.io", plan: "essential" },
-    { id: "c3", name: "Nova Labs", email: "team@novalabs.com", plan: "startup" },
-    { id: "c4", name: "Greenfield Inc", email: "info@greenfield.com", plan: "essential" },
-    { id: "c5", name: "Pixel Works", email: "contact@pixelworks.co", plan: "startup" },
-  ];
 
-  const TASK_STATUSES = [
-    { value: "not_started", label: "Not Started" },
-    { value: "in_progress", label: "In Progress" },
-    { value: "completed", label: "Completed" },
-    { value: "blocked", label: "Blocked" },
-  ];
-  
-
-  // Create Task (void)
-  const createTask = (title) => {
-    const newTask = {
-      id: Date.now().toString(),
-      title,
-      status: "Not Started",
-    };
-
-    setTasks((prev) => [...prev, newTask]);
-  };
-
-  // Update Task (void)
-  const updateTask = (id, status) => {
-    setTasks((prev) =>
-      prev.map((task) =>
-        task.id === id ? { ...task, status } : task
-      )
-    );
-  };
-
-  // Delete Task (void)
-  const deleteTask = (id) => {
-    setTasks((prev) => prev.filter((task) => task.id !== id));
-  };
   const [createOpen, setCreateOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState("all");
 
-  const client = MOCK_CLIENTS.find(c => c.id === clientId);
+  /* ================= FETCH TASKS ================= */
 
-  const clientTasks = useMemo(() => {
-    let filtered = tasks.filter(t => t.clientId === clientId);
-    if (filterStatus !== "all") filtered = filtered.filter(t => t.status === filterStatus);
-    return filtered;
-  }, [tasks, clientId, filterStatus]);
+  const {
+    data: tasksData,
+    isLoading,
+    refetch,
+  } = useGetTasksQuery({ clientId });
 
-  const allClientTasks = tasks.filter(t => t.clientId === clientId);
-  const completedCount = allClientTasks.filter(t => t.status === "completed").length;
-  const totalCount = allClientTasks.length;
-  const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+  const tasks = tasksData?.data?.tasks || [];
 
-  if (!client) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-        <p className="text-lg mb-4">Client not found.</p>
-        <Link to="/admin/tasks">
-          <Button variant="outline"><ArrowLeft className="mr-2 h-4 w-4" /> Back to Tasks</Button>
-        </Link>
-      </div>
-    );
-  }
+  const [updateTaskStatusMutation] = useUpdateTaskStatusMutation();
+  const [deleteTaskMutation] = useDeleteTaskMutation();
+  const [createTaskMutation] = useCreateTaskMutation();
 
-  const handleQuickStatusChange = (taskId, newStatus) => {
-    updateTask(taskId, { status: newStatus });
-    toast.success("Status updated");
+  /* ================= FILTER ================= */
+
+  const filteredTasks = useMemo(() => {
+    if (filterStatus === "all") return tasks;
+    return tasks.filter((t) => t.status === filterStatus);
+  }, [tasks, filterStatus]);
+
+  /* ================= PROGRESS ================= */
+
+  const completedCount = tasks.filter(
+    (t) => t.status === "COMPLETED"
+  ).length;
+
+  const totalCount = tasks.length;
+
+  const progressPercent =
+    totalCount > 0
+      ? Math.round((completedCount / totalCount) * 100)
+      : 0;
+
+  /* ================= ACTIONS ================= */
+
+  const handleQuickStatusChange = async (taskId, status) => {
+    try {
+      await updateTaskStatusMutation({
+        id: taskId,
+        status,
+      }).unwrap();
+
+      toast.success("Status updated");
+    } catch (err) {
+      toast.error("Failed to update status");
+    }
   };
-  
+
+  const deleteTask = async (taskId) => {
+    try {
+      await deleteTaskMutation(taskId).unwrap();
+      toast.success("Task deleted");
+    } catch (err) {
+      toast.error("Delete failed");
+    }
+  };
+
+  const createTask = async (task) => {
+    try {
+      await createTaskMutation({
+        ...task,
+        clientId,
+      }).unwrap();
+
+      toast.success("Task created");
+      setCreateOpen(false);
+    } catch (err) {
+      toast.error("Create failed");
+    }
+  };
+
+
+  console.log("Tasks:", tasksData);
+  /* ================= UI ================= */
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Back nav */}
-      <Link to="/admin/tasks" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+      {/* Back */}
+      <Link
+        to="/admin/tasks"
+        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+      >
         <ArrowLeft className="h-4 w-4" /> Back to Tasks
       </Link>
 
-      {/* Client header */}
+      {/* Header */}
       <div className="bg-card border border-border rounded-xl p-6">
-        <div className="flex items-start justify-between">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center">
               <Building2 className="h-7 w-7 text-primary" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-foreground">{client.name}</h1>
-              <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
-                <span className="flex items-center gap-1"><Mail className="h-3.5 w-3.5" /> {client.email}</span>
-                <span className="px-2 py-0.5 bg-primary/10 text-primary text-xs font-medium rounded-full capitalize">{client.plan}</span>
+              <h1 className="text-2xl font-bold text-foreground">
+              {tasks[0]?.clientId?.first_name + " " + tasks[0]?.clientId?.last_name || "-"}
+              </h1>
+              <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+                <Mail className="h-3.5 w-3.5" />
+               {tasks[0]?.clientId?.email || "Unknown Client"}
               </div>
             </div>
           </div>
-          <Button onClick={() => setCreateOpen(true)} className="gap-2">
+
+          <Button
+            onClick={() => setCreateOpen(true)}
+            className="gap-2"
+          >
             <Plus className="h-4 w-4" /> Create Task
           </Button>
         </div>
@@ -117,32 +168,51 @@ export default function AdminClientDetail() {
 
       {/* Progress */}
       <div className="bg-card border border-border rounded-xl p-6">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold text-foreground">Task Progress</h3>
+        <div className="flex justify-between mb-3">
+          <h3 className="font-semibold">Task Progress</h3>
           <span className="text-sm text-muted-foreground">
-            {completedCount} of {totalCount} tasks completed ({progressPercent}%)
+            {completedCount} of {totalCount} completed (
+            {progressPercent}%)
           </span>
         </div>
         <Progress value={progressPercent} className="h-3" />
       </div>
 
       {/* Filter */}
-      <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-foreground">Tasks ({clientTasks.length})</h3>
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-[150px]"><SelectValue placeholder="Filter status" /></SelectTrigger>
-          <SelectContent className="bg-popover z-50">
-            <SelectItem value="all">All Status</SelectItem>
-            {TASK_STATUSES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+      <div className="flex justify-between items-center">
+        <h3 className="font-semibold">
+          Tasks ({filteredTasks.length})
+        </h3>
+
+        <Select
+          value={filterStatus}
+          onValueChange={setFilterStatus}
+        >
+          <SelectTrigger className="w-[160px]">
+            <SelectValue placeholder="Filter status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">
+              All Status
+            </SelectItem>
+            <SelectItem value="NOT_STARTED">
+              Not Started
+            </SelectItem>
+            <SelectItem value="IN_PROGRESS">
+              In Progress
+            </SelectItem>
+            <SelectItem value="COMPLETED">
+              Completed
+            </SelectItem>
           </SelectContent>
         </Select>
       </div>
 
-      {/* Tasks table */}
+      {/* Table */}
       <div className="bg-card border border-border rounded-xl overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="bg-muted/50">
+            <TableRow>
               <TableHead>Title</TableHead>
               <TableHead>Assigned To</TableHead>
               <TableHead>Status</TableHead>
@@ -151,40 +221,109 @@ export default function AdminClientDetail() {
               <TableHead className="w-12" />
             </TableRow>
           </TableHeader>
+
           <TableBody>
-            {clientTasks.length === 0 ? (
+            {isLoading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
-                  No tasks for this client yet.
+                <TableCell
+                  colSpan={6}
+                  className="text-center py-12"
+                >
+                  Loading...
+                </TableCell>
+              </TableRow>
+            ) : filteredTasks.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={6}
+                  className="text-center py-12"
+                >
+                  No tasks found.
                 </TableCell>
               </TableRow>
             ) : (
-              clientTasks.map(task => (
-                <TableRow key={task.id}>
+              filteredTasks.map((task) => (
+                <TableRow key={task._id}>
                   <TableCell>
-                    <div className="font-medium text-foreground">{task.title}</div>
-                    {task.description && <div className="text-xs text-muted-foreground mt-0.5">{task.description}</div>}
+                    <div className="font-medium">
+                      {task.title}
+                    </div>
+                    {task.description && (
+                      <div className="text-xs text-muted-foreground">
+                        {task.description}
+                      </div>
+                    )}
                   </TableCell>
-                  <TableCell className="text-sm">{task.assignedTo}</TableCell>
-                  <TableCell><TaskStatusBadge status={task.status} /></TableCell>
-                  <TableCell><TaskPriorityBadge priority={task.priority} /></TableCell>
-                  <TableCell className="text-sm">{format(new Date(task.dueDate), "MMM d, yyyy")}</TableCell>
+
+                  <TableCell>
+                    {task.assignedTo?.email || "-"}
+                  </TableCell>
+
+                  <TableCell>
+                    <TaskStatusBadge
+                      status={task.status}
+                    />
+                  </TableCell>
+
+                  <TableCell>
+                    <TaskPriorityBadge
+                      priority={task.priority}
+                    />
+                  </TableCell>
+
+                  <TableCell>
+                    {task.dueDate
+                      ? format(
+                          new Date(task.dueDate),
+                          "MMM d, yyyy"
+                        )
+                      : "-"}
+                  </TableCell>
+
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                        >
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-popover z-50">
-                        {TASK_STATUSES.map(s => (
-                          <DropdownMenuItem key={s.value} onClick={() => handleQuickStatusChange(task.id, s.value)}>
-                            Mark as {s.label}
-                          </DropdownMenuItem>
-                        ))}
+
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() =>
+                            handleQuickStatusChange(
+                              task._id,
+                              "IN_PROGRESS"
+                            )
+                          }
+                        >
+                          Mark In Progress
+                        </DropdownMenuItem>
+
+                        <DropdownMenuItem
+                          onClick={() =>
+                            handleQuickStatusChange(
+                              task._id,
+                              "COMPLETED"
+                            )
+                          }
+                        >
+                          Mark Completed
+                        </DropdownMenuItem>
+
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive" onClick={() => { deleteTask(task.id); toast.success("Task deleted"); }}>
-                          <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
+
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={() =>
+                            deleteTask(task._id)
+                          }
+                        >
+                          <Trash2 className="mr-2 h-3.5 w-3.5" />
+                          Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -196,7 +335,13 @@ export default function AdminClientDetail() {
         </Table>
       </div>
 
-      <CreateTaskDialog open={createOpen} onOpenChange={setCreateOpen} onCreate={createTask} prefillClientId={clientId} />
+      {/* Create Dialog */}
+      <CreateTaskDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onCreate={createTask}
+        prefillClientId={clientId}
+      />
     </div>
   );
 }
