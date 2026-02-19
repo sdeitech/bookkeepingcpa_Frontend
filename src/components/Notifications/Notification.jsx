@@ -6,11 +6,13 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Separator } from "@/components/ui/separator";
 import { useDispatch, useSelector } from "react-redux";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   useMarkAsReadMutation,
   useMarkAllAsReadMutation,
   useDeleteNotificationMutation,
+  useGetNotificationsQuery,
+  useGetUnreadCountQuery,
 } from "@/features/notifications/notificationApi";
 import {
   selectNotifications,
@@ -47,6 +49,26 @@ export function NotificationPanel() {
   const [markAsReadMutation] = useMarkAsReadMutation();
   const [markAllAsReadMutation] = useMarkAllAsReadMutation();
   const [deleteNotificationMutation] = useDeleteNotificationMutation();
+  const {
+    data: notificationsResponse,
+    refetch: refetchNotifications,
+    isFetching: isPollingNotifications,
+  } = useGetNotificationsQuery(
+    { page: 1, limit: 100 },
+    {
+      // pollingInterval: 10000, // Optional: Poll every 10 seconds for new notifications
+      refetchOnFocus: true,
+      refetchOnReconnect: true,
+    }
+  );
+  const {
+    data: unreadCountResponse,
+    refetch: refetchUnreadCount,
+  } = useGetUnreadCountQuery(undefined, {
+    // pollingInterval: 10000, // Optional: Poll every 10 seconds for unread count
+    refetchOnFocus: true,
+    refetchOnReconnect: true,
+  });
 
   const [filter, setLocalFilter] = useState("all");
   const [open, setOpen] = useState(false);
@@ -54,31 +76,37 @@ export function NotificationPanel() {
 
   const filtered = filter === "unread" ? notifications.filter((n) => !n.isRead) : notifications;
 
+  // Keep unread badge in sync even when bell is not opened.
+  useEffect(() => {
+    if (unreadCountResponse !== undefined && unreadCount !== unreadCountResponse) {
+      dispatch(updateUnreadCount(unreadCountResponse));
+    }
+  }, [unreadCountResponse, unreadCount, dispatch]);
+
+  // Keep notification list in sync in background (not only on bell click).
+  useEffect(() => {
+    if (!notificationsResponse?.data?.notifications) return;
+
+    const apiNotifications = notificationsResponse.data.notifications;
+    if (allNotifications.length === 0) {
+      dispatch(setNotifications(apiNotifications));
+    } else {
+      const existingIds = new Set(allNotifications.map((n) => n._id || n.id));
+      const newNotifications = apiNotifications.filter(
+        (n) => !existingIds.has(n._id) && !existingIds.has(n.id)
+      );
+      newNotifications.forEach((notification) => dispatch(addNotification(notification)));
+    }
+
+    if (notificationsResponse?.data?.unreadCount !== undefined) {
+      dispatch(updateUnreadCount(notificationsResponse.data.unreadCount));
+    }
+  }, [notificationsResponse, allNotifications, dispatch]);
+
   const handleRefresh = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch("/api/notifications?limit=100", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-        },
-      });
-      const data = await response.json();
-
-      if (data.success && data.data?.notifications) {
-        if (allNotifications.length === 0) {
-          dispatch(setNotifications(data.data.notifications));
-        } else {
-          const existingIds = new Set(allNotifications.map((n) => n._id || n.id));
-          const newNotifications = data.data.notifications.filter(
-            (n) => !existingIds.has(n._id) && !existingIds.has(n.id)
-          );
-          newNotifications.forEach((notification) => dispatch(addNotification(notification)));
-        }
-
-        if (data.data.unreadCount !== undefined) {
-          dispatch(updateUnreadCount(data.data.unreadCount));
-        }
-      }
+      await Promise.all([refetchNotifications(), refetchUnreadCount()]);
     } catch (error) {
       console.error("Failed to refresh notifications:", error);
     } finally {
@@ -236,7 +264,7 @@ export function NotificationPanel() {
 
         {/* Notification List */}
         <ScrollArea className="max-h-[360px]">
-          {isLoading ? (
+          {isLoading || isPollingNotifications ? (
             <div className="flex flex-col items-center justify-center py-10 text-center">
               <p className="text-sm text-muted-foreground">Loading notifications...</p>
             </div>

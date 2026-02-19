@@ -30,13 +30,13 @@ const notificationSlice = createSlice({
   reducers: {
     // Set all notifications (only for initial load - should not be called after real-time updates)
     setNotifications: (state, action) => {
-      const apiNotifications = action.payload || [];
+      const apiNotifications = Array.isArray(action.payload) ? action.payload : [];
       
       // Only set notifications if store is empty (initial load)
       // This prevents overwriting real-time notifications
       if (state.notifications.length === 0) {
         console.log('🔄 Initial load: Setting', apiNotifications.length, 'notifications');
-        state.notifications = apiNotifications;
+        state.notifications = [...apiNotifications];
         
         // Sort by createdAt to maintain order (newest first)
         state.notifications.sort((a, b) =>
