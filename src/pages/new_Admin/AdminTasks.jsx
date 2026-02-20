@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useTasks } from "@/hooks/useTasks";
 import { useGetAllClientsQuery, useGetAllStaffQuery } from "@/features/user/userApi";
 import { Button } from "@/components/ui/button";
@@ -10,9 +10,27 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { TaskStatusBadge, TaskPriorityBadge } from "@/components/new_Admin/TaskStatusBadge";
 import { CreateTaskWizard } from "@/components/new_Admin/CreateTaskWizard";
 import { TASK_STATUSES, TASK_PRIORITIES } from "@/lib/task-types";
-import { Plus, MoreHorizontal, Search, AlertTriangle, Pencil, Trash2, UserCheck, Filter } from "lucide-react";
-import { format, isBefore, startOfDay } from "date-fns";
+import { Plus, MoreHorizontal, Search, AlertTriangle, Pencil, Trash2, UserCheck, Filter, ChevronDown, X } from "lucide-react";
+import { format, isBefore, startOfDay, isWithinInterval, addDays } from "date-fns";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+
+const TASK_TYPES = [
+  { value: "all", label: "All Types" },
+  { value: "DOCUMENT_UPLOAD", label: "📄 Document Upload" },
+  { value: "INTEGRATION", label: "🔗 Integration" },
+  { value: "ACTION", label: "✓ Action" },
+  { value: "REVIEW", label: "👁 Review" },
+];
+
+const QUICK_FILTERS = [
+  { id: "all", label: "All Tasks" },
+  { id: "my_tasks", label: "My Tasks" },
+  { id: "client_tasks", label: "Client Tasks" },
+  { id: "staff_tasks", label: "Staff Tasks" },
+  { id: "overdue", label: "Overdue" },
+  { id: "due_this_week", label: "Due This Week" },
+];
 
 export default function AdminTasks() {
   const { tasks, createTask, updateTask, deleteTask, deleteTasks, reassignTasks } = useTasks();
@@ -22,45 +40,203 @@ export default function AdminTasks() {
   const clients = clientsData?.data || [];
   const staffMembers = staffData?.data || [];
   
+  // State
   const [createOpen, setCreateOpen] = useState(false);
   const [selected, setSelected] = useState([]);
   const [search, setSearch] = useState("");
+  
+  // Quick Filters
+  const [quickFilter, setQuickFilter] = useState("all");
+  const [taskTypeFilter, setTaskTypeFilter] = useState("all");
+  
+  // Column Filters
   const [filterClient, setFilterClient] = useState("all");
-  const [filterStaff, setFilterStaff] = useState("all");
+  const [filterAssignedTo, setFilterAssignedTo] = useState("all");
+  const [filterAssignedBy, setFilterAssignedBy] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterPriority, setFilterPriority] = useState("all");
+  const [filterDueDate, setFilterDueDate] = useState("all");
 
   // Editing inline
   const [editingId, setEditingId] = useState(null);
-  const [editStatus, setEditStatus] = useState("not_started");
+  const [editStatus, setEditStatus] = useState("NOT_STARTED");
   const [editAssignedTo, setEditAssignedTo] = useState("");
 
   const today = startOfDay(new Date());
+  const currentUserId = "CURRENT_USER_ID"; // TODO: Get from auth context
+
+  // Console log filter changes
+  useEffect(() => {
+    const activeFilters = {
+      quickFilter: quickFilter !== "all" ? quickFilter : null,
+      taskType: taskTypeFilter !== "all" ? taskTypeFilter : null,
+      clientId: filterClient !== "all" ? filterClient : null,
+      assignedTo: filterAssignedTo !== "all" ? filterAssignedTo : null,
+      assignedBy: filterAssignedBy !== "all" ? filterAssignedBy : null,
+      status: filterStatus !== "all" ? filterStatus : null,
+      priority: filterPriority !== "all" ? filterPriority : null,
+      dueDate: filterDueDate !== "all" ? filterDueDate : null,
+    };
+
+    // Remove null values
+    const cleanFilters = Object.fromEntries(
+      Object.entries(activeFilters).filter(([_, v]) => v !== null)
+    );
+
+    if (Object.keys(cleanFilters).length > 0) {
+      console.log("=== FILTER APPLIED ===");
+      console.log("Active Filters:", cleanFilters);
+      console.log("Backend Query Params:", cleanFilters);
+      console.log("Query String:", new URLSearchParams(cleanFilters).toString());
+      console.log("======================");
+    }
+  }, [quickFilter, taskTypeFilter, filterClient, filterAssignedTo, filterAssignedBy, filterStatus, filterPriority, filterDueDate]);
+
+  // Get all unique users for filters
+  const allUsers = useMemo(() => {
+    const userMap = new Map();
+    
+    tasks.forEach(task => {
+      if (task.assignedTo) {
+        const id = task.assignedTo._id || task.assignedTo;
+        if (!userMap.has(id)) {
+          userMap.set(id, task.assignedTo);
+        }
+      }
+      if (task.assignedBy) {
+        const id = task.assignedBy._id || task.assignedBy;
+        if (!userMap.has(id)) {
+          userMap.set(id, task.assignedBy);
+        }
+      }
+    });
+    
+    return Array.from(userMap.values());
+  }, [tasks]);
 
   const overdueTasks = useMemo(() =>
-    tasks.filter(t => t.status !== "completed" && isBefore(new Date(t.dueDate), today)),
+    tasks.filter(t => t.status !== "COMPLETED" && isBefore(new Date(t.dueDate), today)),
     [tasks, today]
   );
 
   const filtered = useMemo(() => {
     return tasks.filter(t => {
-      const clientName = t.clientId?.first_name && t.clientId?.last_name 
-        ? `${t.clientId.first_name} ${t.clientId.last_name}` 
-        : '';
-      if (search && !t.title.toLowerCase().includes(search.toLowerCase()) && !clientName.toLowerCase().includes(search.toLowerCase())) return false;
-      if (filterClient !== "all" && t.clientId?._id !== filterClient) return false;
-      if (filterStaff !== "all" && t.assignedTo?._id !== filterStaff) return false;
+      // Search
+      if (search) {
+        const clientName = t.clientId?.first_name && t.clientId?.last_name 
+          ? `${t.clientId.first_name} ${t.clientId.last_name}` 
+          : '';
+        const searchLower = search.toLowerCase();
+        if (!t.title.toLowerCase().includes(searchLower) && 
+            !clientName.toLowerCase().includes(searchLower)) {
+          return false;
+        }
+      }
+
+      // Quick Filters
+      if (quickFilter === "my_tasks" && t.assignedTo?._id !== currentUserId) return false;
+      if (quickFilter === "client_tasks" && t.assignedToRole !== "CLIENT") return false;
+      if (quickFilter === "staff_tasks" && t.assignedToRole !== "STAFF") return false;
+      if (quickFilter === "overdue" && (t.status === "COMPLETED" || !isBefore(new Date(t.dueDate), today))) return false;
+      if (quickFilter === "due_this_week") {
+        const weekEnd = addDays(today, 7);
+        if (!isWithinInterval(new Date(t.dueDate), { start: today, end: weekEnd })) return false;
+      }
+
+      // Task Type Filter
+      if (taskTypeFilter !== "all" && t.taskType !== taskTypeFilter) return false;
+
+      // Column Filters
+      if (filterClient !== "all") {
+        if (filterClient === "internal" && t.clientId) return false;
+        if (filterClient !== "internal" && t.clientId?._id !== filterClient) return false;
+      }
+      if (filterAssignedTo !== "all" && t.assignedTo?._id !== filterAssignedTo) return false;
+      if (filterAssignedBy !== "all" && t.assignedBy?._id !== filterAssignedBy) return false;
       if (filterStatus !== "all" && t.status !== filterStatus) return false;
       if (filterPriority !== "all" && t.priority !== filterPriority) return false;
+      
+      // Due Date Filter
+      if (filterDueDate === "overdue" && (t.status === "COMPLETED" || !isBefore(new Date(t.dueDate), today))) return false;
+      if (filterDueDate === "today" && format(new Date(t.dueDate), "yyyy-MM-dd") !== format(today, "yyyy-MM-dd")) return false;
+      if (filterDueDate === "this_week") {
+        const weekEnd = addDays(today, 7);
+        if (!isWithinInterval(new Date(t.dueDate), { start: today, end: weekEnd })) return false;
+      }
+
       return true;
     });
-  }, [tasks, search, filterClient, filterStaff, filterStatus, filterPriority]);
+  }, [tasks, search, quickFilter, taskTypeFilter, filterClient, filterAssignedTo, filterAssignedBy, filterStatus, filterPriority, filterDueDate, today, currentUserId]);
+
+  // Active filters for badges
+  const activeFilters = useMemo(() => {
+    const filters = [];
+    
+    if (quickFilter !== "all") {
+      filters.push({ type: "quick", value: quickFilter, label: QUICK_FILTERS.find(f => f.id === quickFilter)?.label });
+    }
+    if (taskTypeFilter !== "all") {
+      filters.push({ type: "taskType", value: taskTypeFilter, label: TASK_TYPES.find(t => t.value === taskTypeFilter)?.label });
+    }
+    if (filterClient !== "all") {
+      const clientLabel = filterClient === "internal" ? "Internal" : 
+        clients.find(c => c.id === filterClient)?.first_name + " " + clients.find(c => c.id === filterClient)?.last_name;
+      filters.push({ type: "client", value: filterClient, label: `Client: ${clientLabel}` });
+    }
+    if (filterAssignedTo !== "all") {
+      const user = allUsers.find(u => u._id === filterAssignedTo);
+      const label = user?.first_name && user?.last_name ? `${user.first_name} ${user.last_name}` : filterAssignedTo;
+      filters.push({ type: "assignedTo", value: filterAssignedTo, label: `Assigned To: ${label}` });
+    }
+    if (filterAssignedBy !== "all") {
+      const user = allUsers.find(u => u._id === filterAssignedBy);
+      const label = user?.first_name && user?.last_name ? `${user.first_name} ${user.last_name}` : filterAssignedBy;
+      filters.push({ type: "assignedBy", value: filterAssignedBy, label: `Created By: ${label}` });
+    }
+    if (filterStatus !== "all") {
+      filters.push({ type: "status", value: filterStatus, label: `Status: ${TASK_STATUSES.find(s => s.value === filterStatus)?.label}` });
+    }
+    if (filterPriority !== "all") {
+      filters.push({ type: "priority", value: filterPriority, label: `Priority: ${TASK_PRIORITIES.find(p => p.value === filterPriority)?.label}` });
+    }
+    if (filterDueDate !== "all") {
+      const labels = { overdue: "Overdue", today: "Today", this_week: "This Week", this_month: "This Month" };
+      filters.push({ type: "dueDate", value: filterDueDate, label: `Due: ${labels[filterDueDate]}` });
+    }
+    
+    return filters;
+  }, [quickFilter, taskTypeFilter, filterClient, filterAssignedTo, filterAssignedBy, filterStatus, filterPriority, filterDueDate, clients, allUsers]);
+
+  const removeFilter = (filter) => {
+    if (filter.type === "quick") setQuickFilter("all");
+    if (filter.type === "taskType") setTaskTypeFilter("all");
+    if (filter.type === "client") setFilterClient("all");
+    if (filter.type === "assignedTo") setFilterAssignedTo("all");
+    if (filter.type === "assignedBy") setFilterAssignedBy("all");
+    if (filter.type === "status") setFilterStatus("all");
+    if (filter.type === "priority") setFilterPriority("all");
+    if (filter.type === "dueDate") setFilterDueDate("all");
+  };
+
+  const clearAllFilters = () => {
+    setQuickFilter("all");
+    setTaskTypeFilter("all");
+    setFilterClient("all");
+    setFilterAssignedTo("all");
+    setFilterAssignedBy("all");
+    setFilterStatus("all");
+    setFilterPriority("all");
+    setFilterDueDate("all");
+    setSearch("");
+  };
 
   const toggleSelect = (id) =>
     setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
 
-  const toggleAll = () =>
-    setSelected(prev => prev.length === filtered.length ? [] : filtered.map(t => t.id));
+  const toggleAll = () => {
+    const allIds = filtered.map(t => t._id || t.id);
+    setSelected(prev => prev.length === filtered.length ? [] : allIds);
+  };
 
   const handleBulkDelete = () => {
     deleteTasks(selected);
@@ -68,10 +244,10 @@ export default function AdminTasks() {
     toast.success(`${selected.length} tasks deleted`);
   };
 
-  const handleBulkReassign = (staff) => {
-    reassignTasks(selected, staff);
+  const handleBulkReassign = (staffId) => {
+    reassignTasks(selected, staffId);
     setSelected([]);
-    toast.success(`Tasks reassigned to ${staff}`);
+    toast.success(`Tasks reassigned`);
   };
 
   const startEdit = (taskId) => {
@@ -125,46 +301,72 @@ export default function AdminTasks() {
         </div>
       )}
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[200px] max-w-xs">
+      {/* Filters Section */}
+      <div className="space-y-4">
+        {/* Search */}
+        <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Search tasks..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+          <Input 
+            placeholder="Search tasks..." 
+            value={search} 
+            onChange={e => setSearch(e.target.value)} 
+            className="pl-9" 
+          />
         </div>
-        <Select value={filterClient} onValueChange={setFilterClient}>
-          <SelectTrigger className="w-[160px]"><Filter className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" /><SelectValue placeholder="Client" /></SelectTrigger>
-          <SelectContent className="bg-popover z-50">
-            <SelectItem value="all">All Clients</SelectItem>
-            {clients.map(c => {
-              const fullName = `${c.first_name} ${c.last_name}`.trim();
-              return <SelectItem key={c.id} value={c.id}>{fullName}</SelectItem>;
-            })}
-          </SelectContent>
-        </Select>
-        <Select value={filterStaff} onValueChange={setFilterStaff}>
-          <SelectTrigger className="w-[160px]"><SelectValue placeholder="Staff" /></SelectTrigger>
-          <SelectContent className="bg-popover z-50">
-            <SelectItem value="all">All Staff</SelectItem>
-            {staffMembers.map(s => {
-              const fullName = `${s.first_name} ${s.last_name}`.trim();
-              return <SelectItem key={s._id} value={s._id}>{fullName}</SelectItem>;
-            })}
-          </SelectContent>
-        </Select>
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-[140px]"><SelectValue placeholder="Status" /></SelectTrigger>
-          <SelectContent className="bg-popover z-50">
-            <SelectItem value="all">All Status</SelectItem>
-            {TASK_STATUSES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={filterPriority} onValueChange={setFilterPriority}>
-          <SelectTrigger className="w-[130px]"><SelectValue placeholder="Priority" /></SelectTrigger>
-          <SelectContent className="bg-popover z-50">
-            <SelectItem value="all">All Priority</SelectItem>
-            {TASK_PRIORITIES.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
-          </SelectContent>
-        </Select>
+
+        {/* Quick Filters */}
+        <div className="flex flex-wrap items-center gap-2">
+          {QUICK_FILTERS.map(filter => (
+            <Button
+              key={filter.id}
+              variant={quickFilter === filter.id ? "default" : "outline"}
+              size="sm"
+              onClick={() => setQuickFilter(filter.id)}
+              className="h-8"
+            >
+              {filter.label}
+            </Button>
+          ))}
+        </div>
+
+        {/* Task Type Filter */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-foreground">Task Type:</span>
+          <Select value={taskTypeFilter} onValueChange={setTaskTypeFilter}>
+            <SelectTrigger className="w-[200px] h-8">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-popover z-50">
+              {TASK_TYPES.map(type => (
+                <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Active Filters */}
+        {activeFilters.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm font-medium text-muted-foreground">Active Filters:</span>
+            {activeFilters.map((filter, idx) => (
+              <div
+                key={idx}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-primary/10 text-primary text-sm"
+              >
+                <span>{filter.label}</span>
+                <button
+                  onClick={() => removeFilter(filter)}
+                  className="hover:bg-primary/20 rounded-sm p-0.5"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+            <Button variant="ghost" size="sm" onClick={clearAllFilters} className="h-7 text-xs">
+              Clear All
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Bulk actions */}
@@ -201,25 +403,121 @@ export default function AdminTasks() {
                 <Checkbox checked={selected.length === filtered.length && filtered.length > 0} onCheckedChange={toggleAll} />
               </TableHead>
               <TableHead>Title</TableHead>
-              <TableHead>Client</TableHead>
-              <TableHead>Assigned To</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Priority</TableHead>
-              <TableHead>Due Date</TableHead>
+              <TableHead>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-8 px-2 hover:bg-muted">
+                      Client <ChevronDown className="ml-1 h-3 w-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="bg-popover z-50 w-48">
+                    <DropdownMenuItem onClick={() => setFilterClient("all")}>All Clients</DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setFilterClient("internal")}>Internal</DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    {clients.map(c => {
+                      const fullName = `${c.first_name} ${c.last_name}`.trim();
+                      return <DropdownMenuItem key={c.id} onClick={() => setFilterClient(c.id)}>{fullName}</DropdownMenuItem>;
+                    })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </TableHead>
+              <TableHead>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-8 px-2 hover:bg-muted">
+                      Assigned To <ChevronDown className="ml-1 h-3 w-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="bg-popover z-50 w-48">
+                    <DropdownMenuItem onClick={() => setFilterAssignedTo("all")}>All Users</DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    {allUsers.map(u => {
+                      const fullName = u.first_name && u.last_name ? `${u.first_name} ${u.last_name}` : u._id;
+                      return <DropdownMenuItem key={u._id} onClick={() => setFilterAssignedTo(u._id)}>{fullName}</DropdownMenuItem>;
+                    })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </TableHead>
+              <TableHead>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-8 px-2 hover:bg-muted">
+                      Assigned By <ChevronDown className="ml-1 h-3 w-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="bg-popover z-50 w-48">
+                    <DropdownMenuItem onClick={() => setFilterAssignedBy("all")}>All Users</DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    {allUsers.map(u => {
+                      const fullName = u.first_name && u.last_name ? `${u.first_name} ${u.last_name}` : u._id;
+                      return <DropdownMenuItem key={u._id} onClick={() => setFilterAssignedBy(u._id)}>{fullName}</DropdownMenuItem>;
+                    })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </TableHead>
+              <TableHead>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-8 px-2 hover:bg-muted">
+                      Status <ChevronDown className="ml-1 h-3 w-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="bg-popover z-50 w-48">
+                    <DropdownMenuItem onClick={() => setFilterStatus("all")}>All Status</DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    {TASK_STATUSES.map(s => (
+                      <DropdownMenuItem key={s.value} onClick={() => setFilterStatus(s.value)}>{s.label}</DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </TableHead>
+              <TableHead>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-8 px-2 hover:bg-muted">
+                      Priority <ChevronDown className="ml-1 h-3 w-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="bg-popover z-50 w-48">
+                    <DropdownMenuItem onClick={() => setFilterPriority("all")}>All Priority</DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    {TASK_PRIORITIES.map(p => (
+                      <DropdownMenuItem key={p.value} onClick={() => setFilterPriority(p.value)}>{p.label}</DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </TableHead>
+              <TableHead>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-8 px-2 hover:bg-muted">
+                      Due Date <ChevronDown className="ml-1 h-3 w-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="bg-popover z-50 w-48">
+                    <DropdownMenuItem onClick={() => setFilterDueDate("all")}>All</DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setFilterDueDate("overdue")}>Overdue</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setFilterDueDate("today")}>Today</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setFilterDueDate("this_week")}>This Week</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </TableHead>
               <TableHead className="w-12" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
+                <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
                   No tasks found.
                 </TableCell>
               </TableRow>
             ) : (
               filtered.map(task => {
                 const taskId = task._id || task.id;
-                const isOverdue = task.status !== "completed" && isBefore(new Date(task.dueDate), today);
+                const isOverdue = task.status !== "COMPLETED" && isBefore(new Date(task.dueDate), today);
                 const isEditing = editingId === taskId;
                 return (
                   <TableRow key={taskId} className={isOverdue ? "bg-destructive/5" : ""}>
@@ -228,12 +526,12 @@ export default function AdminTasks() {
                     </TableCell>
                     <TableCell>
                       <div className="font-medium text-foreground">{task.title}</div>
-                      {task.description && <div className="text-xs text-muted-foreground mt-0.5">{task.description}</div>}
+                      {task.description && <div className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{task.description}</div>}
                     </TableCell>
                     <TableCell className="text-sm">
                       {task.clientId?.first_name && task.clientId?.last_name
                         ? `${task.clientId.first_name} ${task.clientId.last_name}`
-                        : "-"}
+                        : <span className="text-muted-foreground italic">Internal</span>}
                     </TableCell>
                     <TableCell className="text-sm">
                       {isEditing ? (
@@ -247,10 +545,20 @@ export default function AdminTasks() {
                           </SelectContent>
                         </Select>
                       ) : (
-                        task.assignedTo?.first_name && task.assignedTo?.last_name
-                          ? `${task.assignedTo.first_name} ${task.assignedTo.last_name}`
-                          : "-"
+                        <div>
+                          {task.assignedTo?.first_name && task.assignedTo?.last_name
+                            ? `${task.assignedTo.first_name} ${task.assignedTo.last_name}`
+                            : "-"}
+                          {task.assignedToRole && (
+                            <span className="ml-2 text-xs text-muted-foreground">({task.assignedToRole})</span>
+                          )}
+                        </div>
                       )}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {task.assignedBy?.first_name && task.assignedBy?.last_name
+                        ? `${task.assignedBy.first_name} ${task.assignedBy.last_name}`
+                        : "-"}
                     </TableCell>
                     <TableCell>
                       {isEditing ? (
