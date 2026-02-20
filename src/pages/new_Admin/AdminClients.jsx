@@ -1,21 +1,62 @@
 import { Link } from "react-router-dom";
-import { MOCK_CLIENTS } from "@/lib/task-types";
 import { useTasks } from "@/hooks/useTasks";
-import { Building2, ArrowRight } from "lucide-react";
+import { Building2, ArrowRight, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useGetAllClientsQuery } from "@/features/user/userApi";
 import { useGetTasksQuery } from "@/features/tasks/tasksApi";
 
 export default function AdminClients() {
+  // Fetch real clients from backend
+  const { data: clientsData, isLoading: clientsLoading, error: clientsError } = useGetAllClientsQuery();
 
-  const { data: clientsData, isLoading: clientsLoading } =
-    useGetAllClientsQuery();
+  console.log('client data ->', clientsData)
+  
+  // Fetch real tasks from backend
+  const { tasks, isLoading: tasksLoading } = useTasks();
 
-  const { data: tasksData, isLoading: tasksLoading } =
-    useGetTasksQuery({});
-
+  // Extract clients from response
   const clients = clientsData?.data || [];
-  const tasks = tasksData?.data?.tasks || [];
+
+  // Loading state
+  if (clientsLoading || tasksLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Loading clients...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (clientsError) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <p className="text-lg font-semibold text-destructive">Error Loading Clients</p>
+          <p className="text-sm text-muted-foreground mt-2">
+            {clientsError?.data?.message || clientsError?.message || 'Failed to fetch clients'}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Empty state
+  if (clients.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+          <p className="text-lg font-semibold text-foreground">No Clients Yet</p>
+          <p className="text-sm text-muted-foreground mt-2">
+            Clients will appear here once they sign up
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -27,7 +68,11 @@ export default function AdminClients() {
       <div className="grid gap-4">
         {clients.map(client => {
           const clientTasks = tasks.filter(t => t.clientId === client.id);
-          const completed = clientTasks.filter(t => t.status === "completed").length;
+          const completed = clientTasks.filter(t => t.status === "COMPLETED").length;
+          
+          // Construct full name from backend fields
+          const fullName = `${client.first_name || ''} ${client.last_name || ''}`.trim() || 'Unnamed Client';
+          
           return (
             <Link
               key={client.id}
@@ -39,7 +84,7 @@ export default function AdminClients() {
                   <Building2 className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <p className="font-semibold text-foreground">{client.name}</p>
+                  <p className="font-semibold text-foreground">{fullName}</p>
                   <p className="text-sm text-muted-foreground">{client.email}</p>
                 </div>
               </div>

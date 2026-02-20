@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useTasks } from "@/hooks/useTasks";
+import { useGetAllClientsQuery, useGetAllStaffQuery } from "@/features/user/userApi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -8,13 +9,19 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { TaskStatusBadge, TaskPriorityBadge } from "@/components/new_Admin/TaskStatusBadge";
 import { CreateTaskWizard } from "@/components/new_Admin/CreateTaskWizard";
-import { MOCK_CLIENTS, STAFF_MEMBERS, TASK_STATUSES, TASK_PRIORITIES } from "@/lib/task-types";
+import { TASK_STATUSES, TASK_PRIORITIES } from "@/lib/task-types";
 import { Plus, MoreHorizontal, Search, AlertTriangle, Pencil, Trash2, UserCheck, Filter } from "lucide-react";
 import { format, isBefore, startOfDay } from "date-fns";
 import { toast } from "sonner";
 
 export default function AdminTasks() {
   const { tasks, createTask, updateTask, deleteTask, deleteTasks, reassignTasks } = useTasks();
+  const { data: clientsData } = useGetAllClientsQuery();
+  const { data: staffData } = useGetAllStaffQuery();
+  
+  const clients = clientsData?.data || [];
+  const staffMembers = staffData?.data || [];
+  
   const [createOpen, setCreateOpen] = useState(false);
   const [selected, setSelected] = useState([]);
   const [search, setSearch] = useState("");
@@ -37,9 +44,12 @@ export default function AdminTasks() {
 
   const filtered = useMemo(() => {
     return tasks.filter(t => {
-      if (search && !t.title.toLowerCase().includes(search.toLowerCase()) && !t.clientName.toLowerCase().includes(search.toLowerCase())) return false;
-      if (filterClient !== "all" && t.clientId !== filterClient) return false;
-      if (filterStaff !== "all" && t.assignedTo !== filterStaff) return false;
+      const clientName = t.clientId?.first_name && t.clientId?.last_name 
+        ? `${t.clientId.first_name} ${t.clientId.last_name}` 
+        : '';
+      if (search && !t.title.toLowerCase().includes(search.toLowerCase()) && !clientName.toLowerCase().includes(search.toLowerCase())) return false;
+      if (filterClient !== "all" && t.clientId?._id !== filterClient) return false;
+      if (filterStaff !== "all" && t.assignedTo?._id !== filterStaff) return false;
       if (filterStatus !== "all" && t.status !== filterStatus) return false;
       if (filterPriority !== "all" && t.priority !== filterPriority) return false;
       return true;
@@ -65,11 +75,11 @@ export default function AdminTasks() {
   };
 
   const startEdit = (taskId) => {
-    const task = tasks.find(t => t.id === taskId);
+    const task = tasks.find(t => (t._id || t.id) === taskId);
     if (!task) return;
     setEditingId(taskId);
     setEditStatus(task.status);
-    setEditAssignedTo(task.assignedTo);
+    setEditAssignedTo(task.assignedTo?._id || task.assignedTo);
   };
 
   const saveEdit = () => {
@@ -100,9 +110,15 @@ export default function AdminTasks() {
               {overdueTasks.length} Overdue Task{overdueTasks.length > 1 ? "s" : ""}
             </p>
             <ul className="text-sm text-destructive/80 mt-1 space-y-0.5">
-              {overdueTasks.slice(0, 3).map(t => (
-                <li key={t.id}>• {t.title} — {t.clientName} (due {format(new Date(t.dueDate), "MMM d")})</li>
-              ))}
+              {overdueTasks.slice(0, 3).map(t => {
+                const taskId = t._id || t.id;
+                const clientName = t.clientId?.first_name && t.clientId?.last_name 
+                  ? `${t.clientId.first_name} ${t.clientId.last_name}` 
+                  : 'No client';
+                return (
+                  <li key={taskId}>• {t.title} — {clientName} (due {format(new Date(t.dueDate), "MMM d")})</li>
+                );
+              })}
               {overdueTasks.length > 3 && <li>...and {overdueTasks.length - 3} more</li>}
             </ul>
           </div>
@@ -119,14 +135,20 @@ export default function AdminTasks() {
           <SelectTrigger className="w-[160px]"><Filter className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" /><SelectValue placeholder="Client" /></SelectTrigger>
           <SelectContent className="bg-popover z-50">
             <SelectItem value="all">All Clients</SelectItem>
-            {MOCK_CLIENTS.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+            {clients.map(c => {
+              const fullName = `${c.first_name} ${c.last_name}`.trim();
+              return <SelectItem key={c.id} value={c.id}>{fullName}</SelectItem>;
+            })}
           </SelectContent>
         </Select>
         <Select value={filterStaff} onValueChange={setFilterStaff}>
           <SelectTrigger className="w-[160px]"><SelectValue placeholder="Staff" /></SelectTrigger>
           <SelectContent className="bg-popover z-50">
             <SelectItem value="all">All Staff</SelectItem>
-            {STAFF_MEMBERS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+            {staffMembers.map(s => {
+              const fullName = `${s.first_name} ${s.last_name}`.trim();
+              return <SelectItem key={s._id} value={s._id}>{fullName}</SelectItem>;
+            })}
           </SelectContent>
         </Select>
         <Select value={filterStatus} onValueChange={setFilterStatus}>
@@ -156,9 +178,12 @@ export default function AdminTasks() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="bg-popover z-50">
-              {STAFF_MEMBERS.map(s => (
-                <DropdownMenuItem key={s} onClick={() => handleBulkReassign(s)}>{s}</DropdownMenuItem>
-              ))}
+              {staffMembers.map(s => {
+                const fullName = `${s.first_name} ${s.last_name}`.trim();
+                return (
+                  <DropdownMenuItem key={s._id} onClick={() => handleBulkReassign(s._id)}>{fullName}</DropdownMenuItem>
+                );
+              })}
             </DropdownMenuContent>
           </DropdownMenu>
           <Button variant="destructive" size="sm" className="gap-1.5" onClick={handleBulkDelete}>
@@ -193,27 +218,39 @@ export default function AdminTasks() {
               </TableRow>
             ) : (
               filtered.map(task => {
+                const taskId = task._id || task.id;
                 const isOverdue = task.status !== "completed" && isBefore(new Date(task.dueDate), today);
-                const isEditing = editingId === task.id;
+                const isEditing = editingId === taskId;
                 return (
-                  <TableRow key={task.id} className={isOverdue ? "bg-destructive/5" : ""}>
+                  <TableRow key={taskId} className={isOverdue ? "bg-destructive/5" : ""}>
                     <TableCell>
-                      <Checkbox checked={selected.includes(task.id)} onCheckedChange={() => toggleSelect(task.id)} />
+                      <Checkbox checked={selected.includes(taskId)} onCheckedChange={() => toggleSelect(taskId)} />
                     </TableCell>
                     <TableCell>
                       <div className="font-medium text-foreground">{task.title}</div>
                       {task.description && <div className="text-xs text-muted-foreground mt-0.5">{task.description}</div>}
                     </TableCell>
-                    <TableCell className="text-sm">{task.clientName}</TableCell>
+                    <TableCell className="text-sm">
+                      {task.clientId?.first_name && task.clientId?.last_name
+                        ? `${task.clientId.first_name} ${task.clientId.last_name}`
+                        : "-"}
+                    </TableCell>
                     <TableCell className="text-sm">
                       {isEditing ? (
                         <Select value={editAssignedTo} onValueChange={setEditAssignedTo}>
                           <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                           <SelectContent className="bg-popover z-50">
-                            {STAFF_MEMBERS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                            {staffMembers.map(s => {
+                              const fullName = `${s.first_name} ${s.last_name}`.trim();
+                              return <SelectItem key={s._id} value={s._id}>{fullName}</SelectItem>;
+                            })}
                           </SelectContent>
                         </Select>
-                      ) : task.assignedTo}
+                      ) : (
+                        task.assignedTo?.first_name && task.assignedTo?.last_name
+                          ? `${task.assignedTo.first_name} ${task.assignedTo.last_name}`
+                          : "-"
+                      )}
                     </TableCell>
                     <TableCell>
                       {isEditing ? (
@@ -245,11 +282,11 @@ export default function AdminTasks() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="bg-popover z-50">
-                            <DropdownMenuItem onClick={() => startEdit(task.id)}>
+                            <DropdownMenuItem onClick={() => startEdit(taskId)}>
                               <Pencil className="mr-2 h-3.5 w-3.5" /> Edit
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-destructive" onClick={() => { deleteTask(task.id); toast.success("Task deleted"); }}>
+                            <DropdownMenuItem className="text-destructive" onClick={() => { deleteTask(taskId); toast.success("Task deleted"); }}>
                               <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
                             </DropdownMenuItem>
                           </DropdownMenuContent>

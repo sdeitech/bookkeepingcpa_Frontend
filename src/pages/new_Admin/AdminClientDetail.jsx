@@ -36,7 +36,20 @@ import {
   Trash2,
   Mail,
   Building2,
+  Loader2
 } from "lucide-react";
+
+// check and revert
+import { useTasks } from "@/hooks/useTasks";
+import { useGetClientProfileQuery } from "@/features/user/userApi";
+// import { TASK_STATUSES } from "@/lib/task-types";
+// import { Button } from "@/components/ui/button";
+// import { Progress } from "@/components/ui/progress";
+// import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+// import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+// import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+// import { TaskStatusBadge, TaskPriorityBadge } from "@/components/new_Admin/TaskStatusBadge";
+// import { CreateTaskDialog } from "@/components/new_Admin/CreateTaskDialog";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
@@ -48,44 +61,78 @@ import {
 } from "@/features/tasks/tasksApi";
 
 export default function AdminClientDetail() {
-  const { clientId } = useParams();
-
+  const { clientId } = useParams(); 
+  
+  // ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS
+  const { data: clientData, isLoading: clientLoading, error: clientError } = useGetClientProfileQuery(clientId, {
+    skip: !clientId
+  });
+  
+  const { tasks, createTask, updateTask, deleteTask } = useTasks();
   const [createOpen, setCreateOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState("all");
 
-  /* ================= FETCH TASKS ================= */
-
-  const {
-    data: tasksData,
-    isLoading,
-    refetch,
-  } = useGetTasksQuery({ clientId });
-
-  const tasks = tasksData?.data?.tasks || [];
-
-  const [updateTaskStatusMutation] = useUpdateTaskStatusMutation();
-  const [deleteTaskMutation] = useDeleteTaskMutation();
-  const [createTaskMutation] = useCreateTaskMutation();
-
-  /* ================= FILTER ================= */
+  // All useMemo hooks must be called unconditionally
+  const clientTasks = useMemo(() => {
+    if (!clientId) return [];
+    let filtered = tasks.filter(t => t.clientId === clientId);
+    if (filterStatus !== "all") filtered = filtered.filter(t => t.status === filterStatus);
+    return filtered;
+  }, [tasks, clientId, filterStatus]);
 
   const filteredTasks = useMemo(() => {
     if (filterStatus === "all") return tasks;
     return tasks.filter((t) => t.status === filterStatus);
   }, [tasks, filterStatus]);
 
-  /* ================= PROGRESS ================= */
+  // Derived state
+  const client = clientData?.data?.client;
+  console.log('hgasfdhsagda', client)
+  const allClientTasks = clientId ? tasks.filter(t => t.clientId === clientId) : [];
+  const completedCount = allClientTasks.filter(t => t.status === "COMPLETED").length;
+  const totalCount = allClientTasks.length;
+  const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
-  const completedCount = tasks.filter(
-    (t) => t.status === "COMPLETED"
-  ).length;
+  // NOW we can do conditional returns after all hooks are called
+  // Check if clientId is missing
+  if (!clientId) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+        <p className="text-lg mb-4">Invalid client ID</p>
+        <Link to="/admin/clients">
+          <Button variant="outline"><ArrowLeft className="mr-2 h-4 w-4" /> Back to Clients</Button>
+        </Link>
+      </div>
+    );
+  }
 
-  const totalCount = tasks.length;
+  // Loading state
+  if (clientLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Loading client details...</p>
+        </div>
+      </div>
+    );
+  }
 
-  const progressPercent =
-    totalCount > 0
-      ? Math.round((completedCount / totalCount) * 100)
-      : 0;
+  // Error state
+  if (clientError || !client) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+        <p className="text-lg mb-4">
+          {clientError?.data?.message || "Client not found"}
+        </p>
+        <Link to="/admin/clients">
+          <Button variant="outline"><ArrowLeft className="mr-2 h-4 w-4" /> Back to Clients</Button>
+        </Link>
+      </div>
+    );
+  }
+
+  /* ================= FILTER ================= */
 
   /* ================= ACTIONS ================= */
 
@@ -102,31 +149,29 @@ export default function AdminClientDetail() {
     }
   };
 
-  const deleteTask = async (taskId) => {
-    try {
-      await deleteTaskMutation(taskId).unwrap();
-      toast.success("Task deleted");
-    } catch (err) {
-      toast.error("Delete failed");
-    }
-  };
+  // const deleteTask = async (taskId) => {
+  //   try {
+  //     await deleteTaskMutation(taskId).unwrap();
+  //     toast.success("Task deleted");
+  //   } catch (err) {
+  //     toast.error("Delete failed");
+  //   }
+  // };
 
-  const createTask = async (task) => {
-    try {
-      await createTaskMutation({
-        ...task,
-        clientId,
-      }).unwrap();
+  // const createTask = async (task) => {
+  //   try {
+  //     await createTaskMutation({
+  //       ...task,
+  //       clientId,
+  //     }).unwrap();
 
-      toast.success("Task created");
-      setCreateOpen(false);
-    } catch (err) {
-      toast.error("Create failed");
-    }
-  };
+  //     toast.success("Task created");
+  //     setCreateOpen(false);
+  //   } catch (err) {
+  //     toast.error("Create failed");
+  //   }
+  // };
 
-
-  console.log("Tasks:", tasksData);
   /* ================= UI ================= */
 
   return (
@@ -148,12 +193,15 @@ export default function AdminClientDetail() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-foreground">
-              {tasks[0]?.clientId?.first_name + " " + tasks[0]?.clientId?.last_name || "-"}
+              {client.firstName + " " + client.lastName || "-"}
               </h1>
               <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
                 <Mail className="h-3.5 w-3.5" />
-               {tasks[0]?.clientId?.email || "Unknown Client"}
+               {client.email || "Unknown Client"}
               </div>
+              {client.phone && (
+                <p className="text-sm text-muted-foreground mt-1">Phone: {client.phone}</p>
+              )}
             </div>
           </div>
 
@@ -223,7 +271,7 @@ export default function AdminClientDetail() {
           </TableHeader>
 
           <TableBody>
-            {isLoading ? (
+            {clientLoading ? (
               <TableRow>
                 <TableCell
                   colSpan={6}

@@ -88,20 +88,31 @@ export function NotificationPanel() {
     if (!notificationsResponse?.data?.notifications) return;
 
     const apiNotifications = notificationsResponse.data.notifications;
+    const currentIds = allNotifications.map((n) => n._id || n.id);
+    
+    // Only update if the data has actually changed
+    const apiIds = apiNotifications.map((n) => n._id || n.id);
+    const hasChanges = apiIds.length !== currentIds.length || 
+                       apiIds.some((id) => !currentIds.includes(id));
+    
+    if (!hasChanges && allNotifications.length > 0) return;
+
     if (allNotifications.length === 0) {
       dispatch(setNotifications(apiNotifications));
     } else {
-      const existingIds = new Set(allNotifications.map((n) => n._id || n.id));
+      const existingIds = new Set(currentIds);
       const newNotifications = apiNotifications.filter(
         (n) => !existingIds.has(n._id) && !existingIds.has(n.id)
       );
-      newNotifications.forEach((notification) => dispatch(addNotification(notification)));
+      if (newNotifications.length > 0) {
+        newNotifications.forEach((notification) => dispatch(addNotification(notification)));
+      }
     }
 
     if (notificationsResponse?.data?.unreadCount !== undefined) {
       dispatch(updateUnreadCount(notificationsResponse.data.unreadCount));
     }
-  }, [notificationsResponse, allNotifications, dispatch]);
+  }, [notificationsResponse, dispatch]);
 
   const handleRefresh = async () => {
     setIsLoading(true);

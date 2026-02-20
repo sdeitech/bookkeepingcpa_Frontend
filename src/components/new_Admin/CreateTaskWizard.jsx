@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,91 +6,142 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { MOCK_CLIENTS, STAFF_MEMBERS } from "@/lib/task-types";
-import { FileText, Link2, CheckCircle, Edit, ArrowLeft, ArrowRight, Sparkles, Users, UserCheck } from "lucide-react";
+import { useGetAllClientsQuery, useGetAllStaffQuery } from "@/features/user/userApi";
+import { useGetTemplatesQuery } from "@/features/tasks/taskTemplateApi";
+import { FileText, Link2, CheckCircle, Edit, ArrowLeft, ArrowRight, Sparkles, Users, UserCheck, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { addDays, format } from "date-fns";
+import { toast } from "sonner";
 
 const CATEGORIES = [
-  { id: "documents", icon: FileText, title: "Upload Documents", desc: "Upload files required" },
-  { id: "integration", icon: Link2, title: "Connect Integration", desc: "Connect QuickBooks, Shopify, etc." },
-  { id: "action", icon: CheckCircle, title: "Complete Action", desc: "Action item to complete" },
-  { id: "custom", icon: Edit, title: "Custom Task", desc: "Create your own task" },
-];
-
-const DOC_TYPES = [
-  "W-2 Forms (2024)", "Bank Statements (Last 3 months)", "Profit & Loss Statement",
-  "Business Receipts", "Tax Return (Previous Year)", "1099 Forms", "Invoices", "Business License",
-];
-
-const INTEGRATIONS = ["QuickBooks", "Shopify", "Amazon Seller Central"];
-
-const CLIENT_ACTIONS = [
-  "Schedule Consultation Call", "Review Business Information", "Provide Bank Account Details",
-  "Complete Onboarding Process", "Update Contact Information", "Sign Engagement Letter",
-];
-
-const STAFF_ACTIONS = [
-  "Review Client's Financial Records", "Prepare Tax Return for Client", "Reconcile Bank Statements",
-  "Follow Up with Client", "Send Reminder to Client", "Generate Monthly Report",
+  { id: "documents", icon: FileText, title: "Upload Documents", desc: "Upload files required", taskType: "DOCUMENT_UPLOAD" },
+  { id: "integration", icon: Link2, title: "Connect Integration", desc: "Connect QuickBooks, Shopify, etc.", taskType: "INTEGRATION" },
+  { id: "action", icon: CheckCircle, title: "Complete Action", desc: "Action item to complete", taskType: "ACTION" },
+  { id: "custom", icon: Edit, title: "Custom Task", desc: "Create your own task", taskType: null },
 ];
 
 export function CreateTaskWizard({ open, onOpenChange, onCreate }) {
+  // Fetch data from APIs
+  const { data: templatesData, isLoading: templatesLoading } = useGetTemplatesQuery({ active: true });
+  const { data: clientsData, isLoading: clientsLoading } = useGetAllClientsQuery();
+  const { data: staffData, isLoading: staffLoading } = useGetAllStaffQuery();
+
+  const templates = templatesData?.data?.templates || [];
+  const clients = clientsData?.data || [];
+  const staffMembers = staffData?.data || [];
+
+  // State
   const [step, setStep] = useState(1);
   const [taskTarget, setTaskTarget] = useState(null);
   const [category, setCategory] = useState(null);
-  const [selectedItem, setSelectedItem] = useState("");
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [customTitle, setCustomTitle] = useState("");
   const [customDesc, setCustomDesc] = useState("");
+  const [customTaskType, setCustomTaskType] = useState("ACTION");
   const [clientId, setClientId] = useState("");
-  const [staffMember, setStaffMember] = useState("");
-  const [priority, setPriority] = useState("medium");
+  const [staffId, setStaffId] = useState("");
+  const [priority, setPriority] = useState("MEDIUM");
   const [dueDate, setDueDate] = useState("");
   const [description, setDescription] = useState("");
-  const [customDocType, setCustomDocType] = useState("");
-  const [showCustomDoc, setShowCustomDoc] = useState(false);
-  const [customAction, setCustomAction] = useState("");
-  const [showCustomAction, setShowCustomAction] = useState(false);
 
   const totalSteps = 4;
 
+  // Filter templates by category
+  const categoryTemplates = useMemo(() => {
+    if (!category || category === "custom") return [];
+    const categoryObj = CATEGORIES.find(c => c.id === category);
+    return templates.filter(t => t.taskType === categoryObj?.taskType && t.active);
+  }, [templates, category]);
+
   const reset = () => {
-    setStep(1); setTaskTarget(null); setCategory(null); setSelectedItem(""); setCustomTitle(""); setCustomDesc("");
-    setClientId(""); setStaffMember(""); setPriority("medium"); setDueDate(""); setDescription("");
-    setCustomDocType(""); setShowCustomDoc(false); setCustomAction(""); setShowCustomAction(false);
+    setStep(1);
+    setTaskTarget(null);
+    setCategory(null);
+    setSelectedTemplate(null);
+    setCustomTitle("");
+    setCustomDesc("");
+    setCustomTaskType("ACTION");
+    setClientId("");
+    setStaffId("");
+    setPriority("MEDIUM");
+    setDueDate("");
+    setDescription("");
   };
 
-  const handleClose = () => { reset(); onOpenChange(false); };
+  const handleClose = () => {
+    reset();
+    onOpenChange(false);
+  };
 
   const getTaskTitle = () => {
     if (category === "custom") return customTitle;
-    return selectedItem || "";
+    return selectedTemplate?.name || "";
   };
 
-  const handleCreate = () => {
-    const client = MOCK_CLIENTS.find(c => c.id === clientId);
-    if (!getTaskTitle() || !dueDate) return;
+  const handleCreate = async () => {
+    if (!getTaskTitle() || !dueDate) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
 
-    const assignedTo = taskTarget === "staff" ? staffMember : (client?.name || "");
+    // Determine assignedTo based on target
+    let assignedToId;
+    if (taskTarget === "staff") {
+      if (!staffId) {
+        toast.error("Please select a staff member");
+        return;
+      }
+      assignedToId = staffId;
+    } else {
+      if (!clientId) {
+        toast.error("Please select a client");
+        return;
+      }
+      assignedToId = clientId;
+    }
 
-    onCreate({
+    // Build task data
+    const taskData = {
       title: getTaskTitle(),
-      description: description || customDesc || undefined,
-      clientId: client?.id || "",
-      clientName: client?.name || "",
-      assignedTo,
-      status: "not_started",
-      priority,
-      dueDate,
-    });
-    handleClose();
+      description: description || selectedTemplate?.description || customDesc || "",
+      taskType: category === "custom" ? customTaskType : CATEGORIES.find(c => c.id === category)?.taskType,
+      priority: priority,
+      dueDate: dueDate,
+      assignedTo: assignedToId,
+      clientId: taskTarget === "client" ? clientId : (clientId || undefined),
+    };
+
+    // Add type-specific fields
+    if (selectedTemplate) {
+      taskData.templateId = selectedTemplate._id;
+      taskData.templateName = selectedTemplate.name;
+      
+      if (selectedTemplate.documentType) {
+        taskData.documentType = selectedTemplate.documentType;
+      }
+      if (selectedTemplate.integrationType) {
+        taskData.integrationType = selectedTemplate.integrationType;
+      }
+      if (selectedTemplate.actionCategory) {
+        taskData.actionCategory = selectedTemplate.actionCategory;
+      }
+    }
+
+    try {
+      await onCreate(taskData);
+      toast.success("Task created successfully");
+      handleClose();
+    } catch (error) {
+      toast.error("Failed to create task");
+      console.error("Create task error:", error);
+    }
   };
 
-  const canProceedStep3 = category === "custom" ? customTitle.trim() : selectedItem;
+  const canProceedStep3 = category === "custom" ? customTitle.trim() : selectedTemplate !== null;
 
   const canCreate = () => {
     if (!getTaskTitle() || !dueDate) return false;
-    if (taskTarget === "staff" && !staffMember) return false;
+    if (taskTarget === "staff" && !staffId) return false;
     if (taskTarget === "client" && !clientId) return false;
     return true;
   };
@@ -102,9 +153,9 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate }) {
   const getStepSubtitle = () => {
     if (step === 1) return "Who is this task for?";
     if (step === 2) return "What type of task do you want to create?";
-    if (step === 3 && category === "documents") return "Select Document Type";
-    if (step === 3 && category === "integration") return "Select Integration";
-    if (step === 3 && category === "action") return "Select Action Type";
+    if (step === 3 && category === "documents") return "Select Document Template";
+    if (step === 3 && category === "integration") return "Select Integration Template";
+    if (step === 3 && category === "action") return "Select Action Template";
     if (step === 3 && category === "custom") return "Create Custom Task";
     if (step === 4) return "Task Details";
     return "";
@@ -159,7 +210,7 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate }) {
             {CATEGORIES.map((cat) => (
               <button
                 key={cat.id}
-                onClick={() => { setCategory(cat.id); setSelectedItem(""); setStep(3); }}
+                onClick={() => { setCategory(cat.id); setSelectedTemplate(null); setStep(3); }}
                 className={cn(
                   "flex flex-col items-center gap-2 p-5 rounded-xl border-2 transition-all text-center hover:shadow-md",
                   category === cat.id ? "border-primary bg-accent" : "border-border hover:border-primary/40"
@@ -173,107 +224,90 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate }) {
           </div>
         )}
 
-        {/* Step 3A: Documents */}
-        {step === 3 && category === "documents" && (
+        {/* Step 3: Template Selection (Documents, Integration, Action) */}
+        {step === 3 && category !== "custom" && (
           <div className="space-y-3 py-2">
-            <p className="text-sm font-medium text-foreground">Common Documents</p>
-            <RadioGroup value={selectedItem} onValueChange={setSelectedItem} className="space-y-2">
-              {DOC_TYPES.map((doc) => (
-                <label key={doc} className={cn(
-                  "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors",
-                  selectedItem === doc ? "border-primary bg-accent" : "border-border hover:bg-muted/50"
-                )}>
-                  <RadioGroupItem value={doc} />
-                  <span className="text-sm">{doc}</span>
-                </label>
-              ))}
-            </RadioGroup>
-            {!showCustomDoc ? (
-              <Button variant="ghost" size="sm" onClick={() => setShowCustomDoc(true)} className="text-primary">
-                + Add Custom Document Type
-              </Button>
+            {templatesLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                <span className="ml-2 text-sm text-muted-foreground">Loading templates...</span>
+              </div>
+            ) : categoryTemplates.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <p className="text-sm">No templates available for this category</p>
+                <Button variant="ghost" size="sm" onClick={() => setStep(2)} className="mt-2">
+                  Go Back
+                </Button>
+              </div>
             ) : (
-              <Input placeholder="Custom document type..." value={customDocType}
-                onChange={(e) => { setCustomDocType(e.target.value); setSelectedItem(e.target.value); }} />
+              <>
+                <p className="text-sm font-medium text-foreground">
+                  Select a Template ({categoryTemplates.length} available)
+                </p>
+                <RadioGroup 
+                  value={selectedTemplate?._id} 
+                  onValueChange={(val) => setSelectedTemplate(categoryTemplates.find(t => t._id === val))}
+                  className="space-y-2"
+                >
+                  {categoryTemplates.map((template) => (
+                    <label 
+                      key={template._id} 
+                      className={cn(
+                        "flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors",
+                        selectedTemplate?._id === template._id ? "border-primary bg-accent" : "border-border hover:bg-muted/50"
+                      )}
+                    >
+                      <RadioGroupItem value={template._id} className="mt-0.5" />
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">{template.name}</span>
+                          {template.usageCount > 0 && (
+                            <span className="text-xs text-muted-foreground">Used {template.usageCount}x</span>
+                          )}
+                        </div>
+                        {template.description && (
+                          <p className="text-xs text-muted-foreground mt-1">{template.description}</p>
+                        )}
+                      </div>
+                    </label>
+                  ))}
+                </RadioGroup>
+              </>
             )}
           </div>
         )}
 
-        {/* Step 3B: Integration */}
-        {step === 3 && category === "integration" && (
-          <div className="space-y-3 py-2">
-            <p className="text-sm font-medium text-foreground">Available Integrations</p>
-            <RadioGroup value={selectedItem} onValueChange={setSelectedItem} className="space-y-2">
-              {INTEGRATIONS.map((name) => (
-                <label key={name} className={cn(
-                  "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors",
-                  selectedItem === name ? "border-primary bg-accent" : "border-border hover:bg-muted/50"
-                )}>
-                  <RadioGroupItem value={name} />
-                  <Link2 className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm">{name}</span>
-                </label>
-              ))}
-            </RadioGroup>
-          </div>
-        )}
-
-        {/* Step 3C: Action */}
-        {step === 3 && category === "action" && (
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-foreground flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-primary" /> Client Actions
-              </p>
-              <RadioGroup value={selectedItem} onValueChange={setSelectedItem} className="space-y-1.5">
-                {CLIENT_ACTIONS.map((action) => (
-                  <label key={action} className={cn(
-                    "flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer transition-colors",
-                    selectedItem === action ? "border-primary bg-accent" : "border-border hover:bg-muted/50"
-                  )}>
-                    <RadioGroupItem value={action} />
-                    <span className="text-sm">{action}</span>
-                  </label>
-                ))}
-              </RadioGroup>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-foreground flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-warning" /> Staff Actions (Internal)
-              </p>
-              <RadioGroup value={selectedItem} onValueChange={setSelectedItem} className="space-y-1.5">
-                {STAFF_ACTIONS.map((action) => (
-                  <label key={action} className={cn(
-                    "flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer transition-colors",
-                    selectedItem === action ? "border-primary bg-accent" : "border-border hover:bg-muted/50"
-                  )}>
-                    <RadioGroupItem value={action} />
-                    <span className="text-sm">{action}</span>
-                  </label>
-                ))}
-              </RadioGroup>
-            </div>
-            {!showCustomAction ? (
-              <Button variant="ghost" size="sm" onClick={() => setShowCustomAction(true)} className="text-primary">
-                + Create Custom Action
-              </Button>
-            ) : (
-              <Input placeholder="Custom action..." value={customAction}
-                onChange={(e) => { setCustomAction(e.target.value); setSelectedItem(e.target.value); }} />
-            )}
-          </div>
-        )}
-
-        {/* Step 3D: Custom */}
+        {/* Step 3: Custom Task */}
         {step === 3 && category === "custom" && (
           <div className="space-y-4 py-2">
             <div className="space-y-2">
               <Label>Task Title *</Label>
-              <Input value={customTitle} onChange={(e) => setCustomTitle(e.target.value)} placeholder="Enter task title..." />
+              <Input 
+                value={customTitle} 
+                onChange={(e) => setCustomTitle(e.target.value)} 
+                placeholder="Enter task title..." 
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Task Type *</Label>
+              <Select value={customTaskType} onValueChange={setCustomTaskType}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-popover z-50">
+                  <SelectItem value="DOCUMENT_UPLOAD">Document Upload</SelectItem>
+                  <SelectItem value="INTEGRATION">Integration</SelectItem>
+                  <SelectItem value="ACTION">Action</SelectItem>
+                  <SelectItem value="REVIEW">Review</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label>Description</Label>
-              <Textarea value={customDesc} onChange={(e) => setCustomDesc(e.target.value)} placeholder="Task description..." rows={3} />
+              <Textarea 
+                value={customDesc} 
+                onChange={(e) => setCustomDesc(e.target.value)} 
+                placeholder="Task description..." 
+                rows={3} 
+              />
             </div>
           </div>
         )}
@@ -294,32 +328,54 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate }) {
               </span>
             </div>
 
-            {/* Assign To - different based on target */}
+            {/* Assign To */}
             <div className="space-y-2">
               <Label>{taskTarget === "staff" ? "Assign to Staff *" : "Assign to Client *"}</Label>
               {taskTarget === "staff" ? (
-                <Select value={staffMember} onValueChange={setStaffMember}>
-                  <SelectTrigger><SelectValue placeholder="Select staff member..." /></SelectTrigger>
-                  <SelectContent className="bg-popover z-50">
-                    {STAFF_MEMBERS.map(s => (
-                      <SelectItem key={s} value={s}>{s}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                staffLoading ? (
+                  <div className="flex items-center gap-2 p-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading staff...
+                  </div>
+                ) : (
+                  <Select value={staffId} onValueChange={setStaffId}>
+                    <SelectTrigger><SelectValue placeholder="Select staff member..." /></SelectTrigger>
+                    <SelectContent className="bg-popover z-50">
+                      {staffMembers.map(s => {
+                        const fullName = `${s.first_name} ${s.last_name}`.trim();
+                        return (
+                          <SelectItem key={s._id} value={s._id}>
+                            {fullName} ({s.email})
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                )
               ) : (
-                <Select value={clientId} onValueChange={setClientId}>
-                  <SelectTrigger><SelectValue placeholder="Select client..." /></SelectTrigger>
-                  <SelectContent className="bg-popover z-50">
-                    {MOCK_CLIENTS.map(c => (
-                      <SelectItem key={c.id} value={c.id}>
-                        <div>
-                          <span className="font-medium">{c.name}</span>
-                          <span className="text-muted-foreground ml-2 text-xs">{c.email}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                clientsLoading ? (
+                  <div className="flex items-center gap-2 p-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading clients...
+                  </div>
+                ) : (
+                  <Select value={clientId} onValueChange={setClientId}>
+                    <SelectTrigger><SelectValue placeholder="Select client..." /></SelectTrigger>
+                    <SelectContent className="bg-popover z-50">
+                      {clients.map(c => {
+                        const fullName = `${c.first_name} ${c.last_name}`.trim();
+                        return (
+                          <SelectItem key={c.id} value={c.id}>
+                            <div>
+                              <span className="font-medium">{fullName}</span>
+                              <span className="text-muted-foreground ml-2 text-xs">{c.email}</span>
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                )
               )}
             </div>
 
@@ -327,14 +383,24 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate }) {
             {taskTarget === "staff" && (
               <div className="space-y-2">
                 <Label>Related Client <span className="text-muted-foreground">(optional)</span></Label>
-                <Select value={clientId} onValueChange={setClientId}>
-                  <SelectTrigger><SelectValue placeholder="Select client..." /></SelectTrigger>
-                  <SelectContent className="bg-popover z-50">
-                    {MOCK_CLIENTS.map(c => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {clientsLoading ? (
+                  <div className="flex items-center gap-2 p-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading clients...
+                  </div>
+                ) : (
+                  <Select value={clientId} onValueChange={setClientId}>
+                    <SelectTrigger><SelectValue placeholder="Select client..." /></SelectTrigger>
+                    <SelectContent className="bg-popover z-50">
+                      {clients.map(c => {
+                        const fullName = `${c.first_name} ${c.last_name}`.trim();
+                        return (
+                          <SelectItem key={c.id} value={c.id}>{fullName}</SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             )}
 
@@ -342,16 +408,16 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate }) {
               <Label>Priority *</Label>
               <RadioGroup value={priority} onValueChange={setPriority} className="flex gap-3">
                 <label className={cn("flex items-center gap-2 px-4 py-2 rounded-lg border cursor-pointer transition-colors",
-                  priority === "low" ? "border-muted-foreground bg-muted" : "border-border")}>
-                  <RadioGroupItem value="low" /> <span className="text-sm">Low</span>
+                  priority === "LOW" ? "border-muted-foreground bg-muted" : "border-border")}>
+                  <RadioGroupItem value="LOW" /> <span className="text-sm">Low</span>
                 </label>
                 <label className={cn("flex items-center gap-2 px-4 py-2 rounded-lg border cursor-pointer transition-colors",
-                  priority === "medium" ? "border-warning bg-warning/10" : "border-border")}>
-                  <RadioGroupItem value="medium" /> <span className="text-sm">Medium</span>
+                  priority === "MEDIUM" ? "border-warning bg-warning/10" : "border-border")}>
+                  <RadioGroupItem value="MEDIUM" /> <span className="text-sm">Medium</span>
                 </label>
                 <label className={cn("flex items-center gap-2 px-4 py-2 rounded-lg border cursor-pointer transition-colors",
-                  priority === "high" ? "border-destructive bg-destructive/10" : "border-border")}>
-                  <RadioGroupItem value="high" /> <span className="text-sm">High</span>
+                  priority === "HIGH" ? "border-destructive bg-destructive/10" : "border-border")}>
+                  <RadioGroupItem value="HIGH" /> <span className="text-sm">High</span>
                 </label>
               </RadioGroup>
             </div>
@@ -368,8 +434,12 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate }) {
 
             <div className="space-y-2">
               <Label>Description <span className="text-muted-foreground">(optional)</span></Label>
-              <Textarea value={description} onChange={(e) => setDescription(e.target.value.slice(0, 500))}
-                placeholder="Add additional instructions or notes..." rows={3} />
+              <Textarea 
+                value={description} 
+                onChange={(e) => setDescription(e.target.value.slice(0, 500))}
+                placeholder="Add additional instructions or notes..." 
+                rows={3} 
+              />
               <p className="text-xs text-muted-foreground text-right">{description.length}/500</p>
             </div>
           </div>

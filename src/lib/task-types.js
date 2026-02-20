@@ -1,14 +1,39 @@
+// Task statuses - aligned with backend
 const TASK_STATUSES = [
-  { value: "not_started", label: "Not Started" },
-  { value: "in_progress", label: "In Progress" },
-  { value: "completed", label: "Completed" },
-  { value: "blocked", label: "Blocked" }
+  { value: "NOT_STARTED", label: "Not Started" },
+  { value: "IN_PROGRESS", label: "In Progress" },
+  { value: "PENDING_REVIEW", label: "Pending Review" },
+  { value: "NEEDS_REVISION", label: "Needs Revision" },
+  { value: "COMPLETED", label: "Completed" },
+  { value: "CANCELLED", label: "Cancelled" }
 ];
+
+// Task priorities - aligned with backend
 const TASK_PRIORITIES = [
-  { value: "low", label: "Low" },
-  { value: "medium", label: "Medium" },
-  { value: "high", label: "High" },
-  { value: "urgent", label: "Urgent" }
+  { value: "LOW", label: "Low" },
+  { value: "MEDIUM", label: "Medium" },
+  { value: "HIGH", label: "High" }
+];
+
+// Task types - aligned with backend
+const TASK_TYPES = [
+  { value: "DOCUMENT_UPLOAD", label: "Document Upload" },
+  { value: "INTEGRATION", label: "Integration" },
+  { value: "ACTION", label: "Action" },
+  { value: "REVIEW", label: "Review" }
+];
+
+// Integration types - aligned with backend
+const INTEGRATION_TYPES = [
+  { value: "QUICKBOOKS", label: "QuickBooks" },
+  { value: "SHOPIFY", label: "Shopify" },
+  { value: "AMAZON", label: "Amazon Seller" }
+];
+
+// Action categories - aligned with backend
+const ACTION_CATEGORIES = [
+  { value: "CLIENT_ACTION", label: "Client Action" },
+  { value: "STAFF_ACTION", label: "Staff Action" }
 ];
 const STAFF_MEMBERS = [
   "Sarah Mitchell",
@@ -31,8 +56,8 @@ const MOCK_TASKS = [
     clientId: "c1",
     clientName: "Acme Corp",
     assignedTo: "Sarah Mitchell",
-    status: "in_progress",
-    priority: "urgent",
+    status: "IN_PROGRESS",
+    priority: "HIGH",
     dueDate: "2026-02-10",
     createdAt: "2026-01-15T10:00:00Z",
     updatedAt: "2026-02-01T10:00:00Z"
@@ -44,8 +69,8 @@ const MOCK_TASKS = [
     clientId: "c2",
     clientName: "Bloom Studio",
     assignedTo: "James Carter",
-    status: "not_started",
-    priority: "high",
+    status: "NOT_STARTED",
+    priority: "HIGH",
     dueDate: "2026-02-20",
     createdAt: "2026-02-01T10:00:00Z",
     updatedAt: "2026-02-01T10:00:00Z"
@@ -57,8 +82,8 @@ const MOCK_TASKS = [
     clientId: "c1",
     clientName: "Acme Corp",
     assignedTo: "Emily Chen",
-    status: "completed",
-    priority: "medium",
+    status: "COMPLETED",
+    priority: "MEDIUM",
     dueDate: "2026-01-30",
     createdAt: "2026-01-10T10:00:00Z",
     updatedAt: "2026-01-28T10:00:00Z"
@@ -70,8 +95,8 @@ const MOCK_TASKS = [
     clientId: "c3",
     clientName: "Nova Labs",
     assignedTo: "Michael Ross",
-    status: "blocked",
-    priority: "high",
+    status: "PENDING_REVIEW",
+    priority: "HIGH",
     dueDate: "2026-02-14",
     createdAt: "2026-01-20T10:00:00Z",
     updatedAt: "2026-02-05T10:00:00Z"
@@ -83,8 +108,8 @@ const MOCK_TASKS = [
     clientId: "c4",
     clientName: "Greenfield Inc",
     assignedTo: "Sarah Mitchell",
-    status: "not_started",
-    priority: "medium",
+    status: "NOT_STARTED",
+    priority: "MEDIUM",
     dueDate: "2026-02-28",
     createdAt: "2026-02-10T10:00:00Z",
     updatedAt: "2026-02-10T10:00:00Z"
@@ -96,8 +121,8 @@ const MOCK_TASKS = [
     clientId: "c5",
     clientName: "Pixel Works",
     assignedTo: "James Carter",
-    status: "in_progress",
-    priority: "low",
+    status: "IN_PROGRESS",
+    priority: "LOW",
     dueDate: "2026-03-01",
     createdAt: "2026-02-05T10:00:00Z",
     updatedAt: "2026-02-12T10:00:00Z"
@@ -109,8 +134,8 @@ const MOCK_TASKS = [
     clientId: "c1",
     clientName: "Acme Corp",
     assignedTo: "Emily Chen",
-    status: "completed",
-    priority: "high",
+    status: "COMPLETED",
+    priority: "HIGH",
     dueDate: "2026-01-20",
     createdAt: "2026-01-05T10:00:00Z",
     updatedAt: "2026-01-18T10:00:00Z"
@@ -122,8 +147,8 @@ const MOCK_TASKS = [
     clientId: "c2",
     clientName: "Bloom Studio",
     assignedTo: "Michael Ross",
-    status: "not_started",
-    priority: "urgent",
+    status: "NOT_STARTED",
+    priority: "HIGH",
     dueDate: "2026-02-12",
     createdAt: "2026-02-01T10:00:00Z",
     updatedAt: "2026-02-01T10:00:00Z"
@@ -134,5 +159,8 @@ export {
   MOCK_TASKS,
   STAFF_MEMBERS,
   TASK_PRIORITIES,
-  TASK_STATUSES
+  TASK_STATUSES,
+  TASK_TYPES,
+  INTEGRATION_TYPES,
+  ACTION_CATEGORIES
 };

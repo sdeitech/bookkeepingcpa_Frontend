@@ -1,8 +1,8 @@
 import { useTasks } from "@/hooks/useTasks";
-import { MOCK_CLIENTS, STAFF_MEMBERS } from "@/lib/task-types";
+import { useGetAllClientsQuery, useGetAllStaffQuery } from "@/features/user/userApi";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, UserCheck, CheckSquare, AlertTriangle, Plus, ClipboardList, BarChart3, FileText, Clock, UserPlus, CheckCircle, Upload } from "lucide-react";
+import { Users, UserCheck, CheckSquare, AlertTriangle, Plus, ClipboardList, BarChart3, FileText, Clock, UserPlus, CheckCircle, Upload, Loader2 } from "lucide-react";
 import { isBefore, startOfDay, format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -21,20 +21,25 @@ const RECENT_ACTIVITY = [
 ];
 
 export default function AdminDashboardHome() {
-  const { tasks } = useTasks();
+  const { tasks, isLoading: tasksLoading } = useTasks();
+  const { data: clientsData, isLoading: clientsLoading } = useGetAllClientsQuery();
+  const { data: staffData, isLoading: staffLoading } = useGetAllStaffQuery();
   const navigate = useNavigate();
   const today = startOfDay(new Date());
   const user = useSelector(selectCurrentUser);
   const [createOpen, setCreateOpen] = useState(false);
 
-  const overdueTasks = tasks.filter(t => t.status !== "completed" && isBefore(new Date(t.dueDate), today));
-  const pendingTasks = tasks.filter(t => t.status !== "completed");
+  const clients = clientsData?.data || [];
+  const staffMembers = staffData?.data || [];
+
+  const overdueTasks = tasks.filter(t => t.status !== "COMPLETED" && isBefore(new Date(t.dueDate), today));
+  const pendingTasks = tasks.filter(t => t.status !== "COMPLETED");
 
   const stats = [
-    { label: "Total Clients", value: MOCK_CLIENTS.length, icon: Users, color: "bg-primary/10 text-primary" },
-    { label: "Active Staff", value: STAFF_MEMBERS.length, icon: UserCheck, color: "bg-success/10 text-success" },
-    { label: "Pending Tasks", value: pendingTasks.length, icon: CheckSquare, color: "bg-warning/10 text-warning" },
-    { label: "Overdue Tasks", value: overdueTasks.length, icon: AlertTriangle, color: overdueTasks.length > 0 ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground" },
+    { label: "Total Clients", value: clients.length, icon: Users, color: "bg-primary/10 text-primary", loading: clientsLoading },
+    { label: "Active Staff", value: staffMembers.length, icon: UserCheck, color: "bg-success/10 text-success", loading: staffLoading },
+    { label: "Pending Tasks", value: pendingTasks.length, icon: CheckSquare, color: "bg-warning/10 text-warning", loading: tasksLoading },
+    { label: "Overdue Tasks", value: overdueTasks.length, icon: AlertTriangle, color: overdueTasks.length > 0 ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground", loading: tasksLoading },
   ];
 
   const createTask = (taskData) => {
@@ -58,7 +63,13 @@ export default function AdminDashboardHome() {
             <CardContent className="p-5 flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">{stat.label}</p>
-                <p className={cn("text-3xl font-bold mt-1", stat.color.includes("destructive") && stat.value > 0 ? "text-destructive" : "text-foreground")}>{stat.value}</p>
+                {stat.loading ? (
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground mt-1" />
+                ) : (
+                  <p className={cn("text-3xl font-bold mt-1", stat.color.includes("destructive") && stat.value > 0 ? "text-destructive" : "text-foreground")}>
+                    {stat.value}
+                  </p>
+                )}
               </div>
               <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center", stat.color)}>
                 <stat.icon className="w-6 h-6" />
