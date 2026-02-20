@@ -53,6 +53,14 @@ export const userApi = createApi({
       query: (clientId) => `/admin/client/${clientId}/profile`,
       providesTags: (result, error, clientId) => [{ type: 'ClientProfile', id: clientId }],
     }),
+    changePassword: builder.mutation({
+      query: (passwordData) => ({
+        url: '/user/profile/update-password',
+        method: 'PATCH',
+        body: passwordData,
+      }),
+      invalidatesTags: ['Profile'],
+    }),
   }),
 });
 
@@ -61,6 +69,7 @@ export const {
   useUpdateUserProfileMutation,
   useUploadProfilePictureMutation,
   useLazyGetUserProfileQuery,
+  useChangePasswordMutation,
   // Admin hooks
   useGetAllClientsQuery,
   useGetClientProfileQuery,

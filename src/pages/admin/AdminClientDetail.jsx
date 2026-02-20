@@ -134,14 +134,14 @@ export default function AdminClientDetail() {
       {/* Back */}
       <Link
         to="/admin/tasks"
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors no-underline"
       >
         <ArrowLeft className="h-4 w-4" /> Back to Tasks
       </Link>
 
       {/* Header */}
       <div className="bg-card border border-border rounded-xl p-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center">
               <Building2 className="h-7 w-7 text-primary" />
@@ -168,8 +168,8 @@ export default function AdminClientDetail() {
 
       {/* Progress */}
       <div className="bg-card border border-border rounded-xl p-6">
-        <div className="flex justify-between mb-3">
-          <h3 className="font-semibold">Task Progress</h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-semibold text-foreground">Task Progress</h3>
           <span className="text-sm text-muted-foreground">
             {completedCount} of {totalCount} completed (
             {progressPercent}%)
@@ -179,8 +179,8 @@ export default function AdminClientDetail() {
       </div>
 
       {/* Filter */}
-      <div className="flex justify-between items-center">
-        <h3 className="font-semibold">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-foreground">
           Tasks ({filteredTasks.length})
         </h3>
 
@@ -188,10 +188,10 @@ export default function AdminClientDetail() {
           value={filterStatus}
           onValueChange={setFilterStatus}
         >
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="w-[150px]">
             <SelectValue placeholder="Filter status" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-popover z-50">
             <SelectItem value="all">
               All Status
             </SelectItem>
@@ -212,7 +212,7 @@ export default function AdminClientDetail() {
       <div className="bg-card border border-border rounded-xl overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow>
+            <TableRow className="bg-muted/50">
               <TableHead>Title</TableHead>
               <TableHead>Assigned To</TableHead>
               <TableHead>Status</TableHead>
@@ -236,7 +236,7 @@ export default function AdminClientDetail() {
               <TableRow>
                 <TableCell
                   colSpan={6}
-                  className="text-center py-12"
+                  className="text-center py-12 text-muted-foreground"
                 >
                   No tasks found.
                 </TableCell>
@@ -245,17 +245,17 @@ export default function AdminClientDetail() {
               filteredTasks.map((task) => (
                 <TableRow key={task._id}>
                   <TableCell>
-                    <div className="font-medium">
+                    <div className="font-medium text-foreground">
                       {task.title}
                     </div>
                     {task.description && (
-                      <div className="text-xs text-muted-foreground">
+                      <div className="text-xs text-muted-foreground mt-0.5">
                         {task.description}
                       </div>
                     )}
                   </TableCell>
 
-                  <TableCell>
+                  <TableCell className="text-sm">
                     {task.assignedTo?.email || "-"}
                   </TableCell>
 
@@ -271,7 +271,7 @@ export default function AdminClientDetail() {
                     />
                   </TableCell>
 
-                  <TableCell>
+                  <TableCell className="text-sm">
                     {task.dueDate
                       ? format(
                           new Date(task.dueDate),
@@ -286,12 +286,13 @@ export default function AdminClientDetail() {
                         <Button
                           size="icon"
                           variant="ghost"
+                          className="h-8 w-8"
                         >
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
 
-                      <DropdownMenuContent align="end">
+                      <DropdownMenuContent align="end" className="bg-popover z-50">
                         <DropdownMenuItem
                           onClick={() =>
                             handleQuickStatusChange(

@@ -8,28 +8,27 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Plus, Search, MoreHorizontal, Eye, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useGetAllStaffQuery } from "@/features/auth/authApi";
 
-const STAFF_DATA = STAFF_MEMBERS.map((name, i) => ({
-  id: `s${i + 1}`,
-  name,
-  email: `${name.toLowerCase().replace(" ", ".")}@plutify.com`,
-  status: "active",
-}));
 
 export default function AdminStaff() {
+  const { data: staffData, isLoading, refetch } = useGetAllStaffQuery();
+  const Staff = staffData?.data || [];
   const { tasks } = useTasks();
   const [search, setSearch] = useState("");
 
-  const filtered = STAFF_DATA.filter(s =>
-    !search || s.name.toLowerCase().includes(search.toLowerCase()) || s.email.toLowerCase().includes(search.toLowerCase())
+  const filtered = Staff.filter(s =>
+    !search || s.first_name.toLowerCase().includes(search.toLowerCase()) || s.last_name.toLowerCase().includes(search.toLowerCase())  || s.email.toLowerCase().includes(search.toLowerCase())
   );
+  
+ 
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Staff Members</h1>
-          <p className="text-sm text-muted-foreground">{STAFF_DATA.length} staff members</p>
+          <p className="text-sm text-muted-foreground">{Staff.length} staff members</p>
         </div>
         <Button className="gap-2" onClick={() => toast.info("Add staff coming soon")}>
           <Plus className="h-4 w-4" /> Add New Staff
@@ -54,14 +53,19 @@ export default function AdminStaff() {
           </TableHeader>
           <TableBody>
             {filtered.map(staff => {
-              const assignedCount = new Set(tasks.filter(t => t.assignedTo === staff.name).map(t => t.clientId)).size;
               return (
                 <TableRow key={staff.id}>
-                  <TableCell className="font-medium text-foreground">{staff.name}</TableCell>
+                  <TableCell className="font-medium text-foreground">{staff.first_name} {staff.last_name}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{staff.email}</TableCell>
-                  <TableCell>{assignedCount}</TableCell>
+                  <TableCell>{staff.clientCount}</TableCell>
                   <TableCell>
-                    <Badge variant="outline" className="bg-success/15 text-success border-success/30 text-xs">Active</Badge>
+                    {
+                      staff.active ? (
+                        <Badge variant="outline" className="bg-success/15 text-success border-success/30 text-xs">Active</Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-destructive/15 text-destructive border-destructive/30 text-xs">Inactive</Badge>
+                      )
+                    }
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>

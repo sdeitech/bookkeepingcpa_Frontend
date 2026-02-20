@@ -6,6 +6,10 @@ import { Users, UserCheck, CheckSquare, AlertTriangle, Plus, ClipboardList, BarC
 import { isBefore, startOfDay, format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { useSelector } from "react-redux";
+import { selectCurrentUser } from "@/features/auth/authSlice";
+import { CreateTaskWizard } from "@/components/new_Admin/CreateTaskWizard";
+import { useState } from "react";
 
 const RECENT_ACTIVITY = [
   { icon: UserPlus, text: "New client 'Acme Corp' registered", time: "2 hours ago", color: "text-primary" },
@@ -20,6 +24,8 @@ export default function AdminDashboardHome() {
   const { tasks } = useTasks();
   const navigate = useNavigate();
   const today = startOfDay(new Date());
+  const user = useSelector(selectCurrentUser);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const overdueTasks = tasks.filter(t => t.status !== "completed" && isBefore(new Date(t.dueDate), today));
   const pendingTasks = tasks.filter(t => t.status !== "completed");
@@ -31,11 +37,17 @@ export default function AdminDashboardHome() {
     { label: "Overdue Tasks", value: overdueTasks.length, icon: AlertTriangle, color: overdueTasks.length > 0 ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground" },
   ];
 
+  const createTask = (taskData) => {
+    // Here you would typically call an API to create the task and then refresh your task list
+    console.log("Creating task with data:", taskData);
+    setCreateOpen(false);
+  }
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Welcome */}
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Welcome back, Admin!</h1>
+        <h1 className="text-2xl font-bold text-foreground">Welcome back,{user?.first_name} {user?.last_name}</h1>
         <p className="text-sm text-muted-foreground">{format(new Date(), "EEEE, MMMM d, yyyy · h:mm a")}</p>
       </div>
 
@@ -83,13 +95,13 @@ export default function AdminDashboardHome() {
             <CardTitle className="text-base">Quick Actions</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-1 gap-3">
-            <Button onClick={() => navigate("/admin/tasks")} className="justify-start gap-2 h-11 bg-primary hover:bg-primary/90">
+            <Button onClick={() => setCreateOpen(true)} className="justify-start gap-2 h-11 bg-primary hover:bg-primary/90">
               <Plus className="w-4 h-4" /> Create Task
             </Button>
-            <Button variant="outline" onClick={() => navigate("/admin/clients")} className="justify-start gap-2 h-11">
-              <UserPlus className="w-4 h-4" /> Add Client
-            </Button>
             <Button variant="outline" onClick={() => navigate("/admin/staff")} className="justify-start gap-2 h-11">
+              <UserPlus className="w-4 h-4" /> Add Staff
+            </Button>
+            <Button variant="outline" onClick={() => navigate("/admin/assign-clients")} className="justify-start gap-2 h-11">
               <UserCheck className="w-4 h-4" /> Assign Staff
             </Button>
             <Button variant="outline" onClick={() => navigate("/admin/settings")} className="justify-start gap-2 h-11">
@@ -98,6 +110,8 @@ export default function AdminDashboardHome() {
           </CardContent>
         </Card>
       </div>
+
+      <CreateTaskWizard open={createOpen} onOpenChange={setCreateOpen} onCreate={createTask} />
     </div>
   );
 }

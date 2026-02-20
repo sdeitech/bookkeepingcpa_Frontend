@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Home, Users, UserCheck, CheckSquare, FileText, Mail, Settings, ArrowLeft } from "lucide-react";
+import { Home, Users, UserCheck, CheckSquare, FileText, Mail, Settings, ArrowLeft, UserPlus } from "lucide-react";
 import { PlutifyLogo } from "@/components/PlutifyLogo";
 import { cn } from "@/lib/utils";
 
@@ -7,6 +7,7 @@ const navItems = [
   { icon: Home, label: "Dashboard", href: "/admin" },
   { icon: Users, label: "Clients", href: "/admin/clients" },
   { icon: UserCheck, label: "Staff", href: "/admin/staff" },
+  { icon: UserPlus, label: "Assign Clients", href: "/admin/assign-clients" },
   { icon: CheckSquare, label: "Tasks", href: "/admin/tasks" },
   { icon: FileText, label: "Documents", href: "/admin/documents" },
   { icon: Mail, label: "Messages", href: "/admin/messages" },
@@ -51,7 +52,7 @@ export function AdminSidebar() {
         })}
       </nav>
 
-      <div className="p-3 border-t border-sidebar-border">
+      {/* <div className="p-3 border-t border-sidebar-border">
         <Link
           to="/dashboard"
           className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
@@ -59,7 +60,7 @@ export function AdminSidebar() {
           <ArrowLeft className="w-5 h-5 shrink-0" />
           Back to Dashboard
         </Link>
-      </div>
+      </div> */}
     </aside>
   );
 }

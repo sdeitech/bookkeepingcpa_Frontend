@@ -54,6 +54,8 @@ import AdminSettings from './pages/new_Admin/AdminSettings';
 import AdminTasks from './pages/new_Admin/AdminTasks';
 import AdminClients from './pages/new_Admin/AdminClients';
 import AdminClientDetail from './pages/new_Admin/AdminClientDetail';
+import { Profile } from './components/common/profile';
+import AdminAssignClients from './pages/new_Admin/AdminAssignClients';
 
 
 // import Questionnaire from './pages/questionnaire/Questionnaire';
@@ -125,6 +127,7 @@ function App() {
             }
           >
             <Route path="quickbooks" element={<QuickBooksData />} />
+            <Route path="profile" element={<Profile />} />
           </Route>
 
 
@@ -141,15 +144,23 @@ function App() {
             <Route path="clients/:clientId" element={<AdminClientDetail />} />
           </Route> */}
 
-          <Route path="/admin" element={<AdminLayout />}>
+          <Route path="/admin" element={
+            <AuthGuard>
+              <RoleGuard allowedRoles={[USER_ROLES.ADMIN]}>
+                <AdminLayout />
+              </RoleGuard>
+            </AuthGuard>
+          }>
             <Route index element={<AdminDashboardHome />} />
             <Route path="tasks" element={<AdminTasks />} />
             <Route path="clients" element={<AdminClients />} />
+            <Route path="assign-clients" element={<AdminAssignClients />} />
             <Route path="clients/:clientId" element={<AdminClientDetail />} />
             <Route path="staff" element={<AdminStaff />} />
             <Route path="documents" element={<AdminDocuments />} />
             <Route path="messages" element={<AdminMessages />} />
             <Route path="settings" element={<AdminSettings />} />
+            <Route path='profile' element={<Profile/>} />
           </Route>
 
 
@@ -165,6 +176,7 @@ function App() {
             <Route path="tasks" element={<StaffTasks />} />
             <Route path="reports" element={<StaffReports />} />
             <Route path="create-task" element={<StaffCreateTask />} />
+            <Route path="profile" element={<Profile />} />
           </Route>
 
 

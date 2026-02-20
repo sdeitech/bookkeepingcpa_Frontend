@@ -45,11 +45,11 @@ export function DashboardHeader({user,logout}) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48 bg-popover">
-            <DropdownMenuItem>Profile Settings</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate("/new-dashboard/profile")}>Profile</DropdownMenuItem>
             <DropdownMenuItem>Account</DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout}>
-              Sign Out
+              Logout
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

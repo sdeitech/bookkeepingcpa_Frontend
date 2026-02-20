@@ -6,6 +6,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Search, User, Settings, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { logout, selectCurrentUser } from "@/features/auth/authSlice";
 
 const pageTitles = {
   "/admin": "Dashboard",
@@ -15,6 +17,7 @@ const pageTitles = {
   "/admin/documents": "Documents",
   "/admin/messages": "Messages",
   "/admin/settings": "Settings",
+  "/admin/assign-clients": "Assign Clients",
 };
 
 export default function AdminLayout() {
@@ -22,6 +25,12 @@ export default function AdminLayout() {
   const navigate = useNavigate();
   const baseRoute = "/" + location.pathname.split("/").slice(1, 3).join("/");
   const title = pageTitles[baseRoute] || "Admin Panel";
+  const user=useSelector(selectCurrentUser)
+  const dispatch = useDispatch();
+  const handleLogout = () => {
+    dispatch(logout());
+    navigate("/");
+  };
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -40,17 +49,17 @@ export default function AdminLayout() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-2 rounded-full border border-border bg-background px-2 py-1 pr-3 hover:bg-accent/50 transition-colors whitespace-nowrap">
-                  <Avatar className="h-7 w-7">
+                  <Avatar className="h-8 w-8">
                     <AvatarFallback className="bg-primary text-primary-foreground text-xs">AD</AvatarFallback>
                   </Avatar>
-                  <span className="text-sm font-medium text-foreground hidden md:block">Admin</span>
+                  <span className="text-sm font-medium text-foreground hidden md:block">{user?.first_name} {user?.last_name}</span>
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-popover w-48">
-                <DropdownMenuItem><User className="mr-2 h-4 w-4" /> Profile</DropdownMenuItem>
+                <DropdownMenuItem onClick={()=>navigate("/admin/profile")}><User className="mr-2 h-4 w-4" /> Profile</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate("/admin/settings")}><Settings className="mr-2 h-4 w-4" /> Settings</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate("/")}><LogOut className="mr-2 h-4 w-4" /> Logout</DropdownMenuItem>
+                <DropdownMenuItem onClick={() =>dispatch(handleLogout)}><LogOut className="mr-2 h-4 w-4" /> Logout</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

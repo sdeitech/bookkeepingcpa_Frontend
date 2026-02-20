@@ -10,9 +10,16 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
 import NotificationPanel from "../Notifications/Notification";
+import { useDispatch } from "react-redux";
 
-export function StaffHeader({ title }) {
+export function StaffHeader({ title,user,logout }) {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+
+  const handleLogout = () => {
+    dispatch(logout());
+    navigate("/");
+  };
 
   return (
     <header className="h-16 bg-card border-b border-border px-6 flex items-center justify-between shadow-sm">
@@ -39,19 +46,19 @@ export function StaffHeader({ title }) {
               <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
                 <User className="h-4 w-4 text-primary-foreground" />
               </div>
-              <span className="hidden sm:inline font-medium">Joe</span>
+              <span className="hidden sm:inline font-medium">{user?.first_name} {user?.last_name}</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate("/staff/profile")}>
               <User className="mr-2 h-4 w-4" /> Profile
             </DropdownMenuItem>
             <DropdownMenuItem>
               <Settings className="mr-2 h-4 w-4" /> Settings
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => navigate("/")}>
-              <LogOut className="mr-2 h-4 w-4" /> Sign Out
+            <DropdownMenuItem onClick={handleLogout}>
+              <LogOut className="mr-2 h-4 w-4" /> Logout
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
