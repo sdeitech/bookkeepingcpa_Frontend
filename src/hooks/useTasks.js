@@ -1,53 +1,90 @@
-import { useState, useEffect, useCallback } from "react";
-import { MOCK_TASKS } from "@/lib/task-types";
-const STORAGE_KEY = "plutify_tasks";
-function useTasks() {
-  const [tasks, setTasks] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
-        setTasks(JSON.parse(stored));
-      } catch {
-        setTasks(MOCK_TASKS);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(MOCK_TASKS));
-      }
-    } else {
-      setTasks(MOCK_TASKS);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(MOCK_TASKS));
+/**
+ * TEMPORARY WRAPPER HOOK
+ * This is a thin wrapper around RTK Query to prevent breaking existing components.
+ * Components should be migrated to use RTK Query directly.
+ * 
+ * TODO: Migrate all components to use RTK Query hooks directly and delete this file.
+ */
+
+import { useGetTasksQuery, useCreateTaskMutation, useUpdateTaskMutation, useDeleteTaskMutation, useUpdateTaskStatusMutation } from '@/features/tasks/tasksApi';
+import { useCallback } from 'react';
+
+export function useTasks() {
+  // Fetch tasks from API
+  const { data, isLoading, error } = useGetTasksQuery();
+  
+  // Mutations
+  const [createTaskMutation] = useCreateTaskMutation();
+  const [updateTaskMutation] = useUpdateTaskMutation();
+  const [deleteTaskMutation] = useDeleteTaskMutation();
+  const [updateStatusMutation] = useUpdateTaskStatusMutation();
+
+  // Extract tasks from response
+  const tasks = data?.data?.tasks || [];
+
+  // Wrapper functions to match old API
+  const createTask = useCallback(async (taskData) => {
+    try {
+      const result = await createTaskMutation(taskData).unwrap();
+      return result.data;
+    } catch (error) {
+      console.error('Failed to create task:', error);
+      throw error;
     }
-    setIsLoading(false);
-  }, []);
-  const persist = useCallback((updated) => {
-    setTasks(updated);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-  }, []);
-  const createTask = useCallback((task) => {
-    const now = (/* @__PURE__ */ new Date()).toISOString();
-    const newTask = {
-      ...task,
-      id: `t_${Date.now()}`,
-      createdAt: now,
-      updatedAt: now
-    };
-    persist([newTask, ...tasks]);
-    return newTask;
-  }, [tasks, persist]);
-  const updateTask = useCallback((id, updates) => {
-    persist(tasks.map((t) => t.id === id ? { ...t, ...updates, updatedAt: (/* @__PURE__ */ new Date()).toISOString() } : t));
-  }, [tasks, persist]);
-  const deleteTask = useCallback((id) => {
-    persist(tasks.filter((t) => t.id !== id));
-  }, [tasks, persist]);
-  const deleteTasks = useCallback((ids) => {
-    persist(tasks.filter((t) => !ids.includes(t.id)));
-  }, [tasks, persist]);
-  const reassignTasks = useCallback((ids, assignedTo) => {
-    persist(tasks.map((t) => ids.includes(t.id) ? { ...t, assignedTo, updatedAt: (/* @__PURE__ */ new Date()).toISOString() } : t));
-  }, [tasks, persist]);
-  return { tasks, isLoading, createTask, updateTask, deleteTask, deleteTasks, reassignTasks };
+  }, [createTaskMutation]);
+
+  const updateTask = useCallback(async (id, updates) => {
+    try {
+      const result = await updateTaskMutation({ id, body: updates }).unwrap();
+      return result.data;
+    } catch (error) {
+      console.error('Failed to update task:', error);
+      throw error;
+    }
+  }, [updateTaskMutation]);
+
+  const deleteTask = useCallback(async (id) => {
+    try {
+      await deleteTaskMutation(id).unwrap();
+    } catch (error) {
+      console.error('Failed to delete task:', error);
+      throw error;
+    }
+  }, [deleteTaskMutation]);
+
+  const deleteTasks = useCallback(async (ids) => {
+    try {
+      // Delete multiple tasks sequentially
+      await Promise.all(ids.map(id => deleteTaskMutation(id).unwrap()));
+    } catch (error) {
+      console.error('Failed to delete tasks:', error);
+      throw error;
+    }
+  }, [deleteTaskMutation]);
+
+  const reassignTasks = useCallback(async (ids, assignedTo) => {
+    try {
+      // Update multiple tasks sequentially
+      await Promise.all(
+        ids.map(id => updateTaskMutation({ 
+          id, 
+          body: { assignedTo } 
+        }).unwrap())
+      );
+    } catch (error) {
+      console.error('Failed to reassign tasks:', error);
+      throw error;
+    }
+  }, [updateTaskMutation]);
+
+  return {
+    tasks,
+    isLoading,
+    error,
+    createTask,
+    updateTask,
+    deleteTask,
+    deleteTasks,
+    reassignTasks,
+  };
 }
-export {
-  useTasks
-};

@@ -63,6 +63,46 @@ export const tasksApi = createApi({
       query: (taskId) => `/tasks/${taskId}`,
       providesTags: (result, error, id) => [{ type: "Task", id }],
     }),
+
+    // Upload document to task
+    uploadDocument: builder.mutation({
+      query: ({ taskId, formData }) => ({
+        url: `/tasks/${taskId}/upload`,
+        method: 'POST',
+        body: formData,
+      }),
+      invalidatesTags: ['Tasks'],
+    }),
+
+    // Approve task (staff/admin)
+    approveTask: builder.mutation({
+      query: ({ taskId, reviewNotes }) => ({
+        url: `/tasks/${taskId}/approve`,
+        method: 'POST',
+        body: { reviewNotes },
+      }),
+      invalidatesTags: ['Tasks'],
+    }),
+
+    // Reject task (staff/admin)
+    rejectTask: builder.mutation({
+      query: ({ taskId, rejectionReason }) => ({
+        url: `/tasks/${taskId}/reject`,
+        method: 'POST',
+        body: { rejectionReason },
+      }),
+      invalidatesTags: ['Tasks'],
+    }),
+
+    // Request help (client)
+    requestHelp: builder.mutation({
+      query: ({ taskId, message }) => ({
+        url: `/tasks/${taskId}/help`,
+        method: 'POST',
+        body: { message },
+      }),
+      invalidatesTags: ['Tasks'],
+    }),
     
 
 
@@ -75,4 +115,9 @@ export const {
   useDeleteTaskMutation,
   useUpdateTaskMutation,
   useUpdateTaskStatusMutation,
+  useGetTaskByIdQuery,
+  useUploadDocumentMutation,
+  useApproveTaskMutation,
+  useRejectTaskMutation,
+  useRequestHelpMutation,
 } = tasksApi;

@@ -53,6 +53,12 @@ export const userApi = createApi({
       query: (clientId) => `/admin/client/${clientId}/profile`,
       providesTags: (result, error, clientId) => [{ type: 'ClientProfile', id: clientId }],
     }),
+
+    // Get all staff members (admin only)
+    getAllStaff: builder.query({
+      query: () => '/admin/get-all-staff',
+      providesTags: ['StaffList'],
+    }),
     changePassword: builder.mutation({
       query: (passwordData) => ({
         url: '/user/profile/update-password',
@@ -73,4 +79,5 @@ export const {
   // Admin hooks
   useGetAllClientsQuery,
   useGetClientProfileQuery,
+  useGetAllStaffQuery,
 } = userApi;
