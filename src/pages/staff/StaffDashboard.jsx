@@ -11,25 +11,35 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
+import { CreateTaskWizard } from "@/components/new_Admin/CreateTaskWizard";
 
 const CURRENT_STAFF = "Sarah Mitchell";
 
-export default function StaffDashboard() {
+export default function StaffDashboard({myClients}) {
   const { tasks, isLoading, updateTask } = useTasks();
   const { toast } = useToast();
+  const [createOpen, setCreateOpen] = useState(false);
+
 
   const myTasks = tasks.filter((t) => t.assignedTo === CURRENT_STAFF);
   const myClientIds = [...new Set(myTasks.map((t) => t.clientId))];
-  const myClients = MOCK_CLIENTS.filter((c) => myClientIds.includes(c.id));
+  const myClient = MOCK_CLIENTS.filter((c) => myClientIds.includes(c.id));
 
   const pendingTasks = myTasks.filter((t) => t.status !== "completed").length;
   const completedToday = myTasks.filter((t) => t.status === "completed" && isToday(new Date(t.updatedAt))).length;
-  const activeClients = myClients.length;
+  const activeClients = myClient.length;
 
   const handleComplete = (task) => {
     updateTask(task.id, { status: "completed" });
     toast({ title: "Task completed", description: task.title });
   };
+
+  const createTask = (taskData) => {
+    // Here you would typically call an API to create the task and then refresh your task list
+    console.log("Creating task with data:", taskData);
+    setCreateOpen(false);
+  }
 
   if (isLoading) {
     return (
@@ -49,7 +59,7 @@ export default function StaffDashboard() {
   return (
     <div className="space-y-8 animate-fade-in">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Assigned Clients" value={myClients.length} icon={Users} tint="bg-primary/10" iconColor="text-primary" />
+        <StatCard title="Assigned Clients" value={myClient.length} icon={Users} tint="bg-primary/10" iconColor="text-primary" />
         <StatCard title="Pending Tasks" value={pendingTasks} icon={CheckSquare} tint="bg-warning/10" iconColor="text-warning" />
         <StatCard title="Completed Today" value={completedToday} icon={CheckCircle2} tint="bg-success/10" iconColor="text-success" />
         <StatCard title="Active Clients" value={activeClients} icon={Activity} tint="bg-chart-4/10" iconColor="text-chart-4" />
@@ -58,11 +68,9 @@ export default function StaffDashboard() {
       <div>
         <h2 className="text-base font-semibold text-foreground mb-3">Quick Actions</h2>
         <div className="flex flex-wrap gap-3">
-          <Link to="/staff/create-task">
-            <Button className="bg-primary text-primary-foreground hover:opacity-90 gap-2 shadow-md">
-              <PlusCircle className="w-4 h-4" /> Create Client Task
-            </Button>
-          </Link>
+          <Button  onClick={() => setCreateOpen(true)} className="bg-primary text-primary-foreground hover:opacity-90 gap-2 shadow-md">
+            <PlusCircle className="w-4 h-4" /> Create Client Task
+          </Button>
           <Link to="/staff/reports">
             <Button variant="outline" className="gap-2">
               <BarChart3 className="w-4 h-4" /> View Reports
@@ -73,7 +81,7 @@ export default function StaffDashboard() {
 
       <div>
         <h2 className="text-base font-semibold text-foreground mb-3">My Assigned Clients</h2>
-        {myClients.length === 0 ? (
+        {myClient.length === 0 ? (
           <div className="bg-card border border-border rounded-xl p-10 text-center">
             <Users className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
             <p className="text-muted-foreground">No clients assigned yet.</p>
@@ -92,7 +100,7 @@ export default function StaffDashboard() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {myClients.map((client, idx) => {
+                {myClient.map((client, idx) => {
                   const clientTasks = myTasks.filter((t) => t.clientId === client.id);
                   const clientPending = clientTasks.filter((t) => t.status !== "completed").length;
                   const hasOverdue = clientTasks.some(
@@ -151,6 +159,10 @@ export default function StaffDashboard() {
           </div>
         )}
       </div>
+      <CreateTaskWizard
+        open={createOpen} onOpenChange={setCreateOpen} onCreate={createTask}
+        defaultTarget="client" clientList={myClients}
+      />
     </div>
   );
 }

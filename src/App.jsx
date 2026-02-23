@@ -153,7 +153,7 @@ function App() {
           }>
             <Route index element={<AdminDashboardHome />} />
             <Route path="tasks" element={<AdminTasks />} />
-            <Route path="clients" element={<AdminClients />} />
+            <Route path="clients" element={<AdminAssignClients/>} />
             <Route path="assign-clients" element={<AdminAssignClients />} />
             <Route path="clients/:clientId" element={<AdminClientDetail />} />
             <Route path="staff" element={<AdminStaff />} />
