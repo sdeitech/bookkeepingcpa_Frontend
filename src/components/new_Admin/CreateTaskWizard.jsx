@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,19 +20,12 @@ const CATEGORIES = [
   { id: "custom", icon: Edit, title: "Custom Task", desc: "Create your own task", taskType: null },
 ];
 
-export function CreateTaskWizard({ open, onOpenChange, onCreate }) {
-  // Fetch data from APIs
-  const { data: templatesData, isLoading: templatesLoading } = useGetTemplatesQuery({ active: true });
-  const { data: clientsData, isLoading: clientsLoading } = useGetAllClientsQuery();
-  const { data: staffData, isLoading: staffLoading } = useGetAllStaffQuery();
+export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget = null, clientList }) {
 
-  const templates = templatesData?.data?.templates || [];
-  const clients = clientsData?.data || [];
-  const staffMembers = staffData?.data || [];
 
   // State
-  const [step, setStep] = useState(1);
-  const [taskTarget, setTaskTarget] = useState(null);
+  const [step, setStep] = useState(defaultTarget ? 2 : 1);
+  const [taskTarget, setTaskTarget] = useState(defaultTarget);
   const [category, setCategory] = useState(null);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [customTitle, setCustomTitle] = useState("");
@@ -46,6 +39,39 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate }) {
 
   const totalSteps = 4;
 
+
+  // Fetch data from APIs
+  const { data: templatesData, isLoading: templatesLoading } = useGetTemplatesQuery({ active: true });
+  const { data: clientsData, isLoading: clientsLoading } = useGetAllClientsQuery(
+    undefined,
+    { skip: step < 4 }
+  );
+
+
+  const { data: staffData, isLoading: staffLoading } = useGetAllStaffQuery(
+    undefined,
+    { skip: defaultTarget === "client" || step < 4 }
+  )
+
+  const templates = templatesData?.data?.templates || [];
+  const clients = clientsData?.data || [];
+  const staffMembers = staffData?.data || [];
+
+  const resolvedClients = useMemo(() => {
+    if (clientList) {
+      return clientList.map(c => ({
+        id: c._id,
+        name: `${c.first_name} ${c.last_name}`.trim(),
+        email: c.email,
+      }));
+    }
+    return clients.map(c => ({
+      id: c.id,
+      name: c.fullName,
+      email: c.email,
+    }));
+  }, [clientList, clients]);
+
   // Filter templates by category
   const categoryTemplates = useMemo(() => {
     if (!category || category === "custom") return [];
@@ -54,8 +80,8 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate }) {
   }, [templates, category]);
 
   const reset = () => {
-    setStep(1);
-    setTaskTarget(null);
+    setStep(defaultTarget ? 2 : 1); // skip step 1 if target is preset
+    setTaskTarget(defaultTarget);
     setCategory(null);
     setSelectedTemplate(null);
     setCustomTitle("");
@@ -115,7 +141,7 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate }) {
     if (selectedTemplate) {
       taskData.templateId = selectedTemplate._id;
       taskData.templateName = selectedTemplate.name;
-      
+
       if (selectedTemplate.documentType) {
         taskData.documentType = selectedTemplate.documentType;
       }
@@ -161,13 +187,25 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate }) {
     return "";
   };
 
+  useEffect(() => {
+    if (open) {
+      setStep(defaultTarget ? 2 : 1);
+      setTaskTarget(defaultTarget);
+    }
+  }, [open, defaultTarget]);
+
+  const displayStep = defaultTarget ? step - 1 : step;
+  const displayTotal = defaultTarget ? totalSteps - 1 : totalSteps;
+
+  console.log("re", resolvedClients)
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-xl bg-card max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
-            Create New Task — Step {step} of {totalSteps}
+            Create New Task — Step {displayStep} of {displayTotal}
           </DialogTitle>
           <p className="text-sm text-muted-foreground">{getStepSubtitle()}</p>
         </DialogHeader>
@@ -244,14 +282,14 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate }) {
                 <p className="text-sm font-medium text-foreground">
                   Select a Template ({categoryTemplates.length} available)
                 </p>
-                <RadioGroup 
-                  value={selectedTemplate?._id} 
+                <RadioGroup
+                  value={selectedTemplate?._id}
                   onValueChange={(val) => setSelectedTemplate(categoryTemplates.find(t => t._id === val))}
                   className="space-y-2"
                 >
                   {categoryTemplates.map((template) => (
-                    <label 
-                      key={template._id} 
+                    <label
+                      key={template._id}
                       className={cn(
                         "flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors",
                         selectedTemplate?._id === template._id ? "border-primary bg-accent" : "border-border hover:bg-muted/50"
@@ -282,10 +320,10 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate }) {
           <div className="space-y-4 py-2">
             <div className="space-y-2">
               <Label>Task Title *</Label>
-              <Input 
-                value={customTitle} 
-                onChange={(e) => setCustomTitle(e.target.value)} 
-                placeholder="Enter task title..." 
+              <Input
+                value={customTitle}
+                onChange={(e) => setCustomTitle(e.target.value)}
+                placeholder="Enter task title..."
               />
             </div>
             <div className="space-y-2">
@@ -302,11 +340,11 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate }) {
             </div>
             <div className="space-y-2">
               <Label>Description</Label>
-              <Textarea 
-                value={customDesc} 
-                onChange={(e) => setCustomDesc(e.target.value)} 
-                placeholder="Task description..." 
-                rows={3} 
+              <Textarea
+                value={customDesc}
+                onChange={(e) => setCustomDesc(e.target.value)}
+                placeholder="Task description..."
+                rows={3}
               />
             </div>
           </div>
@@ -345,7 +383,7 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate }) {
                         const fullName = `${s.first_name} ${s.last_name}`.trim();
                         return (
                           <SelectItem key={s._id} value={s._id}>
-                            {fullName} ({s.email})
+                            {fullName}
                           </SelectItem>
                         );
                       })}
@@ -362,17 +400,17 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate }) {
                   <Select value={clientId} onValueChange={setClientId}>
                     <SelectTrigger><SelectValue placeholder="Select client..." /></SelectTrigger>
                     <SelectContent className="bg-popover z-50">
-                      {clients.map(c => {
-                        const fullName = `${c.first_name} ${c.last_name}`.trim();
-                        return (
-                          <SelectItem key={c.id} value={c.id}>
-                            <div>
-                              <span className="font-medium">{fullName}</span>
-                              <span className="text-muted-foreground ml-2 text-xs">{c.email}</span>
-                            </div>
-                          </SelectItem>
-                        );
-                      })}
+                      {
+                        resolvedClients.map(c => {
+                          return (
+                            <SelectItem key={c.id} value={c.id}>
+                              <div>
+                                <span className="font-medium">{c.name}</span>
+                              </div>
+                            </SelectItem>
+                          );
+                        })
+                      }
                     </SelectContent>
                   </Select>
                 )
@@ -393,9 +431,9 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate }) {
                     <SelectTrigger><SelectValue placeholder="Select client..." /></SelectTrigger>
                     <SelectContent className="bg-popover z-50">
                       {clients.map(c => {
-                        const fullName = `${c.first_name} ${c.last_name}`.trim();
+                        const fullName = `${c.firstName} ${c.lastName}`.trim();
                         return (
-                          <SelectItem key={c.id} value={c.id}>{fullName}</SelectItem>
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                         );
                       })}
                     </SelectContent>
@@ -434,11 +472,11 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate }) {
 
             <div className="space-y-2">
               <Label>Description <span className="text-muted-foreground">(optional)</span></Label>
-              <Textarea 
-                value={description} 
+              <Textarea
+                value={description}
                 onChange={(e) => setDescription(e.target.value.slice(0, 500))}
-                placeholder="Add additional instructions or notes..." 
-                rows={3} 
+                placeholder="Add additional instructions or notes..."
+                rows={3}
               />
               <p className="text-xs text-muted-foreground text-right">{description.length}/500</p>
             </div>
@@ -447,8 +485,8 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate }) {
 
         {/* Footer */}
         <div className="flex justify-between pt-2 border-t border-border">
-          {step > 1 ? (
-            <Button variant="outline" onClick={() => setStep(step - 1)} className="gap-1.5">
+          {step > 1 && !(step === 2 && defaultTarget) ? (
+            <Button variant="outline" onClick={() => setStep(step - 1)}>
               <ArrowLeft className="w-4 h-4" /> Back
             </Button>
           ) : (

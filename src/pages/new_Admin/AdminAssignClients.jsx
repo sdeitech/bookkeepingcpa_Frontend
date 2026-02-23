@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,17 +17,30 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { PaginationControls } from "@/components/ui/pagination-controls";
+import { DataTable } from "@/components/common/DataTable";
 import {
   Users,
   UserCheck,
   UserX,
   Briefcase,
   Search,
-  ArrowUpDown,
+  Check,
+  ChevronDown,
+  X,
+  Eye,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 import {
   useAssignClientMutation,
   useGetAllStaffQuery,
@@ -37,6 +49,11 @@ import {
 } from "@/features/auth/authApi";
 
 const PAGE_SIZE = 6;
+const CLIENT_FILTERS = [
+  { label: "All Clients", value: "all" },
+  { label: "Assigned", value: "assigned" },
+  { label: "Unassigned", value: "unassigned" },
+];
 
 const getFullName = (firstName, lastName, fallback = "") => {
   const full = `${firstName || ""} ${lastName || ""}`.trim();
@@ -44,9 +61,11 @@ const getFullName = (firstName, lastName, fallback = "") => {
 };
 
 export default function AdminAssignClients() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const [staffFilter, setStaffFilter] = useState("all");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [sortField, setSortField] = useState("name");
   const [sortAsc, setSortAsc] = useState(true);
   const [page, setPage] = useState(1);
@@ -56,6 +75,7 @@ export default function AdminAssignClients() {
   const [assignNotes, setAssignNotes] = useState("");
 
   const [unassignClient, setUnassignClient] = useState(null);
+  const [clearFiltersOpen, setClearFiltersOpen] = useState(false);
 
   const {
     data: assignmentsData,
@@ -68,6 +88,11 @@ export default function AdminAssignClients() {
 
   const [assignClient, { isLoading: assignLoading }] = useAssignClientMutation();
   const [unassignClientMutation, { isLoading: unassignLoading }] = useUnassignClientMutation();
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const staffMembers = useMemo(() => {
     const list = Array.isArray(staffData?.data) ? staffData.data : [];
@@ -106,8 +131,8 @@ export default function AdminAssignClients() {
   const filtered = useMemo(() => {
     let result = [...clients];
 
-    if (search) {
-      const q = search.toLowerCase();
+    if (debouncedSearch) {
+      const q = debouncedSearch.toLowerCase();
       result = result.filter((client) =>
         client.name.toLowerCase().includes(q) ||
         client.email.toLowerCase().includes(q) ||
@@ -126,7 +151,7 @@ export default function AdminAssignClients() {
     });
 
     return result;
-  }, [clients, search, filter, staffFilter, sortField, sortAsc]);
+  }, [clients, debouncedSearch, filter, staffFilter, sortField, sortAsc]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -143,14 +168,15 @@ export default function AdminAssignClients() {
   const totalClients = clients.length;
   const assignedClients = clients.filter((client) => client.assignedStaffId).length;
   const unassignedClients = totalClients - assignedClients;
+  const activeClientFilterLabel = CLIENT_FILTERS.find((item) => item.value === filter)?.label || "All Clients";
+  const activeStaffFilterLabel = staffFilter === "all"
+    ? "All Staff"
+    : staffMembers.find((staff) => staff.id === staffFilter)?.name || "All Staff";
+  const hasAnyFilter = filter !== "all" || staffFilter !== "all" || !!debouncedSearch;
 
-  const handleSort = (field) => {
-    if (sortField === field) {
-      setSortAsc(!sortAsc);
-    } else {
-      setSortField(field);
-      setSortAsc(true);
-    }
+  const handleSort = (field, dir) => {
+    setSortField(field);
+    setSortAsc(dir === "asc");
   };
 
   const handleAssign = async () => {
@@ -204,6 +230,16 @@ export default function AdminAssignClients() {
     setAssignNotes("");
   };
 
+  const handleClearAllFilters = () => {
+    setSearch("");
+    setDebouncedSearch("");
+    setFilter("all");
+    setStaffFilter("all");
+    setPage(1);
+    setClearFiltersOpen(false);
+    toast.success("All filters cleared");
+  };
+
   const stats = [
     { label: "Total Clients", value: totalClients, icon: Users, color: "text-primary" },
     { label: "Assigned", value: assignedClients, icon: UserCheck, color: "text-success" },
@@ -212,12 +248,114 @@ export default function AdminAssignClients() {
   ];
 
   const loading = assignmentsLoading || assignmentsFetching || staffLoading;
+  const columns = [
+    {
+      key: "name",
+      label: "Client",
+      sortable: true,
+      render: (client) => (
+        <div className="flex items-center gap-3">
+          <Avatar className="h-8 w-8">
+            <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+              {client.name
+                .split(" ")
+                .filter(Boolean)
+                .slice(0, 2)
+                .map((n) => n[0])
+                .join("") || "U"}
+            </AvatarFallback>
+          </Avatar>
+          <span className="font-medium text-foreground">{client.name}</span>
+        </div>
+      ),
+    },
+    {
+      key: "email",
+      label: "Email",
+      sortable: true,
+      render: (client) => <span className="text-sm text-muted-foreground">{client.email}</span>,
+    },
+    {
+      key: "company",
+      label: "Company",
+      sortable: true,
+      render: (client) => <span className="text-sm text-muted-foreground">{client.company}</span>,
+    },
+    {
+      key: "assignedStaffName",
+      label: "Assigned Staff",
+      sortable: true,
+      render: (client) =>
+        client.assignedStaffName ? (
+          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-xs">
+            {client.assignedStaffName}
+          </Badge>
+        ) : (
+          <Badge variant="outline" className="bg-muted text-muted-foreground border-border text-xs">
+            Unassigned
+          </Badge>
+        ),
+    },
+    {
+      key: "status",
+      label: "Status",
+      sortable: true,
+      render: (client) => (
+        <Badge
+          variant="outline"
+          className={
+            client.status === "active"
+              ? "bg-success/15 text-success border-success/30 text-xs"
+              : "bg-muted text-muted-foreground border-border text-xs"
+          }
+        >
+          {client.status === "active" ? "Active" : "Inactive"}
+        </Badge>
+      ),
+    },
+    {
+      key: "actions",
+      label: "Actions",
+      render: (client) => (
+        <div className="flex items-center justify-end gap-2">
+          {!client.assignedStaffId ? (
+            <Button size="sm" onClick={() => openAssignModal(client)}>
+              Assign
+            </Button>
+          ) : (
+            <>
+              <Button size="sm" variant="outline" onClick={() => openAssignModal(client)}>
+                Reassign
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => setUnassignClient(client)}
+                disabled={unassignLoading}
+              >
+                Unassign
+              </Button>
+            </>
+          )}
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8"
+            onClick={() => navigate(`/admin/clients/${client.id}`)}
+            title="View Client"
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Assign Clients to Staff</h1>
-        <p className="text-sm text-muted-foreground">Manage client assignments and control staff workload.</p>
+        <h1 className="text-2xl font-bold text-foreground">Clients</h1>
+        <p className="text-sm text-muted-foreground">View and manage client.</p>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -251,152 +389,104 @@ export default function AdminAssignClients() {
                 className="pl-9"
               />
             </div>
-            <Select
-              value={filter}
-              onValueChange={(value) => {
-                setFilter(value);
-                setPage(1);
-              }}
-            >
-              <SelectTrigger className="w-[140px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-popover z-50">
-                <SelectItem value="all">All Clients</SelectItem>
-                <SelectItem value="assigned">Assigned</SelectItem>
-                <SelectItem value="unassigned">Unassigned</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select
-              value={staffFilter}
-              onValueChange={(value) => {
-                setStaffFilter(value);
-                setPage(1);
-              }}
-            >
-              <SelectTrigger className="w-[170px]">
-                <SelectValue placeholder="Filter by Staff" />
-              </SelectTrigger>
-              <SelectContent className="bg-popover z-50">
-                <SelectItem value="all">All Staff</SelectItem>
-                {staffMembers.map((staff) => (
-                  <SelectItem key={staff.id} value={staff.id}>
-                    {staff.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
 
-          <div className="bg-card border border-border rounded-xl overflow-hidden">
-            {loading ? (
-              <div className="p-6 space-y-4">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Skeleton key={i} className="h-12 w-full" />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant={filter !== "all" ? "default" : "outline"}
+                  className={cn(
+                    "h-10 gap-2",
+                    filter !== "all"
+                      ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
+                      : "border-border text-foreground hover:bg-accent"
+                  )}
+                >
+                  <span>{activeClientFilterLabel}</span>
+                  <ChevronDown className="h-3.5 w-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="bg-popover z-50 min-w-[180px]">
+                {CLIENT_FILTERS.map((item) => (
+                  <DropdownMenuItem
+                    key={item.value}
+                    onClick={() => {
+                      setFilter(item.value);
+                      setPage(1);
+                    }}
+                    className="flex items-center justify-between"
+                  >
+                    <span>{item.label}</span>
+                    {filter === item.value && <Check className="h-3.5 w-3.5 text-primary" />}
+                  </DropdownMenuItem>
                 ))}
-              </div>
-            ) : filtered.length === 0 ? (
-              <div className="p-12 text-center">
-                <UserX className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
-                <p className="text-sm font-medium text-muted-foreground">No clients found</p>
-                <p className="text-xs text-muted-foreground/70 mt-1">Try adjusting your search or filters.</p>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead>
-                      <button onClick={() => handleSort("name")} className="flex items-center gap-1 hover:text-foreground transition-colors">
-                        Client <ArrowUpDown className="h-3 w-3" />
-                      </button>
-                    </TableHead>
-                    <TableHead className="hidden md:table-cell">Email</TableHead>
-                    <TableHead>
-                      <button onClick={() => handleSort("company")} className="flex items-center gap-1 hover:text-foreground transition-colors">
-                        Company <ArrowUpDown className="h-3 w-3" />
-                      </button>
-                    </TableHead>
-                    <TableHead>Assigned Staff</TableHead>
-                    <TableHead>
-                      <button onClick={() => handleSort("status")} className="flex items-center gap-1 hover:text-foreground transition-colors">
-                        Status <ArrowUpDown className="h-3 w-3" />
-                      </button>
-                    </TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginated.map((client) => (
-                    <TableRow key={client._id} className="group">
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-8 w-8">
-                            <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
-                              {client.name
-                                .split(" ")
-                                .filter(Boolean)
-                                .slice(0, 2)
-                                .map((n) => n[0])
-                                .join("") || "U"}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="font-medium text-foreground">{client.name}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell text-sm text-muted-foreground">{client.email}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{client.company}</TableCell>
-                      <TableCell>
-                        {client.assignedStaffName ? (
-                          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-xs">
-                            {client.assignedStaffName}
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="bg-muted text-muted-foreground border-border text-xs">
-                            Unassigned
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={
-                            client.status === "active"
-                              ? "bg-success/15 text-success border-success/30 text-xs"
-                              : "bg-muted text-muted-foreground border-border text-xs"
-                          }
-                        >
-                          {client.status === "active" ? "Active" : "Inactive"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          {!client.assignedStaffId ? (
-                            <Button size="sm" onClick={() => openAssignModal(client)}>
-                              Assign
-                            </Button>
-                          ) : (
-                            <>
-                              <Button size="sm" variant="outline" onClick={() => openAssignModal(client)}>
-                                Reassign
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => setUnassignClient(client)}
-                                disabled={unassignLoading}
-                              >
-                                Unassign
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant={staffFilter !== "all" ? "default" : "outline"}
+                  className={cn(
+                    "h-10 gap-2",
+                    staffFilter !== "all"
+                      ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
+                      : "border-border text-foreground hover:bg-accent"
+                  )}
+                >
+                  <span>{activeStaffFilterLabel}</span>
+                  <ChevronDown className="h-3.5 w-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="bg-popover z-50 min-w-[180px]">
+                <DropdownMenuItem
+                  onClick={() => {
+                    setStaffFilter("all");
+                    setPage(1);
+                  }}
+                  className="flex items-center justify-between"
+                >
+                  <span>All Staff</span>
+                  {staffFilter === "all" && <Check className="h-3.5 w-3.5 text-primary" />}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {staffMembers.map((staff) => (
+                  <DropdownMenuItem
+                    key={staff.id}
+                    onClick={() => {
+                      setStaffFilter(staff.id);
+                      setPage(1);
+                    }}
+                    className="flex items-center justify-between"
+                  >
+                    <span>{staff.name}</span>
+                    {staffFilter === staff.id && <Check className="h-3.5 w-3.5 text-primary" />}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {hasAnyFilter && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-10 gap-1.5 text-muted-foreground hover:text-destructive"
+                onClick={() => setClearFiltersOpen(true)}
+              >
+                <X className="h-3.5 w-3.5" />
+                Clear All
+              </Button>
             )}
           </div>
+
+          <DataTable
+            data={paginated}
+            columns={columns}
+            onSort={handleSort}
+            loading={loading}
+            emptyMessage="No clients found"
+            emptyDescription="Try adjusting your search or filters."
+            getRowId={(row) => row.id}
+          />
 
           <PaginationControls
             page={page}
@@ -503,6 +593,16 @@ export default function AdminAssignClients() {
         confirmLabel="Confirm Unassign"
         variant="destructive"
         onConfirm={handleUnassign}
+      />
+
+      <ConfirmDialog
+        open={clearFiltersOpen}
+        onOpenChange={setClearFiltersOpen}
+        title="Clear All Filters?"
+        description="This will reset the search and all client/staff filters."
+        confirmLabel="Clear All"
+        variant="destructive"
+        onConfirm={handleClearAllFilters}
       />
     </div>
   );

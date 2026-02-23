@@ -7,7 +7,7 @@ const navItems = [
   { icon: Home, label: "Dashboard", href: "/admin" },
   { icon: Users, label: "Clients", href: "/admin/clients" },
   { icon: UserCheck, label: "Staff", href: "/admin/staff" },
-  { icon: UserPlus, label: "Assign Clients", href: "/admin/assign-clients" },
+  // { icon: UserPlus, label: "Assign Clients", href: "/admin/assign-clients" },
   { icon: CheckSquare, label: "Tasks", href: "/admin/tasks" },
   { icon: FileText, label: "Documents", href: "/admin/documents" },
   { icon: Mail, label: "Messages", href: "/admin/messages" },

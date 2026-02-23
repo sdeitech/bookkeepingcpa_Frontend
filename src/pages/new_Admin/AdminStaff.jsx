@@ -1,28 +1,132 @@
-import { useGetAllStaffQuery, useGetAllClientsQuery } from "@/features/user/userApi";
+import { useGetAllStaffQuery } from "@/features/user/userApi";
 import { useTasks } from "@/hooks/useTasks";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Plus, Search, MoreHorizontal, Eye, Pencil, Trash2, Loader2, UserX } from "lucide-react";
-import { useState } from "react";
+import { Plus, Search, Loader2, UserX, ChevronDown, Check, X } from "lucide-react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { DataTable } from "@/components/common/DataTable";
+
+const STATUS_FILTERS = [
+  { label: "All Status", value: "all" },
+  { label: "Active", value: "active" },
+  { label: "Inactive", value: "inactive" },
+];
+
+const ASSIGNMENT_FILTERS = [
+  { label: "All Staff", value: "all" },
+  { label: "Assigned", value: "assigned" },
+  { label: "Unassigned", value: "unassigned" },
+];
+
+const ROW_ACTIONS = [
+  { label: "View", value: "view" },
+  { label: "Edit", value: "edit" },
+  { label: "Delete", value: "delete", variant: "destructive" },
+];
 
 export default function AdminStaff() {
-  const { data: staffData, isLoading, refetch, error } = useGetAllStaffQuery();
-  const Staff = staffData?.data || [];
+  const { data: staffData, isLoading, error } = useGetAllStaffQuery();
   const { tasks } = useTasks();
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [assignmentFilter, setAssignmentFilter] = useState("all");
 
   const staffMembers = staffData?.data || [];
 
-  const filtered = staffMembers.filter(s => {
-    if (!search) return true;
-    const fullName = `${s.first_name} ${s.last_name}`.toLowerCase();
-    const searchLower = search.toLowerCase();
-    return fullName.includes(searchLower) || s.email.toLowerCase().includes(searchLower);
-  });
+  const getAssignedCount = (staffId) =>
+    new Set(tasks.filter((t) => t.staffId === staffId).map((t) => t.clientId)).size;
+
+  const filtered = useMemo(() => {
+    return staffMembers.filter((s) => {
+      const fullName = `${s.first_name || ""} ${s.last_name || ""}`.trim().toLowerCase();
+      const email = (s.email || "").toLowerCase();
+      const searchLower = search.toLowerCase();
+      const assignedCount = getAssignedCount(s._id);
+
+      if (search && !fullName.includes(searchLower) && !email.includes(searchLower)) return false;
+      if (statusFilter === "active" && !s.active) return false;
+      if (statusFilter === "inactive" && s.active) return false;
+      if (assignmentFilter === "assigned" && assignedCount === 0) return false;
+      if (assignmentFilter === "unassigned" && assignedCount > 0) return false;
+
+      return true;
+    });
+  }, [staffMembers, search, statusFilter, assignmentFilter, tasks]);
+
+  const tableData = useMemo(
+    () =>
+      filtered.map((staff) => ({
+        ...staff,
+        fullName: `${staff.first_name || ""} ${staff.last_name || ""}`.trim() || "Unnamed Staff",
+        assignedCount: getAssignedCount(staff._id),
+        uiStatus: staff.active ? "active" : "inactive",
+      })),
+    [filtered, tasks],
+  );
+
+  const activeStatusLabel = STATUS_FILTERS.find((item) => item.value === statusFilter)?.label || "All Status";
+  const activeAssignmentLabel =
+    ASSIGNMENT_FILTERS.find((item) => item.value === assignmentFilter)?.label || "All Staff";
+  const hasAnyFilter = !!search || statusFilter !== "all" || assignmentFilter !== "all";
+
+  const clearAllFilters = () => {
+    setSearch("");
+    setStatusFilter("all");
+    setAssignmentFilter("all");
+  };
+
+  const handleStaffAction = (action, row) => {
+    if (action === "view") {
+      toast.info("View staff details coming soon");
+      return;
+    }
+    if (action === "edit") {
+      toast.info("Edit staff coming soon");
+      return;
+    }
+    if (action === "delete") {
+      toast.info("Delete staff coming soon");
+    }
+  };
+
+  const columns = [
+    {
+      key: "fullName",
+      label: "Name",
+      sortable: true,
+      render: (row) => <span className="font-medium text-foreground">{row.fullName}</span>,
+    },
+    {
+      key: "email",
+      label: "Email",
+      sortable: true,
+      render: (row) => <span className="text-sm text-muted-foreground">{row.email}</span>,
+    },
+    {
+      key: "assignedCount",
+      label: "Assigned Clients",
+      sortable: true,
+    },
+    {
+      key: "uiStatus",
+      label: "Status",
+      sortable: true,
+      render: (row) =>
+        row.active ? (
+          <Badge variant="outline" className="bg-success/15 text-success border-success/30 text-xs">
+            Active
+          </Badge>
+        ) : (
+          <Badge variant="outline" className="bg-muted text-muted-foreground border-muted text-xs">
+            Inactive
+          </Badge>
+        ),
+    },
+  ];
 
   // Loading state
   if (isLoading) {
@@ -86,83 +190,92 @@ export default function AdminStaff() {
         </Button>
       </div>
 
-      <div className="relative max-w-xs">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Search staff..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative max-w-xs w-full">
+          {/* <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /> */}
+          <Input placeholder="Search staff..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+        </div>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant={statusFilter !== "all" ? "default" : "outline"}
+              className={cn(
+                "h-10 gap-2",
+                statusFilter !== "all"
+                  ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
+                  : "border-border text-foreground hover:bg-accent"
+              )}
+            >
+              <span>{activeStatusLabel}</span>
+              <ChevronDown className="h-3.5 w-3.5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="bg-popover z-50 min-w-[160px]">
+            {STATUS_FILTERS.map((item) => (
+              <DropdownMenuItem
+                key={item.value}
+                onClick={() => setStatusFilter(item.value)}
+                className="flex items-center justify-between"
+              >
+                <span>{item.label}</span>
+                {statusFilter === item.value && <Check className="h-3.5 w-3.5 text-primary" />}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant={assignmentFilter !== "all" ? "default" : "outline"}
+              className={cn(
+                "h-10 gap-2",
+                assignmentFilter !== "all"
+                  ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
+                  : "border-border text-foreground hover:bg-accent"
+              )}
+            >
+              <span>{activeAssignmentLabel}</span>
+              <ChevronDown className="h-3.5 w-3.5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="bg-popover z-50 min-w-[160px]">
+            {ASSIGNMENT_FILTERS.map((item) => (
+              <DropdownMenuItem
+                key={item.value}
+                onClick={() => setAssignmentFilter(item.value)}
+                className="flex items-center justify-between"
+              >
+                <span>{item.label}</span>
+                {assignmentFilter === item.value && <Check className="h-3.5 w-3.5 text-primary" />}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {hasAnyFilter && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-10 gap-1.5 text-muted-foreground hover:text-destructive"
+            onClick={clearAllFilters}
+          >
+            <X className="h-3.5 w-3.5" />
+            Clear All
+          </Button>
+        )}
       </div>
 
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Assigned Clients</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="w-12" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
-                  No staff members found.
-                </TableCell>
-              </TableRow>
-            ) : (
-              filtered.map(staff => {
-                const fullName = `${staff.first_name || ''} ${staff.last_name || ''}`.trim() || 'Unnamed Staff';
-                // Count unique clients assigned to this staff member
-                const assignedCount = new Set(
-                  tasks.filter(t => t.staffId === staff._id).map(t => t.clientId)
-                ).size;
-                
-                return (
-                  <TableRow key={staff._id}>
-                    <TableCell className="font-medium text-foreground">{fullName}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{staff.email}</TableCell>
-                    <TableCell>{assignedCount}</TableCell>
-                    <TableCell>
-                      {staff.active ? (
-                        <Badge variant="outline" className="bg-success/15 text-success border-success/30 text-xs">
-                          Active
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="bg-muted text-muted-foreground border-muted text-xs">
-                          Inactive
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-popover">
-                          <DropdownMenuItem onClick={() => toast.info("View staff details coming soon")}>
-                            <Eye className="mr-2 h-3.5 w-3.5" /> View
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => toast.info("Edit staff coming soon")}>
-                            <Pencil className="mr-2 h-3.5 w-3.5" /> Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            className="text-destructive" 
-                            onClick={() => toast.info("Delete staff coming soon")}
-                          >
-                            <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTable
+        data={tableData}
+        columns={columns}
+        rowActions={ROW_ACTIONS}
+        onRowAction={handleStaffAction}
+        getRowId={(row) => row._id}
+        emptyMessage="No staff members found."
+        emptyDescription="Try adjusting your search or filters."
+      />
     </div>
   );
 }

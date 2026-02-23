@@ -69,9 +69,7 @@ export default function AdminClients() {
         {clients.map(client => {
           const clientTasks = tasks.filter(t => t.clientId === client.id);
           const completed = clientTasks.filter(t => t.status === "COMPLETED").length;
-          
-          // Construct full name from backend fields
-          const fullName = `${client.first_name || ''} ${client.last_name || ''}`.trim() || 'Unnamed Client';
+  
           
           return (
             <Link
@@ -84,7 +82,7 @@ export default function AdminClients() {
                   <Building2 className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <p className="font-semibold text-foreground">{fullName}</p>
+                  <p className="font-semibold text-foreground">{client.name}</p>
                   <p className="text-sm text-muted-foreground">{client.email}</p>
                 </div>
               </div>
