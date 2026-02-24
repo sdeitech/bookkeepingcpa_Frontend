@@ -6,9 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useGetAllClientsQuery, useGetAllStaffQuery } from "@/features/user/userApi";
 import { useGetTemplatesQuery } from "@/features/tasks/taskTemplateApi";
-import { FileText, Link2, CheckCircle, Edit, ArrowLeft, ArrowRight, Sparkles, Users, UserCheck, Loader2 } from "lucide-react";
+import { FileText, Link2, CheckCircle, Edit, ArrowLeft, ArrowRight, Sparkles, Users, UserCheck, Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { addDays, format } from "date-fns";
 import { toast } from "sonner";
@@ -27,7 +28,7 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
   const [step, setStep] = useState(defaultTarget ? 2 : 1);
   const [taskTarget, setTaskTarget] = useState(defaultTarget);
   const [category, setCategory] = useState(null);
-  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [selectedTemplates, setSelectedTemplates] = useState([]); // Changed from single to array
   const [customTitle, setCustomTitle] = useState("");
   const [customDesc, setCustomDesc] = useState("");
   const [customTaskType, setCustomTaskType] = useState("ACTION");
@@ -36,6 +37,10 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
   const [priority, setPriority] = useState("MEDIUM");
   const [dueDate, setDueDate] = useState("");
   const [description, setDescription] = useState("");
+  
+  // NEW: Document types state
+  const [selectedDocTypes, setSelectedDocTypes] = useState([]); // Array of {type, isCustom, isRequired}
+  const [customDocInput, setCustomDocInput] = useState("");
 
   const totalSteps = 4;
 
@@ -83,7 +88,7 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
     setStep(defaultTarget ? 2 : 1); // skip step 1 if target is preset
     setTaskTarget(defaultTarget);
     setCategory(null);
-    setSelectedTemplate(null);
+    setSelectedTemplates([]); // Changed
     setCustomTitle("");
     setCustomDesc("");
     setCustomTaskType("ACTION");
@@ -92,6 +97,8 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
     setPriority("MEDIUM");
     setDueDate("");
     setDescription("");
+    setSelectedDocTypes([]); // NEW
+    setCustomDocInput(""); // NEW
   };
 
   const handleClose = () => {
@@ -99,14 +106,73 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
     onOpenChange(false);
   };
 
+  // NEW: Document type management functions
+  const toggleTemplate = (template) => {
+    setSelectedTemplates(prev => {
+      const exists = prev.find(t => t._id === template._id);
+      if (exists) {
+        // Remove template and its document type
+        setSelectedDocTypes(prevDocs => 
+          prevDocs.filter(doc => doc.type !== template.documentType)
+        );
+        return prev.filter(t => t._id !== template._id);
+      } else {
+        // Add template and its document type
+        setSelectedDocTypes(prevDocs => [
+          ...prevDocs,
+          { type: template.documentType, isCustom: false, isRequired: true }
+        ]);
+        return [...prev, template];
+      }
+    });
+  };
+
+  const toggleDocTypeRequired = (docType, isRequired) => {
+    setSelectedDocTypes(prev =>
+      prev.map(doc => doc.type === docType ? { ...doc, isRequired } : doc)
+    );
+  };
+
+  const addCustomDocType = () => {
+    const trimmed = customDocInput.trim();
+    if (!trimmed) return;
+    
+    // Check for duplicates
+    if (selectedDocTypes.find(doc => doc.type.toLowerCase() === trimmed.toLowerCase())) {
+      toast.error("Document type already added");
+      return;
+    }
+
+    setSelectedDocTypes(prev => [
+      ...prev,
+      { type: trimmed, isCustom: true, isRequired: true }
+    ]);
+    setCustomDocInput("");
+  };
+
+  const removeDocType = (docType) => {
+    setSelectedDocTypes(prev => prev.filter(doc => doc.type !== docType));
+    // Also remove from selected templates if it came from a template
+    setSelectedTemplates(prev => prev.filter(t => t.documentType !== docType));
+  };
+
   const getTaskTitle = () => {
     if (category === "custom") return customTitle;
-    return selectedTemplate?.name || "";
+    if (category === "documents" && selectedDocTypes.length > 0) {
+      return `Upload ${selectedDocTypes.map(d => d.type).join(", ")}`;
+    }
+    return selectedTemplates[0]?.name || "";
   };
 
   const handleCreate = async () => {
     if (!getTaskTitle() || !dueDate) {
       toast.error("Please fill in all required fields");
+      return;
+    }
+
+    // For document upload tasks, require at least one document type
+    if (category === "documents" && selectedDocTypes.length === 0) {
+      toast.error("Please select at least one document type");
       return;
     }
 
@@ -129,7 +195,7 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
     // Build task data
     const taskData = {
       title: getTaskTitle(),
-      description: description || selectedTemplate?.description || customDesc || "",
+      description: description || customDesc || "",
       taskType: category === "custom" ? customTaskType : CATEGORIES.find(c => c.id === category)?.taskType,
       priority: priority,
       dueDate: dueDate,
@@ -137,19 +203,22 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
       clientId: taskTarget === "client" ? clientId : (clientId || undefined),
     };
 
-    // Add type-specific fields
-    if (selectedTemplate) {
-      taskData.templateId = selectedTemplate._id;
-      taskData.templateName = selectedTemplate.name;
+    // Add requiredDocuments for DOCUMENT_UPLOAD tasks
+    if (category === "documents" && selectedDocTypes.length > 0) {
+      taskData.requiredDocuments = selectedDocTypes;
+    }
 
-      if (selectedTemplate.documentType) {
-        taskData.documentType = selectedTemplate.documentType;
+    // Add type-specific fields for non-document tasks
+    if (category !== "documents" && selectedTemplates.length > 0) {
+      const template = selectedTemplates[0];
+      taskData.templateId = template._id;
+      taskData.templateName = template.name;
+
+      if (template.integrationType) {
+        taskData.integrationType = template.integrationType;
       }
-      if (selectedTemplate.integrationType) {
-        taskData.integrationType = selectedTemplate.integrationType;
-      }
-      if (selectedTemplate.actionCategory) {
-        taskData.actionCategory = selectedTemplate.actionCategory;
+      if (template.actionCategory) {
+        taskData.actionCategory = template.actionCategory;
       }
     }
 
@@ -163,7 +232,8 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
     }
   };
 
-  const canProceedStep3 = category === "custom" ? customTitle.trim() : selectedTemplate !== null;
+  const canProceedStep3 = category === "custom" ? customTitle.trim() : 
+    (category === "documents" ? selectedDocTypes.length > 0 : selectedTemplates.length > 0);
 
   const canCreate = () => {
     if (!getTaskTitle() || !dueDate) return false;
@@ -279,37 +349,148 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
               </div>
             ) : (
               <>
-                <p className="text-sm font-medium text-foreground">
-                  Select a Template ({categoryTemplates.length} available)
-                </p>
-                <RadioGroup
-                  value={selectedTemplate?._id}
-                  onValueChange={(val) => setSelectedTemplate(categoryTemplates.find(t => t._id === val))}
-                  className="space-y-2"
-                >
-                  {categoryTemplates.map((template) => (
-                    <label
-                      key={template._id}
-                      className={cn(
-                        "flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors",
-                        selectedTemplate?._id === template._id ? "border-primary bg-accent" : "border-border hover:bg-muted/50"
-                      )}
-                    >
-                      <RadioGroupItem value={template._id} className="mt-0.5" />
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium">{template.name}</span>
-                          {template.usageCount > 0 && (
-                            <span className="text-xs text-muted-foreground">Used {template.usageCount}x</span>
-                          )}
-                        </div>
-                        {template.description && (
-                          <p className="text-xs text-muted-foreground mt-1">{template.description}</p>
-                        )}
+                {category === "documents" ? (
+                  // DOCUMENT UPLOAD: Multi-select with checkboxes
+                  <>
+                    <p className="text-sm font-medium text-foreground">
+                      Select Document Types ({selectedDocTypes.length} selected)
+                    </p>
+                    <div className="space-y-2">
+                      {categoryTemplates.map((template) => {
+                        const isSelected = selectedTemplates.find(t => t._id === template._id);
+                        const docType = selectedDocTypes.find(d => d.type === template.documentType);
+                        
+                        return (
+                          <label
+                            key={template._id}
+                            className={cn(
+                              "flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors",
+                              isSelected ? "border-primary bg-accent" : "border-border hover:bg-muted/50"
+                            )}
+                          >
+                            <Checkbox
+                              checked={!!isSelected}
+                              onCheckedChange={() => toggleTemplate(template)}
+                              className="mt-0.5"
+                            />
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium">{template.name}</span>
+                                {isSelected && docType && (
+                                  <Select
+                                    value={docType.isRequired ? "required" : "optional"}
+                                    onValueChange={(val) => toggleDocTypeRequired(template.documentType, val === "required")}
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <SelectTrigger className="h-7 w-[100px] text-xs">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-popover z-50">
+                                      <SelectItem value="required">Required</SelectItem>
+                                      <SelectItem value="optional">Optional</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                )}
+                              </div>
+                              {template.description && (
+                                <p className="text-xs text-muted-foreground mt-1">{template.description}</p>
+                              )}
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+
+                    {/* Custom Document Type Input */}
+                    <div className="pt-2 border-t border-border">
+                      <Label className="text-sm font-medium">Add Custom Document Type</Label>
+                      <div className="flex gap-2 mt-2">
+                        <Input
+                          value={customDocInput}
+                          onChange={(e) => setCustomDocInput(e.target.value)}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              addCustomDocType();
+                            }
+                          }}
+                          placeholder="e.g., Rental Income Proof"
+                          className="flex-1"
+                        />
+                        <Button type="button" onClick={addCustomDocType} size="sm">
+                          Add
+                        </Button>
                       </div>
-                    </label>
-                  ))}
-                </RadioGroup>
+                    </div>
+
+                    {/* Selected Document Types as Chips */}
+                    {selectedDocTypes.length > 0 && (
+                      <div className="pt-2">
+                        <Label className="text-sm font-medium">Selected Documents ({selectedDocTypes.length})</Label>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {selectedDocTypes.map((doc) => (
+                            <div
+                              key={doc.type}
+                              className={cn(
+                                "flex items-center gap-2 px-3 py-1.5 rounded-full text-sm border",
+                                doc.isCustom ? "bg-purple-50 border-purple-200" : "bg-accent border-border"
+                              )}
+                            >
+                              <span className="font-medium">{doc.type}</span>
+                              <span className="text-xs text-muted-foreground">
+                                ({doc.isRequired ? "Required" : "Optional"})
+                              </span>
+                              <button
+                                onClick={() => removeDocType(doc.type)}
+                                className="ml-1 hover:text-destructive"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  // OTHER CATEGORIES: Single select with radio buttons
+                  <>
+                    <p className="text-sm font-medium text-foreground">
+                      Select a Template ({categoryTemplates.length} available)
+                    </p>
+                    <RadioGroup
+                      value={selectedTemplates[0]?._id}
+                      onValueChange={(val) => {
+                        const template = categoryTemplates.find(t => t._id === val);
+                        setSelectedTemplates(template ? [template] : []);
+                      }}
+                      className="space-y-2"
+                    >
+                      {categoryTemplates.map((template) => (
+                        <label
+                          key={template._id}
+                          className={cn(
+                            "flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors",
+                            selectedTemplates[0]?._id === template._id ? "border-primary bg-accent" : "border-border hover:bg-muted/50"
+                          )}
+                        >
+                          <RadioGroupItem value={template._id} className="mt-0.5" />
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium">{template.name}</span>
+                              {template.usageCount > 0 && (
+                                <span className="text-xs text-muted-foreground">Used {template.usageCount}x</span>
+                              )}
+                            </div>
+                            {template.description && (
+                              <p className="text-xs text-muted-foreground mt-1">{template.description}</p>
+                            )}
+                          </div>
+                        </label>
+                      ))}
+                    </RadioGroup>
+                  </>
+                )}
               </>
             )}
           </div>
@@ -353,17 +534,41 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
         {/* Step 4: Details */}
         {step === 4 && (
           <div className="space-y-4 py-2">
-            <div className="bg-accent/50 rounded-lg p-3 flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Task</p>
-                <p className="font-medium text-foreground">{getTaskTitle()}</p>
+            <div className="bg-accent/50 rounded-lg p-3">
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <p className="text-xs text-muted-foreground">Task</p>
+                  <p className="font-medium text-foreground">{getTaskTitle()}</p>
+                </div>
+                <span className={cn(
+                  "text-xs font-medium px-2.5 py-1 rounded-full",
+                  taskTarget === "staff" ? "bg-primary/15 text-primary" : "bg-success/15 text-success"
+                )}>
+                  {taskTarget === "staff" ? "Staff Task" : "Client Task"}
+                </span>
               </div>
-              <span className={cn(
-                "text-xs font-medium px-2.5 py-1 rounded-full",
-                taskTarget === "staff" ? "bg-primary/15 text-primary" : "bg-success/15 text-success"
-              )}>
-                {taskTarget === "staff" ? "Staff Task" : "Client Task"}
-              </span>
+              
+              {/* Show selected document types for document upload tasks */}
+              {category === "documents" && selectedDocTypes.length > 0 && (
+                <div className="mt-2 pt-2 border-t border-border/50">
+                  <p className="text-xs text-muted-foreground mb-1">Required Documents:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {selectedDocTypes.map((doc) => (
+                      <span
+                        key={doc.type}
+                        className={cn(
+                          "text-xs px-2 py-0.5 rounded-full",
+                          doc.isRequired 
+                            ? "bg-primary/10 text-primary" 
+                            : "bg-muted text-muted-foreground"
+                        )}
+                      >
+                        {doc.type} {!doc.isRequired && "(Optional)"}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Assign To */}
@@ -380,6 +585,7 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
                     <SelectTrigger><SelectValue placeholder="Select staff member..." /></SelectTrigger>
                     <SelectContent className="bg-popover z-50">
                       {staffMembers.map(s => {
+                        console.log('staff members : ', staffMembers)
                         const fullName = `${s.first_name} ${s.last_name}`.trim();
                         return (
                           <SelectItem key={s._id} value={s._id}>
@@ -402,6 +608,7 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
                     <SelectContent className="bg-popover z-50">
                       {
                         resolvedClients.map(c => {
+                          console.log('clients assigned : ',resolvedClients)
                           return (
                             <SelectItem key={c.id} value={c.id}>
                               <div>

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTasks } from "@/hooks/useTasks";
 import { useGetAllStaffQuery } from "@/features/user/userApi";
 import { Button } from "@/components/ui/button";
@@ -25,7 +26,6 @@ const PAGE_SIZE = 8;
 
 const VIEW_FILTERS = [
   { label: "All Tasks", value: "all" },
-  { label: "My Tasks", value: "my_tasks" },
   { label: "Client Tasks", value: "client_tasks" },
   { label: "Staff Tasks", value: "staff_tasks" },
 ];
@@ -38,6 +38,7 @@ const CATEGORY_FILTERS = [
 ];
 
 const ROW_ACTIONS = [
+  { label: "View", value: "view" },
   { label: "Edit", value: "edit" },
   { label: "Delete", value: "delete", variant: "destructive" },
 ];
@@ -74,21 +75,70 @@ const toLowerPriority = (value) => {
 };
 
 export default function AdminTasks() {
-  const { tasks, createTask, deleteTask, deleteTasks, reassignTasks } = useTasks();
-  const { data: staffData } = useGetAllStaffQuery();
-  const staffMembers = staffData?.data || [];
-
+  const navigate = useNavigate();
   const [createOpen, setCreateOpen] = useState(false);
   const [selected, setSelected] = useState([]);
   const [viewFilter, setViewFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [sortKey, setSortKey] = useState(null);
-  const [sortDir, setSortDir] = useState("asc");
+  const [sortKey, setSortKey] = useState("createdAt");
+  const [sortDir, setSortDir] = useState("desc");
   const [page, setPage] = useState(1);
   const [columnFilters, setColumnFilters] = useState({});
   const [clearAllOpen, setClearAllOpen] = useState(false);
+
+  // Build API filter parameters
+  const apiFilters = useMemo(() => {
+    const filters = {
+      page,
+      limit: PAGE_SIZE,
+      sortBy: sortKey || 'createdAt',
+      sortOrder: sortDir || 'desc',
+    };
+
+    // Add search
+    if (debouncedSearch) {
+      filters.search = debouncedSearch;
+    }
+
+    // Add view filter
+    if (viewFilter && viewFilter !== 'all') {
+      filters.viewFilter = viewFilter;
+    }
+
+    // Add category filter
+    if (categoryFilter) {
+      filters.category = categoryFilter;
+    }
+
+    // Add column filters
+    if (columnFilters.clientName) {
+      filters.clientId = columnFilters.clientName; // This is actually the client ID value from the dropdown
+    }
+    if (columnFilters.assignedToId) {
+      filters.assignedTo = columnFilters.assignedToId;
+    }
+    if (columnFilters.assignedById) {
+      filters.assignedBy = columnFilters.assignedById;
+    }
+    if (columnFilters.status) {
+      filters.status = columnFilters.status.toUpperCase();
+    }
+    if (columnFilters.priority) {
+      filters.priority = columnFilters.priority.toUpperCase();
+    }
+    if (columnFilters.dueDate) {
+      filters.dueDateFilter = columnFilters.dueDate;
+    }
+
+    return filters;
+  }, [page, sortKey, sortDir, debouncedSearch, viewFilter, categoryFilter, columnFilters]);
+
+  // Fetch tasks with filters
+  const { tasks: apiTasks, filterOptions, pagination, isLoading, refetch, createTask, deleteTask, deleteTasks, reassignTasks } = useTasks(apiFilters);
+  const { data: staffData } = useGetAllStaffQuery();
+  const staffMembers = staffData?.data || [];
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
@@ -100,7 +150,7 @@ export default function AdminTasks() {
   const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
 
   const normalizedTasks = useMemo(() => {
-    return tasks.map((task) => {
+    return apiTasks.map((task) => {
       const id = getId(task);
       return {
         ...task,
@@ -115,7 +165,7 @@ export default function AdminTasks() {
         priority: toLowerPriority(task.priority),
       };
     });
-  }, [tasks]);
+  }, [apiTasks]);
 
   const overdueTasks = useMemo(
     () =>
@@ -125,41 +175,28 @@ export default function AdminTasks() {
     [normalizedTasks, today],
   );
 
-  const clientNames = useMemo(
-    () => [...new Set(normalizedTasks.map((t) => t.clientName).filter(Boolean))].sort(),
-    [normalizedTasks],
-  );
+  // Get filter options from API response
+  const clientOptions = useMemo(() => {
+    const options = filterOptions?.clients || [];
+    return options;
+  }, [filterOptions]);
 
   const assignedToOptions = useMemo(() => {
-    const map = new Map();
-    normalizedTasks.forEach((task) => {
-      if (task.assignedToId) {
-        map.set(task.assignedToId, task.assignedToName || task.assignedToId);
-      }
-    });
-    return Array.from(map.entries())
-      .map(([value, label]) => ({ value, label }))
-      .sort((a, b) => a.label.localeCompare(b.label));
-  }, [normalizedTasks]);
+    const options = filterOptions?.assignedTo || [];
+    return options;
+  }, [filterOptions]);
 
   const assignedByOptions = useMemo(() => {
-    const map = new Map();
-    normalizedTasks.forEach((task) => {
-      if (task.assignedById) {
-        map.set(task.assignedById, task.assignedByName || task.assignedById);
-      }
-    });
-    return Array.from(map.entries())
-      .map(([value, label]) => ({ value, label }))
-      .sort((a, b) => a.label.localeCompare(b.label));
-  }, [normalizedTasks]);
+    const options = filterOptions?.assignedBy || [];
+    return options;
+  }, [filterOptions]);
 
   const reassignOptions = useMemo(() => {
     const fromStaffApi = staffMembers
       .map((staff) => ({ value: getId(staff), label: getName(staff) }))
       .filter((staff) => staff.value);
-    return fromStaffApi.length > 0 ? fromStaffApi : assignedToOptions;
-  }, [staffMembers, assignedToOptions]);
+    return fromStaffApi.length > 0 ? fromStaffApi : [];
+  }, [staffMembers]);
 
   const handleColumnFilterChange = (columnKey, value) => {
     setColumnFilters((prev) => {
@@ -174,92 +211,9 @@ export default function AdminTasks() {
     setPage(1);
   };
 
-  const filtered = useMemo(() => {
-    let result = normalizedTasks;
-
-    if (debouncedSearch) {
-      const q = debouncedSearch.toLowerCase();
-      result = result.filter(
-        (t) =>
-          String(t.title || "").toLowerCase().includes(q) ||
-          String(t.clientName || "").toLowerCase().includes(q) ||
-          String(t.assignedToName || "").toLowerCase().includes(q),
-      );
-    }
-
-    switch (viewFilter) {
-      case "my_tasks":
-        result = result.filter((t) => t.assignedToName === CURRENT_STAFF);
-        break;
-      case "client_tasks":
-        result = result.filter((t) => t.assignedToRole === "client");
-        break;
-      case "staff_tasks":
-        result = result.filter((t) => t.assignedToRole === "staff");
-        break;
-      default:
-        break;
-    }
-
-    if (categoryFilter) {
-      const keywords = {
-        doc_upload: ["upload", "document", "w-2", "collection"],
-        integration: ["integration", "quickbooks", "migration", "connect", "setup"],
-        action: ["file", "filing", "reconcile", "report"],
-        review: ["review", "audit", "chart"],
-      };
-      const kws = keywords[categoryFilter] || [];
-      if (kws.length > 0) {
-        result = result.filter((t) => {
-          const text = `${t.title || ""} ${t.description || ""}`.toLowerCase();
-          return kws.some((kw) => text.includes(kw));
-        });
-      }
-    }
-
-    if (columnFilters.clientName) {
-      result = result.filter((t) => t.clientName === columnFilters.clientName);
-    }
-    if (columnFilters.assignedTo) {
-      result = result.filter((t) => t.assignedToId === columnFilters.assignedTo);
-    }
-    if (columnFilters.assignedBy) {
-      result = result.filter((t) => t.assignedById === columnFilters.assignedBy);
-    }
-    if (columnFilters.status) {
-      result = result.filter((t) => t.status === columnFilters.status);
-    }
-    if (columnFilters.priority) {
-      result = result.filter((t) => t.priority === columnFilters.priority);
-    }
-    if (columnFilters.dueDate) {
-      const dueDateFilter = columnFilters.dueDate;
-      if (dueDateFilter === "overdue") {
-        result = result.filter((t) => t.status !== "completed" && t.dueDate && isBefore(new Date(t.dueDate), today));
-      } else if (dueDateFilter === "today") {
-        result = result.filter((t) => t.dueDate && isToday(new Date(t.dueDate)));
-      } else if (dueDateFilter === "this_week") {
-        result = result.filter((t) => {
-          if (!t.dueDate) return false;
-          const d = new Date(t.dueDate);
-          return d >= weekStart && d <= weekEnd;
-        });
-      }
-    }
-
-    if (sortKey) {
-      result = [...result].sort((a, b) => {
-        const aVal = String(a[sortKey] ?? "");
-        const bVal = String(b[sortKey] ?? "");
-        return sortDir === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-      });
-    }
-
-    return result;
-  }, [normalizedTasks, debouncedSearch, viewFilter, categoryFilter, columnFilters, sortKey, sortDir, today, weekStart, weekEnd]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  // All filtering is done by backend, so we just use the tasks directly
+  const filtered = normalizedTasks;
+  const paginated = filtered; // Backend already handles pagination
 
   const toggleSelect = (id) => {
     setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -293,8 +247,12 @@ export default function AdminTasks() {
   };
 
   const handleRowAction = async (action, row) => {
+    if (action === "view") {
+      navigate(`/admin/tasks/${row.id}`);
+      return;
+    }
     if (action === "edit") {
-      toast.info(`Editing \"${row.title}\" - inline edit coming soon`);
+      navigate(`/admin/tasks/${row.id}?mode=edit`);
       return;
     }
     if (action === "delete") {
@@ -322,9 +280,15 @@ export default function AdminTasks() {
     setSearchQuery("");
     setDebouncedSearch("");
     setColumnFilters({});
+    setSortKey("createdAt");
+    setSortDir("desc");
     setPage(1);
     setSelected([]);
     setClearAllOpen(false);
+    
+    // Force refresh to get fresh data
+    setTimeout(() => refetch(), 0);
+    
     toast.success("All filters cleared");
   };
 
@@ -345,7 +309,7 @@ export default function AdminTasks() {
       label: "Client",
       sortable: true,
       filterable: true,
-      filterOptions: [{ label: "All", value: "" }, ...clientNames.map((n) => ({ label: n, value: n }))],
+      filterOptions: [{ label: "All", value: "" }, ...clientOptions],
       render: (row) => <span className="italic text-muted-foreground">{row.clientName}</span>,
     },
     {
@@ -425,7 +389,7 @@ export default function AdminTasks() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Task Management</h1>
           <p className="text-sm text-muted-foreground">
-            {tasks.length} total tasks · {overdueTasks.length} overdue
+            {isLoading ? "Loading..." : `${filtered.length} tasks`} · {overdueTasks.length} overdue
           </p>
         </div>
         <Button onClick={() => setCreateOpen(true)} className="gap-2">
@@ -578,15 +542,16 @@ export default function AdminTasks() {
         onSelectAll={toggleAll}
         columnFilters={columnFilters}
         onColumnFilterChange={handleColumnFilterChange}
+        isLoading={isLoading}
       />
 
-      {filtered.length > PAGE_SIZE && (
+      {pagination.totalPages > 1 && (
         <PaginationControls
-          page={page}
-          totalPages={totalPages}
+          page={pagination.currentPage}
+          totalPages={pagination.totalPages}
           onPageChange={setPage}
-          totalItems={filtered.length}
-          pageSize={PAGE_SIZE}
+          totalItems={pagination.totalItems}
+          pageSize={pagination.itemsPerPage}
         />
       )}
 
