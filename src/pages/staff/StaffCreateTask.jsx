@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useOutletContext } from "react-router-dom";
+import { useNavigate, useOutletContext } from "react-router-dom";
 import { useTasks } from "@/hooks/useTasks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +31,11 @@ const CATEGORY_FILTERS = [
   { label: "Integration", value: "integration" },
   { label: "Action", value: "action" },
   { label: "Review", value: "review" },
+];
+const ROW_ACTIONS = [
+  { label: "View", value: "view" },
+  { label: "Edit", value: "edit" },
+  { label: "Delete", value: "delete", variant: "destructive" },
 ];
 
 const getId = (value) => {
@@ -65,6 +70,7 @@ const toLowerPriority = (value) => {
 };
 
 export default function StaffCreateTask() {
+  const navigate = useNavigate();
   const { myClients = [] } = useOutletContext();
 
   const [createOpen, setCreateOpen] = useState(false);
@@ -96,7 +102,7 @@ export default function StaffCreateTask() {
     return filters;
   }, [page, pageSize, sortKey, sortDir, debouncedSearch, viewFilter, categoryFilter, columnFilters]);
 
-  const { tasks, pagination, isLoading, createTask } = useTasks(apiFilters);
+  const { tasks, pagination, isLoading, createTask, deleteTask } = useTasks(apiFilters);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
@@ -235,6 +241,26 @@ export default function StaffCreateTask() {
       toast.success("Task created successfully");
     } catch {
       toast.error("Failed to create task");
+    }
+  };
+  const handleRowAction = async (action, row) => {
+    if (action === "view") {
+      navigate(`/staff/tasks/${row.id}`);
+      return;
+    }
+
+    if (action === "edit") {
+      navigate(`/staff/tasks/${row.id}?mode=edit`);
+      return;
+    }
+
+    if (action === "delete") {
+      try {
+        await deleteTask(row.id);
+        toast.success("Task deleted");
+      } catch {
+        toast.error("Failed to delete task");
+      }
     }
   };
 
@@ -458,6 +484,8 @@ export default function StaffCreateTask() {
         data={paginated}
         columns={columns}
         onSort={handleSort}
+        onRowAction={handleRowAction}
+        rowActions={ROW_ACTIONS}
         columnFilters={columnFilters}
         onColumnFilterChange={handleColumnFilterChange}
         loading={isLoading}

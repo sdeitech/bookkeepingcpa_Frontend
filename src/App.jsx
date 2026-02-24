@@ -41,6 +41,7 @@ import StaffLayout from './pages/staff/StaffLayout';
 import StaffClients from './pages/staff/StaffClients';
 import StaffClientDetail from './pages/staff/StaffClientDetail';
 import StaffTasks from './pages/staff/StaffTasks';
+import StaffTaskDetail from './pages/staff/StaffTaskDetail';
 import StaffReports from './pages/staff/StaffReports';
 import StaffCreateTask from './pages/staff/StaffCreateTask';
 
@@ -181,6 +182,7 @@ function App() {
             <Route path="clients" element={<StaffClients />} />
             <Route path="clients/:clientId" element={<StaffClientDetail />} />
             <Route path="tasks" element={<StaffTasks />} />
+            <Route path="tasks/:taskId" element={<StaffTaskDetail />} />
             <Route path="reports" element={<StaffReports />} />
             <Route path="create-task" element={<StaffCreateTask />} />
             <Route path="profile" element={<Profile />} />

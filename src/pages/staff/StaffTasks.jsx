@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTasks } from "@/hooks/useTasks";
 import { StaffTaskCard } from "@/components/Staff/StaffTaskCard";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -10,6 +11,7 @@ import { TASK_STATUSES, TASK_PRIORITIES } from "@/lib/task-types";
 const CURRENT_STAFF = "Sarah Mitchell";
 
 export default function StaffTasks() {
+  const navigate = useNavigate();
   const { tasks, isLoading, updateTask } = useTasks();
   const { toast } = useToast();
   const [statusFilter, setStatusFilter] = useState("all");
@@ -25,6 +27,12 @@ export default function StaffTasks() {
   const handleComplete = (task) => {
     updateTask(task.id, { status: "completed" });
     toast({ title: "Task completed", description: task.title });
+  };
+
+  const handleEdit = (task) => {
+    const taskId = task?._id || task?.id;
+    if (!taskId) return;
+    navigate(`/staff/tasks/${taskId}`);
   };
 
   if (isLoading) {
@@ -89,7 +97,7 @@ export default function StaffTasks() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((task) => (
-            <StaffTaskCard key={task.id} task={task} onComplete={handleComplete} />
+            <StaffTaskCard key={task._id || task.id} task={task} onEdit={handleEdit} onComplete={handleComplete} />
           ))}
         </div>
       )}

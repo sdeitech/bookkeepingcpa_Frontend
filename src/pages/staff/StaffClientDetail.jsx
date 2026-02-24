@@ -83,7 +83,7 @@ export default function StaffClientDetail() {
     return filters;
   }, [normalizedClientId, page, pageSize, sortKey, sortDir, debouncedSearch, statusFilter, columnFilters]);
 
-  const { tasks, pagination, stats, isLoading: tasksLoading, updateTask, createTask } = useTasks(apiFilters);
+  const { tasks, pagination, stats, isLoading: tasksLoading, updateTask, createTask, deleteTask } = useTasks(apiFilters);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
@@ -212,6 +212,30 @@ export default function StaffClientDetail() {
     }
   };
 
+  const handleTaskAction = async (action, task) => {
+    const taskId = task?.id || task?._id;
+    if (!taskId) return;
+
+    try {
+      if (action === "mark_in_progress") {
+        await updateTask(taskId, { status: "IN_PROGRESS" });
+        toast.success("Task marked in progress");
+        return;
+      }
+      if (action === "mark_completed") {
+        await updateTask(taskId, { status: "COMPLETED" });
+        toast.success("Task marked completed");
+        return;
+      }
+      if (action === "delete") {
+        await deleteTask(taskId);
+        toast.success("Task deleted");
+      }
+    } catch {
+      toast.error("Failed to update task");
+    }
+  };
+
   const handleCreateTask = async (taskData) => {
     try {
       await createTask({ ...taskData, clientId: normalizedClientId });
@@ -313,6 +337,11 @@ export default function StaffClientDetail() {
       ],
       render: (task) => <span className="text-sm">{task.dueDate ? format(new Date(task.dueDate), "MMM d, yyyy") : "-"}</span>,
     },
+  ];
+  const rowActions = [
+    { label: "Mark In Progress", value: "mark_in_progress" },
+    { label: "Mark Completed", value: "mark_completed" },
+    { label: "Delete", value: "delete", variant: "destructive" },
   ];
 
   if (!clientId) {
@@ -456,6 +485,8 @@ export default function StaffClientDetail() {
         data={paginatedTasks}
         columns={columns}
         onSort={handleSort}
+        onRowAction={handleTaskAction}
+        rowActions={rowActions}
         loading={tasksLoading}
         getRowId={(row) => row.id}
         columnFilters={columnFilters}
