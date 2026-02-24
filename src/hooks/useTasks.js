@@ -9,9 +9,9 @@
 import { useGetTasksQuery, useCreateTaskMutation, useUpdateTaskMutation, useDeleteTaskMutation, useUpdateTaskStatusMutation } from '@/features/tasks/tasksApi';
 import { useCallback } from 'react';
 
-export function useTasks() {
-  // Fetch tasks from API
-  const { data, isLoading, error } = useGetTasksQuery();
+export function useTasks(filters = {}) {
+  // Fetch tasks from API with filters
+  const { data, isLoading, error, refetch } = useGetTasksQuery(filters);
   
   // Mutations
   const [createTaskMutation] = useCreateTaskMutation();
@@ -19,8 +19,11 @@ export function useTasks() {
   const [deleteTaskMutation] = useDeleteTaskMutation();
   const [updateStatusMutation] = useUpdateTaskStatusMutation();
 
-  // Extract tasks from response
+  // Extract tasks and filter options from response
   const tasks = data?.data?.tasks || [];
+  const filterOptions = data?.data?.filterOptions || { clients: [], assignedTo: [], assignedBy: [] };
+  const pagination = data?.data?.pagination || {};
+  const stats = data?.data?.stats || {};
 
   // Wrapper functions to match old API
   const createTask = useCallback(async (taskData) => {
@@ -79,8 +82,12 @@ export function useTasks() {
 
   return {
     tasks,
+    filterOptions,
+    pagination,
+    stats,
     isLoading,
     error,
+    refetch,
     createTask,
     updateTask,
     deleteTask,

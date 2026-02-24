@@ -2,10 +2,98 @@ import { isValidElement, useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MoreHorizontal, ArrowUp, ArrowDown, ArrowUpDown, Inbox, Filter, Check } from "lucide-react";
+import { MoreHorizontal, ArrowUp, ArrowDown, ArrowUpDown, Inbox, Filter, Check, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+const SEARCH_THRESHOLD = 15;
+
+function SearchableFilterDropdown({ column, activeFilter, onFilterChange }) {
+  const [searchTerm, setSearchTerm] = useState("");
+  
+  const allOptions = column.filterOptions || [];
+  const showSearch = allOptions.length > SEARCH_THRESHOLD;
+  
+  // Filter options based on search term
+  const filteredOptions = searchTerm
+    ? allOptions.filter(opt => 
+        opt.label.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : allOptions;
+
+  return (
+    <DropdownMenuContent align="start" className="bg-popover z-50 min-w-[200px]">
+      {showSearch && (
+        <div className="p-2 border-b border-border">
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              placeholder="Search..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="h-8 pl-8 pr-8 text-sm"
+              onClick={(e) => e.stopPropagation()}
+            />
+            {searchTerm && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSearchTerm("");
+                }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+      
+      <div className="max-h-[300px] overflow-y-auto">
+        {filteredOptions.length === 0 ? (
+          <div className="p-4 text-center text-sm text-muted-foreground">
+            No results found
+          </div>
+        ) : (
+          filteredOptions.map((opt) => (
+            <DropdownMenuItem
+              key={opt.value}
+              onClick={() => {
+                onFilterChange(opt.value === activeFilter ? "" : opt.value);
+                setSearchTerm("");
+              }}
+              className="flex items-center justify-between"
+            >
+              <span>{opt.label}</span>
+              {activeFilter === opt.value && <Check className="h-3.5 w-3.5 text-primary" />}
+            </DropdownMenuItem>
+          ))
+        )}
+      </div>
+      
+      {column.filterGroups && column.filterGroups.map((group, gi) => (
+        <div key={gi}>
+          <DropdownMenuSeparator />
+          {group.options.map((opt) => (
+            <DropdownMenuItem
+              key={opt.value}
+              onClick={() => {
+                onFilterChange(opt.value === activeFilter ? "" : opt.value);
+                setSearchTerm("");
+              }}
+              className="flex items-center justify-between"
+            >
+              <span>{opt.label}</span>
+              {activeFilter === opt.value && <Check className="h-3.5 w-3.5 text-primary" />}
+            </DropdownMenuItem>
+          ))}
+        </div>
+      ))}
+    </DropdownMenuContent>
+  );
+}
 
 
 
@@ -175,33 +263,11 @@ export function DataTable({
                             )}
                           </button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="bg-popover z-50 min-w-[160px]">
-                          {col.filterOptions && col.filterOptions.map((opt) => (
-                            <DropdownMenuItem
-                              key={opt.value}
-                              onClick={() => onColumnFilterChange?.(colKey, opt.value === activeFilter ? "" : opt.value)}
-                              className="flex items-center justify-between"
-                            >
-                              <span>{opt.label}</span>
-                              {activeFilter === opt.value && <Check className="h-3.5 w-3.5 text-primary" />}
-                            </DropdownMenuItem>
-                          ))}
-                          {col.filterGroups && col.filterGroups.map((group, gi) => (
-                            <div key={gi}>
-                              {(gi > 0 || (col.filterOptions && col.filterOptions.length > 0)) && <DropdownMenuSeparator />}
-                              {group.options.map((opt) => (
-                                <DropdownMenuItem
-                                  key={opt.value}
-                                  onClick={() => onColumnFilterChange?.(colKey, opt.value === activeFilter ? "" : opt.value)}
-                                  className="flex items-center justify-between"
-                                >
-                                  <span>{opt.label}</span>
-                                  {activeFilter === opt.value && <Check className="h-3.5 w-3.5 text-primary" />}
-                                </DropdownMenuItem>
-                              ))}
-                            </div>
-                          ))}
-                        </DropdownMenuContent>
+                        <SearchableFilterDropdown
+                          column={col}
+                          activeFilter={activeFilter}
+                          onFilterChange={(value) => onColumnFilterChange?.(colKey, value)}
+                        />
                       </DropdownMenu>
                     )}
                   </div>

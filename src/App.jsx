@@ -54,8 +54,10 @@ import AdminSettings from './pages/new_Admin/AdminSettings';
 import AdminTasks from './pages/new_Admin/AdminTasks';
 import AdminClients from './pages/new_Admin/AdminClients';
 import AdminClientDetail from './pages/new_Admin/AdminClientDetail';
+import AdminTaskDetail from './pages/new_Admin/AdminTaskDetail';
 import { Profile } from './components/common/profile';
 import AdminAssignClients from './pages/new_Admin/AdminAssignClients';
+import ErrorBoundary from './components/common/ErrorBoundary';
 
 
 // import Questionnaire from './pages/questionnaire/Questionnaire';
@@ -153,6 +155,11 @@ function App() {
           }>
             <Route index element={<AdminDashboardHome />} />
             <Route path="tasks" element={<AdminTasks />} />
+            <Route path="tasks/:taskId" element={
+              <ErrorBoundary fallbackMessage="Unable to load task details. The task may not exist or there was an error loading it." showHomeButton>
+                <AdminTaskDetail />
+              </ErrorBoundary>
+            } />
             <Route path="clients" element={<AdminAssignClients/>} />
             <Route path="assign-clients" element={<AdminAssignClients />} />
             <Route path="clients/:clientId" element={<AdminClientDetail />} />
