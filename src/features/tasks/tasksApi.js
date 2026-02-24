@@ -22,7 +22,7 @@ export const tasksApi = createApi({
         method: 'POST',
         body: taskData,
       }),
-    //   invalidatesTags: ['Profile'],
+      invalidatesTags: ["Tasks"],
     }),
 
     getTasks: builder.query({

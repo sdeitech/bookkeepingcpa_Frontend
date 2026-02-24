@@ -5,10 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Plus, Search, Loader2, UserX, ChevronDown, Check, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { DataTable } from "@/components/common/DataTable";
+import { PaginationControls } from "@/components/ui/pagination-controls";
+
 
 const STATUS_FILTERS = [
   { label: "All Status", value: "all" },
@@ -27,45 +29,61 @@ const ROW_ACTIONS = [
   { label: "Edit", value: "edit" },
   { label: "Delete", value: "delete", variant: "destructive" },
 ];
+const DEFAULT_PAGE_SIZE = 10;
 
 export default function AdminStaff() {
-  const { data: staffData, isLoading, error } = useGetAllStaffQuery();
-  const { tasks } = useTasks();
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [assignmentFilter, setAssignmentFilter] = useState("all");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [sortField, setSortField] = useState("name");
+  const [sortAsc, setSortAsc] = useState(true);
+  const apiFilters = useMemo(() => {
+    const filters = {
+      page,
+      limit: pageSize,
+      sortBy: sortField,
+      sortOrder: sortAsc ? "asc" : "desc",
+    };
+    if (debouncedSearch) filters.search = debouncedSearch;
+    if (statusFilter !== "all") filters.status = statusFilter;
+    if (assignmentFilter !== "all") filters.assignment = assignmentFilter;
+    return filters;
+  }, [page, pageSize, sortField, sortAsc, debouncedSearch, statusFilter, assignmentFilter]);
 
-  const staffMembers = staffData?.data || [];
+  const { data: staffData, isLoading, error } = useGetAllStaffQuery(apiFilters);
+  const { tasks } = useTasks();
+
+  const staffPayload = staffData?.data;
+  const pagination = staffPayload?.pagination || {};
+  const isServerPaginated = Number.isFinite(pagination?.totalPages) && Number.isFinite(pagination?.totalItems);
+  const staffMembers = Array.isArray(staffPayload)
+    ? staffPayload
+    : Array.isArray(staffPayload?.staff)
+      ? staffPayload.staff
+      : Array.isArray(staffPayload?.items)
+        ? staffPayload.items
+        : [];
 
   const getAssignedCount = (staffId) =>
     new Set(tasks.filter((t) => t.staffId === staffId).map((t) => t.clientId)).size;
 
-  const filtered = useMemo(() => {
-    return staffMembers.filter((s) => {
-      const fullName = `${s.first_name || ""} ${s.last_name || ""}`.trim().toLowerCase();
-      const email = (s.email || "").toLowerCase();
-      const searchLower = search.toLowerCase();
-      const assignedCount = getAssignedCount(s._id);
-
-      if (search && !fullName.includes(searchLower) && !email.includes(searchLower)) return false;
-      if (statusFilter === "active" && !s.active) return false;
-      if (statusFilter === "inactive" && s.active) return false;
-      if (assignmentFilter === "assigned" && assignedCount === 0) return false;
-      if (assignmentFilter === "unassigned" && assignedCount > 0) return false;
-
-      return true;
-    });
-  }, [staffMembers, search, statusFilter, assignmentFilter, tasks]);
-
   const tableData = useMemo(
     () =>
-      filtered.map((staff) => ({
+      staffMembers.map((staff) => ({
         ...staff,
         fullName: `${staff.first_name || ""} ${staff.last_name || ""}`.trim() || "Unnamed Staff",
-        assignedCount: getAssignedCount(staff._id),
+        assignedCount: staff.assignedCount ?? getAssignedCount(staff._id),
         uiStatus: staff.active ? "active" : "inactive",
       })),
-    [filtered, tasks],
+    [staffMembers, tasks],
+  );
+  const totalPages = isServerPaginated ? pagination.totalPages : Math.max(1, Math.ceil(tableData.length / pageSize));
+  const paginatedData = useMemo(
+    () => (isServerPaginated ? tableData : tableData.slice((page - 1) * pageSize, page * pageSize)),
+    [tableData, page, pageSize, isServerPaginated],
   );
 
   const activeStatusLabel = STATUS_FILTERS.find((item) => item.value === statusFilter)?.label || "All Status";
@@ -75,9 +93,28 @@ export default function AdminStaff() {
 
   const clearAllFilters = () => {
     setSearch("");
+    setDebouncedSearch("");
     setStatusFilter("all");
     setAssignmentFilter("all");
+    setSortField("name");
+    setSortAsc(true);
+    setPage(1);
   };
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, statusFilter, assignmentFilter, pageSize, sortField, sortAsc]);
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
 
   const handleStaffAction = (action, row) => {
     if (action === "view") {
@@ -91,6 +128,11 @@ export default function AdminStaff() {
     if (action === "delete") {
       toast.info("Delete staff coming soon");
     }
+  };
+
+  const handleSort = (key, dir) => {
+    setSortField(key);
+    setSortAsc(dir === "asc");
   };
 
   const columns = [
@@ -154,8 +196,8 @@ export default function AdminStaff() {
     );
   }
 
-  // Empty state
-  if (staffMembers.length === 0) {
+  // Empty state (only when there is truly no staff and no filters are applied)
+  if (staffMembers.length === 0 && !hasAnyFilter) {
     return (
       <div className="space-y-6 animate-fade-in">
         <div className="flex items-center justify-between">
@@ -183,7 +225,9 @@ export default function AdminStaff() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Staff Members</h1>
-          <p className="text-sm text-muted-foreground">{staffMembers.length} staff members</p>
+          <p className="text-sm text-muted-foreground">
+            {isServerPaginated ? pagination.totalItems || staffMembers.length : staffMembers.length} staff members
+          </p>
         </div>
         <Button className="gap-2" onClick={() => toast.info("Add staff coming soon")}>
           <Plus className="h-4 w-4" /> Add New Staff
@@ -268,13 +312,23 @@ export default function AdminStaff() {
       </div>
 
       <DataTable
-        data={tableData}
+        data={paginatedData}
         columns={columns}
+        onSort={handleSort}
         rowActions={ROW_ACTIONS}
         onRowAction={handleStaffAction}
         getRowId={(row) => row._id}
         emptyMessage="No staff members found."
         emptyDescription="Try adjusting your search or filters."
+      />
+
+      <PaginationControls
+        page={isServerPaginated ? pagination.currentPage || page : page}
+        totalPages={totalPages}
+        totalItems={isServerPaginated ? pagination.totalItems || tableData.length : tableData.length}
+        pageSize={isServerPaginated ? pagination.itemsPerPage || pageSize : pageSize}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
       />
     </div>
   );

@@ -142,12 +142,18 @@ export const authApi = createApi({
     }),
     
     getClientsWithAssignments: builder.query({
-      query: () => `/admin/clients-with-assignments`,
+      query: (params = {}) => {
+        const queryString = new URLSearchParams(params).toString();
+        return `/admin/clients-with-assignments${queryString ? `?${queryString}` : ""}`;
+      },
     }),
     
     // Staff Endpoints
     getMyClients: builder.query({
-      query: () => `/staff/my-clients`,
+      query: (params = {}) => {
+        const queryString = new URLSearchParams(params).toString();
+        return `/staff/my-clients${queryString ? `?${queryString}` : ""}`;
+      },
     }),
     
     getStaffDashboard: builder.query({

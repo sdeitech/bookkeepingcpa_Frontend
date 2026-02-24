@@ -96,6 +96,29 @@ export function PaginationControls({ page, totalPages, totalItems, pageSize, onP
           <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-xl font-semibold text-foreground">
+          Results: {startItem} - {endItem} of {totalItems}
+        </p>
+        {onPageSizeChange && (
+          <Select
+            value={String(pageSize)}
+            onValueChange={(value) => onPageSizeChange(Number(value))}
+          >
+            <SelectTrigger className="h-12 w-[140px] rounded-2xl bg-muted border-border text-lg">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-popover z-50">
+              {pageSizeOptions.map((size) => (
+                <SelectItem key={size} value={String(size)}>
+                  {size}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </div>
     </div>
   );
 }

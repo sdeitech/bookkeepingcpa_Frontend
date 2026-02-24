@@ -13,7 +13,7 @@ export const userApi = createApi({
       return headers;
     },
   }),
-  tagTypes: ['Profile', 'ClientList', 'ClientProfile'],
+  tagTypes: ['Profile', 'ClientList', 'ClientProfile', 'StaffList'],
   endpoints: (builder) => ({
     // Get current user profile
     getUserProfile: builder.query({
@@ -56,7 +56,10 @@ export const userApi = createApi({
 
     // Get all staff members (admin only)
     getAllStaff: builder.query({
-      query: () => '/admin/get-all-staff',
+      query: (params = {}) => {
+        const queryString = new URLSearchParams(params).toString();
+        return `/admin/get-all-staff${queryString ? `?${queryString}` : ''}`;
+      },
       providesTags: ['StaffList'],
     }),
     changePassword: builder.mutation({
@@ -66,6 +69,12 @@ export const userApi = createApi({
         body: passwordData,
       }),
       invalidatesTags: ['Profile'],
+    }),
+
+    // STAFF ENDPOINTS
+    getStaffClient: builder.query({
+      query: (clientId) => `/staff/client/${clientId}/profile`,
+      providesTags: (result, error, clientId) => [{ type: 'ClientProfile', id: clientId }],
     }),
   }),
 });
@@ -80,4 +89,6 @@ export const {
   useGetAllClientsQuery,
   useGetClientProfileQuery,
   useGetAllStaffQuery,
+  // Staff hooks
+  useGetStaffClientQuery,
 } = userApi;

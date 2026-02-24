@@ -44,8 +44,16 @@ export const taskTemplateApi = createApi({
     updateTemplate: builder.mutation({
       query: ({ id, data }) => ({
         url: `/task-templates/${id}`,
-        method: 'PUT',
+        method: 'PATCH',
         body: data,
+      }),
+      invalidatesTags: ['TaskTemplates'],
+    }),
+   
+    toggleTemplate: builder.mutation({
+      query: ({ id }) => ({
+        url: `/task-templates/${id}/toggle`,
+        method: 'PATCH',
       }),
       invalidatesTags: ['TaskTemplates'],
     }),
@@ -75,4 +83,5 @@ export const {
   useDeleteTemplateMutation,
   useGetTemplateStatsQuery,
   useLazyGetTemplatesQuery,
+  useToggleTemplateMutation,
 } = taskTemplateApi;

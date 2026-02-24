@@ -4,8 +4,8 @@ import {
   Users,
   CheckSquare,
   BarChart3,
-  PlusCircle,
   LogOut,
+  ClipboardList
 } from "lucide-react";
 import { PlutifyLogo } from "@/components/PlutifyLogo";
 import { cn } from "@/lib/utils";
@@ -15,7 +15,7 @@ const navItems = [
   { icon: Users, label: "My Clients", href: "/staff/clients" },
   { icon: CheckSquare, label: "My Tasks", href: "/staff/tasks" },
   { icon: BarChart3, label: "Reports", href: "/staff/reports" },
-  { icon: PlusCircle, label: "Create Client Task", href: "/staff/create-task" },
+  { icon: ClipboardList, label: "Client Task", href: "/staff/create-task" },
 ];
 
 export function StaffSidebar() {

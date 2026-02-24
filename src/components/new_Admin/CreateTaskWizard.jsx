@@ -62,6 +62,7 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
   const clients = clientsData?.data || [];
   const staffMembers = staffData?.data || [];
 
+
   const resolvedClients = useMemo(() => {
     if (clientList) {
       return clientList.map(c => ({
@@ -72,7 +73,7 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
     }
     return clients.map(c => ({
       id: c.id,
-      name: c.fullName,
+      name: c.name,
       email: c.email,
     }));
   }, [clientList, clients]);
@@ -267,7 +268,7 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
   const displayStep = defaultTarget ? step - 1 : step;
   const displayTotal = defaultTarget ? totalSteps - 1 : totalSteps;
 
-  console.log("re", resolvedClients)
+
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -585,7 +586,6 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
                     <SelectTrigger><SelectValue placeholder="Select staff member..." /></SelectTrigger>
                     <SelectContent className="bg-popover z-50">
                       {staffMembers.map(s => {
-                        console.log('staff members : ', staffMembers)
                         const fullName = `${s.first_name} ${s.last_name}`.trim();
                         return (
                           <SelectItem key={s._id} value={s._id}>
@@ -608,7 +608,6 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
                     <SelectContent className="bg-popover z-50">
                       {
                         resolvedClients.map(c => {
-                          console.log('clients assigned : ',resolvedClients)
                           return (
                             <SelectItem key={c.id} value={c.id}>
                               <div>

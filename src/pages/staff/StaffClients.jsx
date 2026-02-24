@@ -1,134 +1,374 @@
-import { useTasks } from "@/hooks/useTasks";
-import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Mail, ExternalLink } from "lucide-react";
-import { isPast, isToday } from "date-fns";
-import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useOutletContext } from "react-router-dom";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { PaginationControls } from "@/components/ui/pagination-controls";
+import { DataTable } from "@/components/common/DataTable";
+import { useTasks } from "@/hooks/useTasks";
+import { useGetMyClientsQuery } from "@/features/auth/authApi";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import {
+  Users,
+  UserCheck,
+  UserX,
+  ListChecks,
+  Check,
+  ChevronDown,
+  X,
+  Eye,
+} from "lucide-react";
 
-const CURRENT_STAFF = "Sarah Mitchell";
+const DEFAULT_PAGE_SIZE = 10;
+const CLIENT_FILTERS = [
+  { label: "All Clients", value: "all" },
+  { label: "Active", value: "active" },
+  { label: "Inactive", value: "inactive" },
+];
+
+const getClientId = (client) => client?._id || client?.id;
+const getTaskClientId = (task) => task?.clientId || task?.client?._id || task?.client?.id;
+const getClientName = (client) => {
+  if (client?.first_name || client?.last_name) {
+    return [client?.first_name, client?.last_name].filter(Boolean).join(" ");
+  }
+  return client?.name || "Unnamed Client";
+};
 
 export default function StaffClients() {
-  const { myClients } = useOutletContext();
-  const { tasks, isLoading } = useTasks();
-  const myTasks = tasks.filter((t) => t.assignedTo === CURRENT_STAFF);
+  const navigate = useNavigate();
+  const { tasks = [], isLoading: tasksLoading } = useTasks();
 
-  const getClientId = (client) => client?._id || client?.id;
-  const getTaskClientId = (task) => task?.clientId || task?.client?._id || task?.client?.id;
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [filter, setFilter] = useState("all");
+  const [sortField, setSortField] = useState("name");
+  const [sortAsc, setSortAsc] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [clearFiltersOpen, setClearFiltersOpen] = useState(false);
+  const apiFilters = useMemo(() => {
+    const filters = {
+      page,
+      limit: pageSize,
+      sortBy: sortField,
+      sortOrder: sortAsc ? "asc" : "desc",
+    };
+    if (debouncedSearch) filters.search = debouncedSearch;
+    if (filter !== "all") filters.status = filter;
+    return filters;
+  }, [page, pageSize, sortField, sortAsc, debouncedSearch, filter]);
+  const { data: myClientsData, isLoading: clientsLoading, isFetching: clientsFetching } = useGetMyClientsQuery(apiFilters);
 
-  const getClientName = (client) => {
-    if (client?.first_name || client?.last_name) {
-      return [client?.first_name, client?.last_name].filter(Boolean).join(" ");
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const clientsPayload = myClientsData?.data;
+  const clientPagination = clientsPayload?.pagination || {};
+  const isServerPaginated =
+    Number.isFinite(clientPagination?.totalPages) &&
+    Number.isFinite(clientPagination?.totalItems);
+  const myClients = Array.isArray(clientsPayload)
+    ? clientsPayload
+    : Array.isArray(clientsPayload?.clients)
+      ? clientsPayload.clients
+      : Array.isArray(clientsPayload?.items)
+        ? clientsPayload.items
+        : Array.isArray(clientsPayload?.data)
+          ? clientsPayload.data
+          : [];
+
+  const clients = useMemo(() => {
+    return myClients.map((client) => {
+      const id = getClientId(client);
+      const clientTasks = tasks.filter((t) => getTaskClientId(t) === id);
+      const completedTasks = clientTasks.filter((t) => String(t.status || "").toUpperCase() === "COMPLETED").length;
+      return {
+        id,
+        name: getClientName(client),
+        email: client?.email || "-",
+        status: client?.active ? "active" : "inactive",
+        totalTasks: clientTasks.length,
+        completedTasks,
+      };
+    });
+  }, [myClients, tasks]);
+
+  const filtered = useMemo(() => {
+    let result = [...clients];
+
+    if (!isServerPaginated && debouncedSearch) {
+      const q = debouncedSearch.toLowerCase();
+      result = result.filter((client) => client.name.toLowerCase().includes(q) || client.email.toLowerCase().includes(q));
     }
-    return client?.name || "Unnamed Client";
+
+    if (!isServerPaginated && filter === "active") result = result.filter((client) => client.status === "active");
+    if (!isServerPaginated && filter === "inactive") result = result.filter((client) => client.status === "inactive");
+
+    result.sort((a, b) => {
+      const valA = String(a[sortField] || "").toLowerCase();
+      const valB = String(b[sortField] || "").toLowerCase();
+      return sortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+    });
+
+    return result;
+  }, [clients, isServerPaginated, debouncedSearch, filter, sortField, sortAsc]);
+
+  const totalPages = isServerPaginated
+    ? Math.max(1, clientPagination.totalPages || 1)
+    : Math.max(1, Math.ceil(filtered.length / pageSize));
+  const paginated = useMemo(
+    () => (isServerPaginated ? filtered : filtered.slice((page - 1) * pageSize, page * pageSize)),
+    [filtered, isServerPaginated, page, pageSize],
+  );
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, filter, pageSize, sortField, sortAsc]);
+
+  const serverStats = clientsPayload?.stats || myClientsData?.stats || {};
+  const totalClients = serverStats.totalClients ?? (isServerPaginated ? clientPagination.totalItems || clients.length : clients.length);
+  const activeCount = serverStats.activeClients ?? clients.filter((c) => c.status === "active").length;
+  const inactiveCount = serverStats.inactiveClients ?? Math.max(0, totalClients - activeCount);
+  const totalTasks = clients.reduce((sum, c) => sum + c.totalTasks, 0);
+  const activeFilterLabel = CLIENT_FILTERS.find((item) => item.value === filter)?.label || "All Clients";
+  const hasAnyFilter = filter !== "all" || !!debouncedSearch;
+
+  const handleSort = (field, dir) => {
+    setSortField(field);
+    setSortAsc(dir === "asc");
   };
 
-  const getSubscription = (client) => client?.progress?.subscription || {};
-  const getIntegrationsSummary = (client) => {
-    const integrations = client?.progress?.integrations || {};
-    const connectedCount = Object.values(integrations).filter(Boolean).length;
-    const totalCount = Object.keys(integrations).length;
-    if (totalCount === 0) return "No integrations";
-    return `${connectedCount}/${totalCount} integrations`;
+  const handleClearAllFilters = () => {
+    setSearch("");
+    setDebouncedSearch("");
+    setFilter("all");
+    setPage(1);
+    setClearFiltersOpen(false);
+    toast.success("All filters cleared");
   };
 
-  if (isLoading) {
+  const stats = [
+    { label: "Total Clients", value: totalClients, icon: Users, color: "text-primary" },
+    { label: "Active", value: activeCount, icon: UserCheck, color: "text-success" },
+    { label: "Inactive", value: inactiveCount, icon: UserX, color: "text-warning" },
+    { label: "Total Tasks", value: totalTasks, icon: ListChecks, color: "text-accent-foreground" },
+  ];
+
+  const columns = [
+    {
+      key: "name",
+      label: "Client",
+      sortable: true,
+      render: (client) => (
+        <div className="flex items-center gap-3">
+          <Avatar className="h-8 w-8">
+            <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+              {client.name
+                .split(" ")
+                .filter(Boolean)
+                .slice(0, 2)
+                .map((n) => n[0])
+                .join("") || "U"}
+            </AvatarFallback>
+          </Avatar>
+          <span className="font-medium text-foreground">{client.name}</span>
+        </div>
+      ),
+    },
+    {
+      key: "email",
+      label: "Email",
+      sortable: true,
+      render: (client) => <span className="text-sm text-muted-foreground">{client.email}</span>,
+    },
+    {
+      key: "totalTasks",
+      label: "Tasks",
+      sortable: true,
+      render: (client) => (
+        <span className="text-sm text-muted-foreground">
+          <span className="font-semibold text-foreground">{client.completedTasks}</span>/{client.totalTasks}
+        </span>
+      ),
+    },
+    {
+      key: "status",
+      label: "Status",
+      sortable: true,
+      render: (client) => (
+        <Badge
+          variant="outline"
+          className={
+            client.status === "active"
+              ? "bg-success/15 text-success border-success/30 text-xs"
+              : "bg-muted text-muted-foreground border-border text-xs"
+          }
+        >
+          {client.status === "active" ? "Active" : "Inactive"}
+        </Badge>
+      ),
+    },
+    {
+      key: "actions",
+      label: "Actions",
+      render: (client) => (
+        <div className="ml-2 flex w-8 items-center justify-end">
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8"
+            onClick={() => navigate(`/staff/clients/${client.id}`)}
+            title="View Client"
+            aria-label="View Client"
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
+  if (tasksLoading || clientsLoading || clientsFetching) {
     return (
-      <div className="space-y-4 animate-fade-in">
-        <Skeleton className="h-8 w-40" />
-        <Skeleton className="h-[300px] rounded-xl" />
+      <div className="space-y-6 animate-fade-in">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, idx) => (
+            <Skeleton key={idx} className="h-20 rounded-xl" />
+          ))}
+        </div>
+        <Skeleton className="h-[380px] rounded-xl" />
       </div>
     );
   }
 
-
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div>
-          {/* <h2 className="text-xl font-semibold text-foreground">My Clients</h2> */}
-          <p className="text-sm text-muted-foreground mt-1">{myClients.length} clients assigned to you</p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">My Clients</h1>
+        <p className="text-sm text-muted-foreground">View and track your assigned clients.</p>
       </div>
 
-      {myClients.length === 0 ? (
-        <div className="bg-card border border-border rounded-xl p-12 text-center">
-          <Users className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-          <p className="text-lg font-medium text-foreground mb-1">No clients yet</p>
-          <p className="text-sm text-muted-foreground">Clients will appear here once tasks are assigned to you.</p>
-        </div>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {myClients.map((client) => {
-            const clientId = getClientId(client);
-            const subscription = getSubscription(client);
-            const clientTasks = myTasks.filter((t) => getTaskClientId(t) === clientId);
-            const completed = clientTasks.filter((t) => t.status === "completed").length;
-            const pending = clientTasks.length - completed;
-            const hasOverdue = clientTasks.some(
-              (t) => t?.dueDate && isPast(new Date(t.dueDate)) && !isToday(new Date(t.dueDate)) && t.status !== "completed",
-            );
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {stats.map((stat) => (
+          <Card key={stat.label} className="bg-card border-border">
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                <stat.icon className={`h-5 w-5 ${stat.color}`} />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-foreground">{stat.value}</p>
+                <p className="text-xs text-muted-foreground">{stat.label}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
 
-            return (
-              <div
-                key={clientId}
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-[220px] max-w-xs">
+            <Input
+              placeholder="Search name or email..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+              className="pl-9"
+            />
+          </div>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant={filter !== "all" ? "default" : "outline"}
                 className={cn(
-                  "bg-card border rounded-xl p-5 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5",
-                  hasOverdue ? "border-destructive/40" : "border-border",
+                  "h-10 gap-2",
+                  filter !== "all"
+                    ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
+                    : "border-border text-foreground hover:bg-accent"
                 )}
               >
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <h3 className="font-semibold text-foreground">{getClientName(client)}</h3>
-                    <p className="text-sm text-muted-foreground flex items-center gap-1 mt-0.5">
-                      <Mail className="w-3.5 h-3.5" /> {client?.email}
-                    </p>
-                    {client?.phoneNumber && <p className="text-xs text-muted-foreground mt-1">{client.phoneNumber}</p>}
-                  </div>
-                  <Badge variant="secondary" className="text-[11px] capitalize">
-                    {subscription?.status || (client?.active ? "active" : "inactive")}
-                  </Badge>
-                </div>
+                <span>{activeFilterLabel}</span>
+                <ChevronDown className="h-3.5 w-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="bg-popover z-50 min-w-[160px]">
+              {CLIENT_FILTERS.map((item) => (
+                <DropdownMenuItem
+                  key={item.value}
+                  onClick={() => {
+                    setFilter(item.value);
+                    setPage(1);
+                  }}
+                  className="flex items-center justify-between"
+                >
+                  <span>{item.label}</span>
+                  {filter === item.value && <Check className="h-3.5 w-3.5 text-primary" />}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-                <div className="text-xs text-muted-foreground mb-3 space-y-1">
-                  <p>Plan: {subscription?.planName || "No plan"}</p>
-                  <p>Onboarding: {client?.progress?.onboarding?.completed ? "Completed" : `Step ${client?.progress?.onboarding?.step || 1}`}</p>
-                  <p>{getIntegrationsSummary(client)}</p>
-                </div>
-
-                <div className="flex items-center gap-4 text-sm mb-4">
-                  <span className="text-muted-foreground">
-                    <span className="font-semibold text-foreground">{clientTasks.length}</span> tasks
-                  </span>
-                  <span className="text-muted-foreground">
-                    <span className="font-semibold text-success">{completed}</span> done
-                  </span>
-                  {pending > 0 && (
-                    <span className="text-muted-foreground">
-                      <span className="font-semibold text-warning">{pending}</span> pending
-                    </span>
-                  )}
-                </div>
-
-                <div className="w-full bg-muted rounded-full h-1.5 mb-4">
-                  <div
-                    className="bg-success h-1.5 rounded-full transition-all"
-                    style={{ width: `${clientTasks.length > 0 ? (completed / clientTasks.length) * 100 : 0}%` }}
-                  />
-                </div>
-
-                <Link to={`/staff/clients/${clientId}`}>
-                  <Button variant="outline" size="sm" className="w-full gap-2">
-                    <ExternalLink className="w-3.5 h-3.5" /> View Details
-                  </Button>
-                </Link>
-              </div>
-            );
-          })}
+          {hasAnyFilter && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-10 gap-1.5 text-muted-foreground hover:text-destructive"
+              onClick={() => setClearFiltersOpen(true)}
+            >
+              <X className="h-3.5 w-3.5" />
+              Clear All
+            </Button>
+          )}
         </div>
-      )}
+
+        <DataTable
+          data={paginated}
+          columns={columns}
+          onSort={handleSort}
+          loading={false}
+          emptyMessage="No clients found"
+          emptyDescription="Try adjusting your search or filters."
+          getRowId={(row) => row.id}
+        />
+
+        <PaginationControls
+          page={page}
+          totalPages={totalPages}
+          totalItems={isServerPaginated ? totalClients : filtered.length}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+        />
+      </div>
+
+      <ConfirmDialog
+        open={clearFiltersOpen}
+        onOpenChange={setClearFiltersOpen}
+        title="Clear all filters?"
+        description="This will reset search and status filters."
+        confirmLabel="Clear"
+        onConfirm={handleClearAllFilters}
+      />
     </div>
   );
 }
