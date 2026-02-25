@@ -59,24 +59,49 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
   )
 
   const templates = templatesData?.data?.templates || [];
-  const clients = clientsData?.data || [];
-  const staffMembers = staffData?.data || [];
+  const clientsPayload = clientsData?.data;
+  const staffPayload = staffData?.data;
+  const clients =clientsPayload || []
+  const staffMembers = staffPayload?.staffMembers || [];
+
+  const isActiveStaff = (staff) => {
+    if (typeof staff?.active === "boolean") return staff.active;
+    return true;
+  };
+
+  const isActiveClient = (client) => {
+    if (typeof client?.active === "boolean") return client.active;
+    return true;
+  };
+
+  const activeStaffMembers = useMemo(
+    () => staffMembers.filter(isActiveStaff),
+    [staffMembers]
+  );
+
+  const activeClients = useMemo(
+    () => clients.filter(isActiveClient),
+    [clients]
+  );
+
 
 
   const resolvedClients = useMemo(() => {
     if (clientList) {
-      return clientList.map(c => ({
-        id: c._id,
-        name: `${c.first_name} ${c.last_name}`.trim(),
+      return clientList
+        .filter(isActiveClient)
+        .map(c => ({
+        id: c._id || c.id,
+        name: `${c.first_name || c.firstName || ""} ${c.last_name || c.lastName || ""}`.trim() || c.name || "Unnamed Client",
         email: c.email,
       }));
     }
-    return clients.map(c => ({
-      id: c.id,
-      name: c.name,
+    return activeClients.map(c => ({
+      id: c._id || c.id,
+      name: `${c.first_name || c.firstName || ""} ${c.last_name || c.lastName || ""}`.trim() || c.name || "Unnamed Client",
       email: c.email,
     }));
-  }, [clientList, clients]);
+  }, [clientList, activeClients]);
 
   // Filter templates by category
   const categoryTemplates = useMemo(() => {
@@ -319,7 +344,7 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
             {CATEGORIES.map((cat) => (
               <button
                 key={cat.id}
-                onClick={() => { setCategory(cat.id); setSelectedTemplate(null); setStep(3); }}
+                onClick={() => { setCategory(cat.id); setSelectedTemplates([]); setStep(3); }}
                 className={cn(
                   "flex flex-col items-center gap-2 p-5 rounded-xl border-2 transition-all text-center hover:shadow-md",
                   category === cat.id ? "border-primary bg-accent" : "border-border hover:border-primary/40"
@@ -585,7 +610,7 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
                   <Select value={staffId} onValueChange={setStaffId}>
                     <SelectTrigger><SelectValue placeholder="Select staff member..." /></SelectTrigger>
                     <SelectContent className="bg-popover z-50">
-                      {staffMembers.map(s => {
+                      {activeStaffMembers.map(s => {
                         const fullName = `${s.first_name} ${s.last_name}`.trim();
                         return (
                           <SelectItem key={s._id} value={s._id}>
@@ -636,8 +661,7 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
                   <Select value={clientId} onValueChange={setClientId}>
                     <SelectTrigger><SelectValue placeholder="Select client..." /></SelectTrigger>
                     <SelectContent className="bg-popover z-50">
-                      {clients.map(c => {
-                        const fullName = `${c.firstName} ${c.lastName}`.trim();
+                      {resolvedClients.map(c => {
                         return (
                           <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                         );

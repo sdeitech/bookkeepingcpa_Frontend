@@ -109,7 +109,7 @@ export default function StaffTaskDetail() {
   };
 
   const handleBack = () => {
-    navigate("/staff/tasks");
+    navigate("/staff/create-task");
   };
 
   const handleEdit = () => {

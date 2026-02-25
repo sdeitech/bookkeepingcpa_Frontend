@@ -1,21 +1,25 @@
 import { useGetAllStaffQuery } from "@/features/user/userApi";
+import { useDeactivateStaffMutation, useReactivateStaffMutation } from "@/features/auth/authApi";
 import { useTasks } from "@/hooks/useTasks";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Plus, Search, Loader2, UserX, ChevronDown, Check, X } from "lucide-react";
+import { Plus, Loader2, UserX, ChevronDown, Check, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { DataTable } from "@/components/common/DataTable";
 import { PaginationControls } from "@/components/ui/pagination-controls";
+import StaffInviteModal from "@/components/new_Admin/StaffInviteModal";
 
 
 const STATUS_FILTERS = [
   { label: "All Status", value: "all" },
   { label: "Active", value: "active" },
-  { label: "Inactive", value: "inactive" },
+  { label: "Invite Pending", value: "invite_pending" },
+  { label: "Invite Expired", value: "invite_expired" },
+  { label: "Deactivated", value: "deactivated" },
 ];
 
 const ASSIGNMENT_FILTERS = [
@@ -24,11 +28,20 @@ const ASSIGNMENT_FILTERS = [
   { label: "Unassigned", value: "unassigned" },
 ];
 
-const ROW_ACTIONS = [
-  { label: "View", value: "view" },
-  { label: "Edit", value: "edit" },
-  { label: "Delete", value: "delete", variant: "destructive" },
-];
+const statusMeta = {
+  active: { label: "Active", color: "green" },
+  invite_pending: { label: "Invite Pending", color: "orange" },
+  invite_expired: { label: "Invite Expired", color: "red" },
+  deactivated: { label: "Deactivated", color: "gray" },
+};
+
+const statusBadgeClass = {
+  green: "bg-success/15 text-success border-success/30",
+  orange: "bg-orange-100 text-orange-700 border-orange-200",
+  red: "bg-destructive/15 text-destructive border-destructive/30",
+  gray: "bg-muted text-muted-foreground border-muted",
+};
+
 const DEFAULT_PAGE_SIZE = 10;
 
 export default function AdminStaff() {
@@ -40,6 +53,9 @@ export default function AdminStaff() {
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [sortField, setSortField] = useState("name");
   const [sortAsc, setSortAsc] = useState(true);
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [inviteMode, setInviteMode] = useState("new");
+  const [selectedStaffForInvite, setSelectedStaffForInvite] = useState(null);
   const apiFilters = useMemo(() => {
     const filters = {
       page,
@@ -53,19 +69,18 @@ export default function AdminStaff() {
     return filters;
   }, [page, pageSize, sortField, sortAsc, debouncedSearch, statusFilter, assignmentFilter]);
 
-  const { data: staffData, isLoading, error } = useGetAllStaffQuery(apiFilters);
+  const { data: staffData, isLoading, error, refetch } = useGetAllStaffQuery(apiFilters);
+  const [deactivateStaff] = useDeactivateStaffMutation();
+  const [reactivateStaff] = useReactivateStaffMutation();
   const { tasks } = useTasks();
 
-  const staffPayload = staffData?.data;
+  const staffPayload = staffData?.data || {};
   const pagination = staffPayload?.pagination || {};
   const isServerPaginated = Number.isFinite(pagination?.totalPages) && Number.isFinite(pagination?.totalItems);
-  const staffMembers = Array.isArray(staffPayload)
-    ? staffPayload
-    : Array.isArray(staffPayload?.staff)
-      ? staffPayload.staff
-      : Array.isArray(staffPayload?.items)
-        ? staffPayload.items
-        : [];
+  const staffMembers = Array.isArray(staffPayload?.staffMembers) ? staffPayload.staffMembers : [];
+
+
+  const getAccessStatus = (staff) => staff?.staffAccessStatus || "unknown";
 
   const getAssignedCount = (staffId) =>
     new Set(tasks.filter((t) => t.staffId === staffId).map((t) => t.clientId)).size;
@@ -76,7 +91,9 @@ export default function AdminStaff() {
         ...staff,
         fullName: `${staff.first_name || ""} ${staff.last_name || ""}`.trim() || "Unnamed Staff",
         assignedCount: staff.assignedCount ?? getAssignedCount(staff._id),
-        uiStatus: staff.active ? "active" : "inactive",
+        staffAccessStatus: getAccessStatus(staff),
+        statusLabel: statusMeta[getAccessStatus(staff)]?.label || "Unknown",
+        statusColor: statusMeta[getAccessStatus(staff)]?.color || "gray",
       })),
     [staffMembers, tasks],
   );
@@ -116,7 +133,32 @@ export default function AdminStaff() {
     }
   }, [page, totalPages]);
 
-  const handleStaffAction = (action, row) => {
+  const openInviteModal = (staff = null, modeOverride = null) => {
+    setInviteMode(modeOverride || (staff ? "resend" : "new"));
+    setSelectedStaffForInvite(staff);
+    setIsInviteModalOpen(true);
+  };
+
+  const getRowActions = (row) => {
+    const actions = [
+      { label: "View", value: "view" },
+      { label: "Edit", value: "edit" },
+    ];
+
+    if (row.staffAccessStatus === "invite_pending" || row.staffAccessStatus === "invite_expired") {
+      if (row.staffAccessStatus === "invite_expired") {
+        actions.push({ label: "Send Invite", value: "send_invite" });
+      }
+    } else if (row.staffAccessStatus === "active") {
+      actions.push({ label: "Deactivate", value: "deactivate", variant: "destructive" });
+    } else if (row.staffAccessStatus === "deactivated") {
+      actions.push({ label: "Reactivate", value: "reactivate" });
+    }
+
+    return actions;
+  };
+
+  const handleStaffAction = async (action, row) => {
     if (action === "view") {
       toast.info("View staff details coming soon");
       return;
@@ -125,8 +167,31 @@ export default function AdminStaff() {
       toast.info("Edit staff coming soon");
       return;
     }
-    if (action === "delete") {
-      toast.info("Delete staff coming soon");
+
+    if (action === "send_invite") {
+      openInviteModal(row, "new");
+      return;
+    }
+
+    if (action === "deactivate") {
+      try {
+        await deactivateStaff(row._id).unwrap();
+        toast.success("Staff deactivated");
+        await refetch();
+      } catch (deactivateError) {
+        toast.error(deactivateError?.data?.message || "Failed to deactivate staff");
+      }
+      return;
+    }
+
+    if (action === "reactivate") {
+      try {
+        await reactivateStaff(row._id).unwrap();
+        toast.success("Staff reactivated");
+        await refetch();
+      } catch (reactivateError) {
+        toast.error(reactivateError?.data?.message || "Failed to reactivate staff");
+      }
     }
   };
 
@@ -154,19 +219,17 @@ export default function AdminStaff() {
       sortable: true,
     },
     {
-      key: "uiStatus",
+      key: "staffAccessStatus",
       label: "Status",
       sortable: true,
-      render: (row) =>
-        row.active ? (
-          <Badge variant="outline" className="bg-success/15 text-success border-success/30 text-xs">
-            Active
-          </Badge>
-        ) : (
-          <Badge variant="outline" className="bg-muted text-muted-foreground border-muted text-xs">
-            Inactive
-          </Badge>
-        ),
+      render: (row) => (
+        <Badge
+          variant="outline"
+          className={cn("text-xs", statusBadgeClass[row.statusColor] || statusBadgeClass.gray)}
+        >
+          {row.statusLabel}
+        </Badge>
+      ),
     },
   ];
 
@@ -199,13 +262,22 @@ export default function AdminStaff() {
   // Empty state (only when there is truly no staff and no filters are applied)
   if (staffMembers.length === 0 && !hasAnyFilter) {
     return (
+      <>
+      <StaffInviteModal
+        open={isInviteModalOpen}
+        onOpenChange={setIsInviteModalOpen}
+        mode={inviteMode}
+        initialData={selectedStaffForInvite}
+        onSuccess={refetch}
+      />
+
       <div className="space-y-6 animate-fade-in">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Staff Members</h1>
             <p className="text-sm text-muted-foreground">0 staff members</p>
           </div>
-          <Button className="gap-2" onClick={() => toast.info("Add staff coming soon")}>
+          <Button className="gap-2" onClick={() => openInviteModal()}>
             <Plus className="h-4 w-4" /> Add New Staff
           </Button>
         </div>
@@ -217,10 +289,20 @@ export default function AdminStaff() {
           </p>
         </div>
       </div>
+      </>
     );
   }
 
   return (
+    <>
+    <StaffInviteModal
+      open={isInviteModalOpen}
+      onOpenChange={setIsInviteModalOpen}
+      mode={inviteMode}
+      initialData={selectedStaffForInvite}
+      onSuccess={refetch}
+    />
+
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <div>
@@ -229,7 +311,7 @@ export default function AdminStaff() {
             {isServerPaginated ? pagination.totalItems || staffMembers.length : staffMembers.length} staff members
           </p>
         </div>
-        <Button className="gap-2" onClick={() => toast.info("Add staff coming soon")}>
+        <Button className="gap-2" onClick={() => openInviteModal()}>
           <Plus className="h-4 w-4" /> Add New Staff
         </Button>
       </div>
@@ -315,7 +397,7 @@ export default function AdminStaff() {
         data={paginatedData}
         columns={columns}
         onSort={handleSort}
-        rowActions={ROW_ACTIONS}
+        rowActions={getRowActions}
         onRowAction={handleStaffAction}
         getRowId={(row) => row._id}
         emptyMessage="No staff members found."
@@ -329,7 +411,9 @@ export default function AdminStaff() {
         pageSize={isServerPaginated ? pagination.itemsPerPage || pageSize : pageSize}
         onPageChange={setPage}
         onPageSizeChange={setPageSize}
+        showCount={false}
       />
     </div>
+    </>
   );
 }

@@ -93,20 +93,21 @@ const Signup = () => {
         // STEP 3: Navigate based on user role and onboarding status from backend
         // For client users (role_id === '3'), new signups always go to onboarding
         // The backend should return onboarding_completed: false for new clients
-        if (user?.role_id === '3') {
-          // Check onboarding status from backend response
-          // New signups should have onboarding_completed: false
-          if (user.onboarding_completed) {
-            // Rare case: if they already have onboarding completed (shouldn't happen for new signup)
-            navigate('/dashboard');
-          } else {
-            // Normal flow: new client signups go to onboarding
-            navigate('/onboarding');
-          }
-        } else {
-          // Admin and staff go directly to dashboard
-          navigate('/dashboard');
-        }
+        // if (user?.role_id === '3') {
+        //   // Check onboarding status from backend response
+        //   // New signups should have onboarding_completed: false
+        //   if (user.onboarding_completed) {
+        //     // Rare case: if they already have onboarding completed (shouldn't happen for new signup)
+        //     navigate('/dashboard');
+        //   } else {
+        //     // Normal flow: new client signups go to onboarding
+        //     navigate('/onboarding');
+        //   }
+        // } else {
+        //   // Admin and staff go directly to dashboard
+        //   navigate('/dashboard');
+        // } // For now, we will assume all new signups are clients completing onboarding, so we will just navigate to dashboard for simplicity. The onboarding flow will be handled separately.
+        navigate('/dashboard');
       } else {
         // Handle signup failure
         console.error('Signup failed:', result);

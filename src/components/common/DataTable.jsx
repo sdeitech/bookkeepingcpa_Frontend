@@ -135,7 +135,7 @@ export function DataTable({
   };
 
   const hasSelection = !!onSelectRow;
-  const hasActions = rowActions && rowActions.length > 0;
+  const hasActions = typeof rowActions === "function" ? true : !!(rowActions && rowActions.length > 0);
   const totalCols = columns.length + (hasSelection ? 1 : 0) + (hasActions ? 1 : 0);
 
   const formatCellValue = (value) => {
@@ -316,6 +316,10 @@ export function DataTable({
                   ))}
                   {hasActions && (
                     <TableCell onClick={(e) => e.stopPropagation()}>
+                      {(() => {
+                        const actionsForRow = typeof rowActions === "function" ? rowActions(row) : rowActions;
+                        if (!actionsForRow || actionsForRow.length === 0) return null;
+                        return (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -323,7 +327,7 @@ export function DataTable({
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="bg-popover z-50">
-                          {rowActions.map((action) => (
+                          {actionsForRow.map((action) => (
                             <DropdownMenuItem
                               key={action.value}
                               onClick={() => onRowAction?.(action.value, row)}
@@ -334,6 +338,8 @@ export function DataTable({
                           ))}
                         </DropdownMenuContent>
                       </DropdownMenu>
+                        );
+                      })()}
                     </TableCell>
                   )}
                 </TableRow>

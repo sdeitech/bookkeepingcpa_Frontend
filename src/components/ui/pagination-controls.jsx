@@ -1,8 +1,20 @@
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react";
 
-export function PaginationControls({ page, totalPages, totalItems, pageSize, onPageChange }) {
+export function PaginationControls({
+  page,
+  totalPages,
+  totalItems,
+  pageSize,
+  onPageChange,
+  showCount = true,
+}) {
   if (totalPages <= 1) return null;
+  const safeTotalItems = Number.isFinite(totalItems) ? totalItems : 0;
+  const safePage = Number.isFinite(page) ? page : 1;
+  const safePageSize = Number.isFinite(pageSize) && pageSize > 0 ? pageSize : 10;
+  const startItem = safeTotalItems === 0 ? 0 : (safePage - 1) * safePageSize + 1;
+  const endItem = Math.min(safePage * safePageSize, safeTotalItems);
 
   // Generate page numbers with ellipsis
   const getPageNumbers = () => {
@@ -50,16 +62,20 @@ export function PaginationControls({ page, totalPages, totalItems, pageSize, onP
 
   return (
     <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:items-center sm:justify-between">
-      <p className="text-xs text-muted-foreground">
-        Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, totalItems)} of {totalItems}
-      </p>
+      {showCount ? (
+        <p className="text-xs text-muted-foreground">
+          Showing {startItem}–{endItem} of {safeTotalItems}
+        </p>
+      ) : (
+        <div />
+      )}
       <div className="flex items-center gap-1 overflow-x-auto pb-1">
         <Button 
           variant="outline" 
           size="icon" 
           className="h-8 w-8" 
-          disabled={page <= 1} 
-          onClick={() => onPageChange(page - 1)}
+          disabled={safePage <= 1}
+          onClick={() => onPageChange(safePage - 1)}
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
@@ -76,7 +92,7 @@ export function PaginationControls({ page, totalPages, totalItems, pageSize, onP
           return (
             <Button
               key={pageNum}
-              variant={page === pageNum ? "default" : "outline"}
+              variant={safePage === pageNum ? "default" : "outline"}
               size="icon"
               className="h-8 w-8"
               onClick={() => onPageChange(pageNum)}
@@ -90,35 +106,14 @@ export function PaginationControls({ page, totalPages, totalItems, pageSize, onP
           variant="outline" 
           size="icon" 
           className="h-8 w-8" 
-          disabled={page >= totalPages} 
-          onClick={() => onPageChange(page + 1)}
+          disabled={safePage >= totalPages}
+          onClick={() => onPageChange(safePage + 1)}
         >
           <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-xl font-semibold text-foreground">
-          Results: {startItem} - {endItem} of {totalItems}
-        </p>
-        {onPageSizeChange && (
-          <Select
-            value={String(pageSize)}
-            onValueChange={(value) => onPageSizeChange(Number(value))}
-          >
-            <SelectTrigger className="h-12 w-[140px] rounded-2xl bg-muted border-border text-lg">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="bg-popover z-50">
-              {pageSizeOptions.map((size) => (
-                <SelectItem key={size} value={String(size)}>
-                  {size}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-      </div>
+      <div />
     </div>
   );
 }

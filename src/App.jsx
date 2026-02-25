@@ -44,6 +44,7 @@ import StaffTasks from './pages/staff/StaffTasks';
 import StaffTaskDetail from './pages/staff/StaffTaskDetail';
 import StaffReports from './pages/staff/StaffReports';
 import StaffCreateTask from './pages/staff/StaffCreateTask';
+import StaffCompleteInvite from './pages/staff/StaffCompleteInvite';
 
 // new admin layout and pages
 import AdminLayout from './pages/new_Admin/AdminLayout';
@@ -119,6 +120,7 @@ function App() {
               </PublicRoute>
             }
           />
+          <Route path="/staff/complete-invite" element={<StaffCompleteInvite />} />
           <Route
             path="/new-dashboard"
             element={
@@ -161,14 +163,14 @@ function App() {
                 <AdminTaskDetail />
               </ErrorBoundary>
             } />
-            <Route path="clients" element={<AdminAssignClients/>} />
+            <Route path="clients" element={<AdminAssignClients />} />
             <Route path="assign-clients" element={<AdminAssignClients />} />
             <Route path="clients/:clientId" element={<AdminClientDetail />} />
             <Route path="staff" element={<AdminStaff />} />
             <Route path="documents" element={<AdminDocuments />} />
             <Route path="messages" element={<AdminMessages />} />
             <Route path="settings" element={<AdminSettings />} />
-            <Route path='profile' element={<Profile/>} />
+            <Route path='profile' element={<Profile />} />
           </Route>
 
 
@@ -247,11 +249,11 @@ function App() {
             path="/dashboard"
             element={
               <AuthGuard>
-                <OnboardingGuard>
+                <DashboardRouter />
+                {/* <OnboardingGuard>
                   <SubscriptionGuard>
-                    <DashboardRouter />
                   </SubscriptionGuard>
-                </OnboardingGuard>
+                </OnboardingGuard> */}
               </AuthGuard>
             }
           />

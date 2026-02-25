@@ -62,6 +62,24 @@ export const userApi = createApi({
       },
       providesTags: ['StaffList'],
     }),
+
+    inviteStaff: builder.mutation({
+      query: (inviteData) => ({
+        url: '/admin/invite-staff',
+        method: 'POST',
+        body: inviteData,
+      }),
+      invalidatesTags: ['StaffList'],
+    }),
+
+    completeStaffInvite: builder.mutation({
+      query: (payload) => ({
+        url: '/staff/complete-invite',
+        method: 'POST',
+        body: payload,
+      }),
+    }),
+
     changePassword: builder.mutation({
       query: (passwordData) => ({
         url: '/user/profile/update-password',
@@ -89,6 +107,8 @@ export const {
   useGetAllClientsQuery,
   useGetClientProfileQuery,
   useGetAllStaffQuery,
+  useInviteStaffMutation,
+  useCompleteStaffInviteMutation,
   // Staff hooks
   useGetStaffClientQuery,
 } = userApi;

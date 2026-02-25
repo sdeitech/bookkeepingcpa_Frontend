@@ -23,7 +23,7 @@ export default function AdminTaskDetail() {
   const user = useSelector(selectCurrentUser);
 
   // Fetch task data
-  const { data, isLoading, error } = useGetTaskByIdQuery(taskId);
+  const { data, isLoading, error, refetch } = useGetTaskByIdQuery(taskId);
   const task = data?.data;
 
   // Mutations
@@ -146,6 +146,7 @@ export default function AdminTaskDetail() {
         }).unwrap();
       }
 
+      await refetch();
       toast.success("Task updated successfully");
       setSearchParams({});
     } catch (error) {

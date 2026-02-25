@@ -21,7 +21,7 @@ import { format, isBefore, startOfDay, endOfWeek, startOfWeek, isToday } from "d
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-const CURRENT_STAFF = "Sarah Mitchell";
+
 const DEFAULT_PAGE_SIZE = 10;
 
 const VIEW_FILTERS = [
@@ -139,7 +139,7 @@ export default function AdminTasks() {
   // Fetch tasks with filters
   const { tasks: apiTasks, filterOptions, pagination, isLoading, refetch, createTask, deleteTask, deleteTasks, reassignTasks } = useTasks(apiFilters);
   const { data: staffData } = useGetAllStaffQuery();
-  const staffMembers = staffData?.data || [];
+  const staffMembers = staffData?.data.staffMembers || [];
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
@@ -561,6 +561,7 @@ export default function AdminTasks() {
           onPageChange={setPage}
           totalItems={pagination.totalItems}
           pageSize={pagination.itemsPerPage}
+          showCount={false}
         />
       )}
 
