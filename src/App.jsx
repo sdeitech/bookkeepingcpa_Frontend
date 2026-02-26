@@ -32,6 +32,7 @@ import './utils/debugFirebaseConnection';
 import './App.css';
 import Dashboard from './pages/Dashboard';
 import QuickBooksData from './pages/dashboard/QuickBooksData';
+import ClientTasks from './pages/dashboard/ClientTasks';
 import AdminDashboard from './pages/admin/AdminDashboard';
 // import AdminLayout from './pages/admin/AdminLayout';
 // import AdminTasks from './pages/admin/AdminTasks';
@@ -132,6 +133,12 @@ function App() {
             }
           >
             <Route path="quickbooks" element={<QuickBooksData />} />
+            <Route path="tasks" element={<ClientTasks />} />
+            <Route path="tasks/:taskId" element={
+              <ErrorBoundary fallbackMessage="Unable to load task details. The task may not exist or there was an error loading it." showHomeButton>
+                <AdminTaskDetail />
+              </ErrorBoundary>
+            } />
             <Route path="profile" element={<Profile />} />
           </Route>
 

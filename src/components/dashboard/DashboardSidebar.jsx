@@ -1,10 +1,11 @@
 import { Link, useLocation } from "react-router-dom";
-import { Home, FileText, CreditCard, HelpCircle, LogOut, Shield, BookOpen } from "lucide-react";
+import { Home, FileText, CreditCard, HelpCircle, LogOut, Shield, BookOpen, CheckSquare } from "lucide-react";
 import { PlutifyLogo } from "../../components/PlutifyLogo";
 import { cn } from "../../lib/utils";
 
 const navItems = [
   { icon: Home, label: "Home", href: "/new-dashboard" },
+  { icon: CheckSquare, label: "My Tasks", href: "/new-dashboard/tasks" },
   { icon: FileText, label: "Documents", href: "/dashboard/documents" },
   { icon: CreditCard, label: "Billing", href: "/dashboard/billing" },
   { icon: HelpCircle, label: "Support", href: "/dashboard/support" },

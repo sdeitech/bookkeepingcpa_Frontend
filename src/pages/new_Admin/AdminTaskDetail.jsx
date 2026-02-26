@@ -22,6 +22,11 @@ export default function AdminTaskDetail() {
   const isEditMode = searchParams.get("mode") === "edit";
   const user = useSelector(selectCurrentUser);
 
+  // Role checks
+  const isClient = user?.role_id === "3";
+  const isAdmin = user?.role_id === "1";
+  const isStaff = user?.role_id === "2";
+
   // Fetch task data
   const { data, isLoading, error, refetch } = useGetTaskByIdQuery(taskId);
   const task = data?.data;
@@ -109,7 +114,11 @@ export default function AdminTaskDetail() {
   };
 
   const handleBack = () => {
-    navigate("/admin/tasks");
+    if (isClient) {
+      navigate("/new-dashboard/tasks");
+    } else {
+      navigate("/admin/tasks");
+    }
   };
 
   const handleEdit = () => {
@@ -338,27 +347,29 @@ export default function AdminTaskDetail() {
         <Button variant="ghost" onClick={handleBack} className="gap-2 self-start">
           <ArrowLeft className="h-4 w-4" /> Back to Tasks
         </Button>
-        <div className="flex gap-2">
-          {isEditMode ? (
-            <>
-              <Button variant="outline" onClick={handleCancelEdit} className="gap-2 flex-1 sm:flex-initial">
-                <X className="h-4 w-4" /> Cancel
-              </Button>
-              <Button onClick={handleSave} className="gap-2 flex-1 sm:flex-initial">
-                <Save className="h-4 w-4" /> Save Changes
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button variant="outline" onClick={handleEdit} className="gap-2 flex-1 sm:flex-initial">
-                <Edit className="h-4 w-4" /> Edit
-              </Button>
-              <Button variant="destructive" onClick={() => setDeleteDialogOpen(true)} className="gap-2 flex-1 sm:flex-initial">
-                <Trash2 className="h-4 w-4" /> Delete
-              </Button>
-            </>
-          )}
-        </div>
+        {!isClient && (
+          <div className="flex gap-2">
+            {isEditMode ? (
+              <>
+                <Button variant="outline" onClick={handleCancelEdit} className="gap-2 flex-1 sm:flex-initial">
+                  <X className="h-4 w-4" /> Cancel
+                </Button>
+                <Button onClick={handleSave} className="gap-2 flex-1 sm:flex-initial">
+                  <Save className="h-4 w-4" /> Save Changes
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="outline" onClick={handleEdit} className="gap-2 flex-1 sm:flex-initial">
+                  <Edit className="h-4 w-4" /> Edit
+                </Button>
+                <Button variant="destructive" onClick={() => setDeleteDialogOpen(true)} className="gap-2 flex-1 sm:flex-initial">
+                  <Trash2 className="h-4 w-4" /> Delete
+                </Button>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Main Content */}
@@ -622,7 +633,11 @@ export default function AdminTaskDetail() {
             {/* Status */}
             <div>
               <p className="text-xs text-muted-foreground mb-2">Status</p>
-              {isEditMode ? (
+              {isClient ? (
+                <p className="text-sm font-medium capitalize">
+                  {task.status?.replace(/_/g, " ")}
+                </p>
+              ) : isEditMode ? (
                 <Select value={editStatus} onValueChange={setEditStatus}>
                   <SelectTrigger>
                     <SelectValue />
@@ -654,7 +669,11 @@ export default function AdminTaskDetail() {
             {/* Priority */}
             <div>
               <p className="text-xs text-muted-foreground mb-2">Priority</p>
-              {isEditMode ? (
+              {isClient ? (
+                <p className={cn("text-sm font-medium capitalize", getPriorityColor(task.priority))}>
+                  {task.priority?.replace(/_/g, " ")}
+                </p>
+              ) : isEditMode ? (
                 <Select value={editPriority} onValueChange={setEditPriority}>
                   <SelectTrigger>
                     <SelectValue />
@@ -690,28 +709,20 @@ export default function AdminTaskDetail() {
             {/* Due Date */}
             <div>
               <p className="text-xs text-muted-foreground mb-2">Due Date</p>
-              {isEditMode ? (
+              {isClient || !isEditMode ? (
+                <p className="text-sm font-medium">
+                  {task.dueDate ? format(new Date(task.dueDate), "MMM dd, yyyy") : "-"}
+                </p>
+              ) : (
                 <Input
                   type="date"
                   value={editDueDate}
                   onChange={(e) => setEditDueDate(e.target.value)}
                 />
-              ) : (
-                <p className="text-sm font-medium">
-                  {task.dueDate ? format(new Date(task.dueDate), "MMM dd, yyyy") : "-"}
-                </p>
               )}
             </div>
 
-            {/* Assigned To */}
-            <div>
-              <p className="text-xs text-muted-foreground">Assigned To</p>
-              <p className="text-sm font-medium">
-                {task.assignedTo?.first_name} {task.assignedTo?.last_name}
-              </p>
-            </div>
-
-            {/* Assigned By */}
+            {/* Assigned By - Show for everyone */}
             <div>
               <p className="text-xs text-muted-foreground">Assigned By</p>
               <p className="text-sm font-medium">
@@ -719,7 +730,17 @@ export default function AdminTaskDetail() {
               </p>
             </div>
 
-            {/* Client */}
+            {/* Assigned To - Hide for clients (it's always them) */}
+            {!isClient && (
+              <div>
+                <p className="text-xs text-muted-foreground">Assigned To</p>
+                <p className="text-sm font-medium">
+                  {task.assignedTo?.first_name} {task.assignedTo?.last_name}
+                </p>
+              </div>
+            )}
+
+            {/* Client - Show for everyone */}
             <div>
               <p className="text-xs text-muted-foreground">Client</p>
               <p className="text-sm font-medium">
@@ -763,7 +784,7 @@ export default function AdminTaskDetail() {
         open={!!viewingDocument}
         onOpenChange={(open) => !open && setViewingDocument(null)}
         document={viewingDocument}
-        canDelete={false}
+        canDelete={isClient}
       />
     </div>
   );
