@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useLocation, useNavigate } from "react-router-dom";
 import { useTasks } from "@/hooks/useTasks";
-import { TASK_STATUSES } from "@/lib/task-types";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
@@ -11,11 +10,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { DataTable } from "@/components/common/DataTable";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { TaskStatusBadge, TaskPriorityBadge } from "@/components/Admin/TaskStatusBadge";
+import { TaskStatusBadge, TaskPriorityBadge } from "@/components/new_Admin/TaskStatusBadge";
 import { CreateTaskWizard } from "@/components/new_Admin/CreateTaskWizard";
 import { ArrowLeft, Mail, Building2, Loader2, Plus, ChevronDown, Check, X } from "lucide-react";
 import { format, isBefore, isToday, startOfDay, startOfWeek, endOfWeek } from "date-fns";
@@ -33,8 +31,18 @@ const STATUS_FILTERS = [
   { label: "Needs Revision", value: "NEEDS_REVISION" },
   { label: "Cancelled", value: "CANCELLED" },
 ];
+const ROW_ACTIONS = [
+  { label: "View", value: "view" },
+  { label: "Edit", value: "edit" },
+  { label: "Delete", value: "delete", variant: "destructive" },
+];
 
 const getTaskId = (task) => task?._id || task?.id;
+const getEntityId = (value) => {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  return value._id || value.id || "";
+};
 
 const getName = (value) => {
   if (!value) return "";
@@ -44,8 +52,24 @@ const getName = (value) => {
   const full = [first, last].filter(Boolean).join(" ").trim();
   return full || value.name || value.fullName || value.email || "";
 };
+const toLowerStatus = (value) => {
+  const status = String(value || "").toLowerCase();
+  if (status === "not_started") return "not_started";
+  if (status === "in_progress") return "in_progress";
+  if (status === "completed") return "completed";
+  return "blocked";
+};
+const toLowerPriority = (value) => {
+  const priority = String(value || "").toLowerCase();
+  if (priority === "low") return "low";
+  if (priority === "medium") return "medium";
+  if (priority === "high") return "high";
+  return "urgent";
+};
 
 export default function StaffClientDetail() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const { clientId } = useParams();
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -75,15 +99,17 @@ export default function StaffClientDetail() {
 
     if (debouncedSearch) filters.search = debouncedSearch;
 
-    const effectiveStatus = columnFilters.status || (statusFilter !== "all" ? statusFilter : "");
+    const effectiveStatus = columnFilters.status
+      ? String(columnFilters.status).toUpperCase()
+      : (statusFilter !== "all" ? statusFilter : "");
     if (effectiveStatus) filters.status = effectiveStatus;
-    if (columnFilters.priority) filters.priority = columnFilters.priority;
+    if (columnFilters.priority) filters.priority = String(columnFilters.priority).toUpperCase();
     if (columnFilters.dueDate) filters.dueDateFilter = columnFilters.dueDate;
 
     return filters;
   }, [normalizedClientId, page, pageSize, sortKey, sortDir, debouncedSearch, statusFilter, columnFilters]);
 
-  const { tasks, pagination, stats, isLoading: tasksLoading, updateTask, createTask, deleteTask } = useTasks(apiFilters);
+  const { tasks, pagination, stats, isLoading: tasksLoading, createTask, deleteTask } = useTasks(apiFilters);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
@@ -93,17 +119,20 @@ export default function StaffClientDetail() {
   const today = startOfDay(new Date());
   const weekStart = startOfWeek(today, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
-
   const normalizedTasks = useMemo(
     () =>
       tasks
         .filter((task) => {
-          const taskClientId = task.clientId || task.client?._id || task.client?.id;
+          const taskClientId = getEntityId(task.clientId) || getEntityId(task.client);
           return String(taskClientId) === String(normalizedClientId);
         })
         .map((task) => ({
           ...task,
           id: getTaskId(task),
+          rawStatus: String(task.status || ""),
+          status: toLowerStatus(task.status),
+          priority: toLowerPriority(task.priority),
+          assignedToName: getName(task.assignedTo) || "-",
           assignedByName: getName(task.assignedBy) || "-",
         })),
     [tasks, normalizedClientId],
@@ -130,7 +159,7 @@ export default function StaffClientDetail() {
     }
 
     if (statusFilter !== "all") {
-      result = result.filter((task) => task.status === statusFilter);
+      result = result.filter((task) => task.rawStatus === statusFilter);
     }
 
     if (columnFilters.status) {
@@ -142,7 +171,7 @@ export default function StaffClientDetail() {
     if (columnFilters.dueDate) {
       const dueDateFilter = columnFilters.dueDate;
       if (dueDateFilter === "overdue") {
-        result = result.filter((task) => task.status !== "COMPLETED" && task.dueDate && isBefore(new Date(task.dueDate), today));
+        result = result.filter((task) => task.status !== "completed" && task.dueDate && isBefore(new Date(task.dueDate), today));
       } else if (dueDateFilter === "today") {
         result = result.filter((task) => task.dueDate && isToday(new Date(task.dueDate)));
       } else if (dueDateFilter === "this_week") {
@@ -181,7 +210,7 @@ export default function StaffClientDetail() {
     setPage(1);
   }, [debouncedSearch, statusFilter, columnFilters, sortKey, sortDir, pageSize]);
 
-  const completedCount = stats?.completedTasks ?? normalizedTasks.filter((t) => t.status === "COMPLETED").length;
+  const completedCount = stats?.completedTasks ?? normalizedTasks.filter((t) => t.rawStatus === "COMPLETED").length;
   const totalCount = stats?.totalTasks ?? (isServerPaginated ? pagination.totalItems || normalizedTasks.length : normalizedTasks.length);
   const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
@@ -203,36 +232,26 @@ export default function StaffClientDetail() {
     setPage(1);
   };
 
-  const handleQuickStatusChange = async (taskId, newStatus) => {
-    try {
-      await updateTask(taskId, { status: newStatus });
-      toast.success("Status updated");
-    } catch {
-      toast.error("Failed to update status");
-    }
-  };
-
   const handleTaskAction = async (action, task) => {
     const taskId = task?.id || task?._id;
     if (!taskId) return;
+    const backTo = `${location.pathname}${location.search}`;
 
-    try {
-      if (action === "mark_in_progress") {
-        await updateTask(taskId, { status: "IN_PROGRESS" });
-        toast.success("Task marked in progress");
-        return;
-      }
-      if (action === "mark_completed") {
-        await updateTask(taskId, { status: "COMPLETED" });
-        toast.success("Task marked completed");
-        return;
-      }
-      if (action === "delete") {
+    if (action === "view") {
+      navigate(`/staff/tasks/${taskId}`, { state: { backTo } });
+      return;
+    }
+    if (action === "edit") {
+      navigate(`/staff/tasks/${taskId}?mode=edit`, { state: { backTo } });
+      return;
+    }
+    if (action === "delete") {
+      try {
         await deleteTask(taskId);
         toast.success("Task deleted");
+      } catch {
+        toast.error("Failed to delete task");
       }
-    } catch {
-      toast.error("Failed to update task");
     }
   };
 
@@ -287,25 +306,24 @@ export default function StaffClientDetail() {
       ),
     },
     {
+      key: "assignedToName",
+      label: "Assigned To",
+      sortable: true,
+      render: (task) => <span>{task.assignedToName}</span>,
+    },
+    {
       key: "status",
       label: "Status",
       sortable: true,
       filterable: true,
-      filterOptions: [{ label: "All", value: "" }, ...TASK_STATUSES.map((s) => ({ label: s.label, value: s.value }))],
-      render: (task) => (
-        <Select value={task.status} onValueChange={(value) => handleQuickStatusChange(task.id, value)}>
-          <SelectTrigger className="h-8 w-[140px] border-border text-xs">
-            <TaskStatusBadge status={task.status} />
-          </SelectTrigger>
-          <SelectContent className="bg-popover z-50">
-            {TASK_STATUSES.map((status) => (
-              <SelectItem key={status.value} value={status.value}>
-                {status.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      ),
+      filterOptions: [
+        { label: "All", value: "" },
+        { label: "Not Started", value: "not_started" },
+        { label: "In Progress", value: "in_progress" },
+        { label: "Completed", value: "completed" },
+        { label: "Blocked", value: "blocked" },
+      ],
+      render: (task) => <TaskStatusBadge status={task.status} />,
     },
     {
       key: "priority",
@@ -314,9 +332,10 @@ export default function StaffClientDetail() {
       filterable: true,
       filterOptions: [
         { label: "All", value: "" },
-        { label: "Low", value: "LOW" },
-        { label: "Medium", value: "MEDIUM" },
-        { label: "High", value: "HIGH" },
+        { label: "Low", value: "low" },
+        { label: "Medium", value: "medium" },
+        { label: "High", value: "high" },
+        { label: "Urgent", value: "urgent" },
       ],
       render: (task) => <TaskPriorityBadge priority={task.priority} />,
     },
@@ -338,12 +357,6 @@ export default function StaffClientDetail() {
       render: (task) => <span className="text-sm">{task.dueDate ? format(new Date(task.dueDate), "MMM d, yyyy") : "-"}</span>,
     },
   ];
-  const rowActions = [
-    { label: "Mark In Progress", value: "mark_in_progress" },
-    { label: "Mark Completed", value: "mark_completed" },
-    { label: "Delete", value: "delete", variant: "destructive" },
-  ];
-
   if (!clientId) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
@@ -486,7 +499,7 @@ export default function StaffClientDetail() {
         columns={columns}
         onSort={handleSort}
         onRowAction={handleTaskAction}
-        rowActions={rowActions}
+        rowActions={ROW_ACTIONS}
         loading={tasksLoading}
         getRowId={(row) => row.id}
         columnFilters={columnFilters}

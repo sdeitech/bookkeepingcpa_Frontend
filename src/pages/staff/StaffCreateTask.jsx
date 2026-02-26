@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useOutletContext } from "react-router-dom";
+import { useLocation, useNavigate, useOutletContext } from "react-router-dom";
 import { useTasks } from "@/hooks/useTasks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -71,6 +71,7 @@ const toLowerPriority = (value) => {
 
 export default function StaffCreateTask() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { myClients = [] } = useOutletContext();
 
   const [createOpen, setCreateOpen] = useState(false);
@@ -244,13 +245,14 @@ export default function StaffCreateTask() {
     }
   };
   const handleRowAction = async (action, row) => {
+    const backTo = `${location.pathname}${location.search}`;
     if (action === "view") {
-      navigate(`/staff/tasks/${row.id}`);
+      navigate(`/staff/tasks/${row.id}`, { state: { backTo } });
       return;
     }
 
     if (action === "edit") {
-      navigate(`/staff/tasks/${row.id}?mode=edit`);
+      navigate(`/staff/tasks/${row.id}?mode=edit`, { state: { backTo } });
       return;
     }
 

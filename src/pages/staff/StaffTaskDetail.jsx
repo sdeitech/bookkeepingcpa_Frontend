@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { useGetTaskByIdQuery, useUpdateTaskMutation, useDeleteTaskMutation, useUpdateTaskStatusMutation, useUploadDocumentMutation } from "@/features/tasks/tasksApi";
 import { selectCurrentUser } from "@/features/auth/authSlice";
@@ -18,9 +18,11 @@ import { cn } from "@/lib/utils";
 export default function StaffTaskDetail() {
   const { taskId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const isEditMode = searchParams.get("mode") === "edit";
   const user = useSelector(selectCurrentUser);
+  const backTo = location.state?.backTo || "/staff/create-task";
 
   // Fetch task data
   const { data, isLoading, error } = useGetTaskByIdQuery(taskId);
@@ -109,7 +111,7 @@ export default function StaffTaskDetail() {
   };
 
   const handleBack = () => {
-    navigate("/staff/create-task");
+    navigate(backTo);
   };
 
   const handleEdit = () => {
@@ -158,7 +160,7 @@ export default function StaffTaskDetail() {
     try {
       await deleteTask(taskId).unwrap();
       toast.success("Task deleted successfully");
-      navigate("/staff/tasks");
+      navigate(backTo);
     } catch (error) {
       toast.error("Failed to delete task");
       console.error("Delete error:", error);
