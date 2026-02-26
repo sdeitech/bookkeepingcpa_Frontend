@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Download, ZoomIn, ZoomOut, RotateCw, Trash2, FileText, Image as ImageIcon, File, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import config from "@/config";
 
 export function DocumentViewerModal({ 
   open, 
@@ -15,6 +16,23 @@ export function DocumentViewerModal({
   const [zoom, setZoom] = useState(100);
   const [rotation, setRotation] = useState(0);
   const [error, setError] = useState(null);
+
+  // Helper function to get full file URL
+  const getFullFileUrl = (fileUrl) => {
+    if (!fileUrl) return '';
+    
+    // If it's already a full URL (starts with http:// or https://), return as is
+    if (fileUrl.startsWith('http://') || fileUrl.startsWith('https://')) {
+      return fileUrl;
+    }
+    
+    // If it's a relative path, construct full URL
+    // Remove /api from baseUrl if present, and remove leading slash from fileUrl
+    const baseUrl = config.api.baseUrl.replace('/api', '');
+    const cleanPath = fileUrl.startsWith('/') ? fileUrl : `/${fileUrl}`;
+    
+    return `${baseUrl}${cleanPath}`;
+  };
 
   // Reset error when document changes
   useEffect(() => {
@@ -69,13 +87,14 @@ export function DocumentViewerModal({
 
   if (!document) return null;
 
+  const fileUrl = getFullFileUrl(document.fileUrl);
   const fileExtension = document.fileName?.split('.').pop()?.toLowerCase() || '';
   const isPDF = fileExtension === 'pdf' || document.mimeType?.includes('pdf');
   const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(fileExtension) || 
                   document.mimeType?.startsWith('image/');
 
   const handleDownload = () => {
-    window.open(document.fileUrl, '_blank');
+    window.open(fileUrl, '_blank');
     toast.success("Download started");
   };
 
@@ -162,7 +181,7 @@ export function DocumentViewerModal({
             {isPDF ? (
               <div className="w-full h-full bg-white rounded-lg shadow-lg overflow-hidden">
                 <iframe
-                  src={`${document.fileUrl}#view=FitH`}
+                  src={`${fileUrl}#view=FitH`}
                   className="w-full h-full"
                   style={{ 
                     minHeight: '400px',
@@ -176,7 +195,7 @@ export function DocumentViewerModal({
             ) : isImage ? (
               <div className="flex items-center justify-center">
                 <img
-                  src={document.fileUrl}
+                  src={fileUrl}
                   alt={document.fileName}
                   className="max-w-full max-h-full object-contain rounded-lg shadow-lg"
                   style={{

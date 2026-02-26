@@ -71,7 +71,10 @@ export const tasksApi = createApi({
         method: 'POST',
         body: formData,
       }),
-      invalidatesTags: (result, error, { taskId }) => ['Tasks', { type: "Task", id: taskId }],
+      invalidatesTags: (result, error, { taskId }) => [
+        'Tasks',
+        { type: 'Task', id: taskId }
+      ],
     }),
 
     // Approve task (staff/admin)
