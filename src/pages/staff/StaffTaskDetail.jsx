@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { useGetTaskByIdQuery, useUpdateTaskMutation, useDeleteTaskMutation, useUpdateTaskStatusMutation, useUploadDocumentMutation } from "@/features/tasks/tasksApi";
 import { selectCurrentUser } from "@/features/auth/authSlice";
@@ -15,15 +15,17 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-export default function AdminTaskDetail() {
+export default function StaffTaskDetail() {
   const { taskId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const isEditMode = searchParams.get("mode") === "edit";
   const user = useSelector(selectCurrentUser);
+  const backTo = location.state?.backTo || "/staff/create-task";
 
   // Fetch task data
-  const { data, isLoading, error, refetch } = useGetTaskByIdQuery(taskId);
+  const { data, isLoading, error } = useGetTaskByIdQuery(taskId);
   const task = data?.data;
 
   // Mutations
@@ -109,7 +111,7 @@ export default function AdminTaskDetail() {
   };
 
   const handleBack = () => {
-    navigate("/admin/tasks");
+    navigate(backTo);
   };
 
   const handleEdit = () => {
@@ -146,7 +148,6 @@ export default function AdminTaskDetail() {
         }).unwrap();
       }
 
-      await refetch();
       toast.success("Task updated successfully");
       setSearchParams({});
     } catch (error) {
@@ -159,7 +160,7 @@ export default function AdminTaskDetail() {
     try {
       await deleteTask(taskId).unwrap();
       toast.success("Task deleted successfully");
-      navigate("/admin/tasks");
+      navigate(backTo);
     } catch (error) {
       toast.error("Failed to delete task");
       console.error("Delete error:", error);
@@ -310,7 +311,8 @@ export default function AdminTaskDetail() {
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
 
-  const canUpload = user?.role_id === "3" && task?.assignedTo?._id === user?._id;
+  const assignedToId = task?.assignedTo?._id || task?.assignedTo?.id || task?.assignedTo;
+  const canUpload = String(assignedToId || "") === String(user?._id || "");
 
   if (isLoading) {
     return (

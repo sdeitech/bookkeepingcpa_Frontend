@@ -13,7 +13,7 @@ export const tasksApi = createApi({
       return headers;
     },
   }),
-  tagTypes: ["Tasks", "Profile", "ClientList", "ClientProfile"],
+  tagTypes: ["Tasks", "Task", "Profile", "ClientList", "ClientProfile"],
   endpoints: (builder) => ({
     
     createTask: builder.mutation({
@@ -22,7 +22,7 @@ export const tasksApi = createApi({
         method: 'POST',
         body: taskData,
       }),
-    //   invalidatesTags: ['Profile'],
+      invalidatesTags: ["Tasks"],
     }),
 
     getTasks: builder.query({
@@ -38,7 +38,7 @@ export const tasksApi = createApi({
         url: `/tasks/${taskId}`,
         method: "DELETE",
       }),
-      invalidatesTags: ["Tasks"],
+      invalidatesTags: (result, error, taskId) => ["Tasks", { type: "Task", id: taskId }],
     }),
     updateTask: builder.mutation({
       query: ({ id, body }) => ({
@@ -46,7 +46,7 @@ export const tasksApi = createApi({
         method: "PATCH",
         body,
       }),
-      invalidatesTags: ["Tasks"],
+      invalidatesTags: (result, error, { id }) => ["Tasks", { type: "Task", id }],
     }),
     
     
@@ -56,7 +56,7 @@ export const tasksApi = createApi({
         method: "PATCH",
         body: { status, notes },
       }),
-      invalidatesTags: ["Tasks"],
+      invalidatesTags: (result, error, { id }) => ["Tasks", { type: "Task", id }],
     }),
 
     getTaskById: builder.query({
@@ -71,7 +71,7 @@ export const tasksApi = createApi({
         method: 'POST',
         body: formData,
       }),
-      invalidatesTags: ['Tasks'],
+      invalidatesTags: (result, error, { taskId }) => ['Tasks', { type: "Task", id: taskId }],
     }),
 
     // Approve task (staff/admin)
@@ -81,7 +81,7 @@ export const tasksApi = createApi({
         method: 'POST',
         body: { reviewNotes },
       }),
-      invalidatesTags: ['Tasks'],
+      invalidatesTags: (result, error, { taskId }) => ['Tasks', { type: "Task", id: taskId }],
     }),
 
     // Reject task (staff/admin)
@@ -91,7 +91,7 @@ export const tasksApi = createApi({
         method: 'POST',
         body: { rejectionReason },
       }),
-      invalidatesTags: ['Tasks'],
+      invalidatesTags: (result, error, { taskId }) => ['Tasks', { type: "Task", id: taskId }],
     }),
 
     // Request help (client)
@@ -101,7 +101,7 @@ export const tasksApi = createApi({
         method: 'POST',
         body: { message },
       }),
-      invalidatesTags: ['Tasks'],
+      invalidatesTags: (result, error, { taskId }) => ['Tasks', { type: "Task", id: taskId }],
     }),
     
 

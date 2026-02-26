@@ -1,100 +1,364 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Button } from "../../components/ui/button";
-import { Progress } from "../../components/ui/progress";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../../components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../../components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "../../components/ui/dropdown-menu";
-import {
-  TaskStatusBadge,
-  TaskPriorityBadge,
-} from "../../components/Admin/TaskStatusBadge";
-import { CreateTaskDialog } from "../../components/Admin/CreateTaskDialog";
-import {
-  ArrowLeft,
-  Plus,
-  MoreHorizontal,
-  Trash2,
-  Mail,
-  Building2,
-  Loader2
-} from "lucide-react";
-
-// check and revert
-import { useTasks } from "@/hooks/useTasks";
-import { useGetClientProfileQuery } from "@/features/user/userApi";
-// import { TASK_STATUSES } from "@/lib/task-types";
-// import { Button } from "@/components/ui/button";
-// import { Progress } from "@/components/ui/progress";
-// import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-// import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-// import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-// import { TaskStatusBadge, TaskPriorityBadge } from "@/components/new_Admin/TaskStatusBadge";
-// import { CreateTaskDialog } from "@/components/new_Admin/CreateTaskDialog";
-import { format } from "date-fns";
+} from "@/components/ui/dropdown-menu";
+import { DataTable } from "@/components/common/DataTable";
+import { PaginationControls } from "@/components/ui/pagination-controls";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { TaskStatusBadge, TaskPriorityBadge } from "@/components/Admin/TaskStatusBadge";
+import { CreateTaskWizard } from "@/components/new_Admin/CreateTaskWizard";
+import { ArrowLeft, Plus, Mail, Building2, Loader2, Search, ChevronDown, Check, X } from "lucide-react";
+import { format, isBefore, isToday, startOfDay, startOfWeek, endOfWeek } from "date-fns";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useGetClientProfileQuery } from "@/features/user/userApi";
+import { useGetTasksQuery, useUpdateTaskStatusMutation, useDeleteTaskMutation } from "@/features/tasks/tasksApi";
+import { useTasks } from "@/hooks/useTasks";
 
-import {
-  useGetTasksQuery,
-  useUpdateTaskStatusMutation,
-  useDeleteTaskMutation,
-  useCreateTaskMutation,
-} from "@/features/tasks/tasksApi";
+const DEFAULT_PAGE_SIZE = 10;
+
+const STATUS_FILTERS = [
+  { label: "All Tasks", value: "all" },
+  { label: "Not Started", value: "NOT_STARTED" },
+  { label: "In Progress", value: "IN_PROGRESS" },
+  { label: "Completed", value: "COMPLETED" },
+  { label: "Pending Review", value: "PENDING_REVIEW" },
+  { label: "Needs Revision", value: "NEEDS_REVISION" },
+  { label: "Cancelled", value: "CANCELLED" },
+];
+
+const getTaskId = (task) => task?._id || task?.id;
+const getName = (value) => {
+  if (!value) return "-";
+  if (typeof value === "string") return value;
+  const first = value.first_name || value.firstName || "";
+  const last = value.last_name || value.lastName || "";
+  const full = [first, last].filter(Boolean).join(" ").trim();
+  return full || value.name || value.fullName || value.email || "-";
+};
 
 export default function AdminClientDetail() {
-  const { clientId } = useParams(); 
-  
-  // ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS
-  const { data: clientData, isLoading: clientLoading, error: clientError } = useGetClientProfileQuery(clientId, {
-    skip: !clientId
-  });
-  
-  const { tasks, createTask, updateTask, deleteTask } = useTasks();
+  const { clientId } = useParams();
+  const { createTask } = useTasks();
+
   const [createOpen, setCreateOpen] = useState(false);
-  const [filterStatus, setFilterStatus] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [sortKey, setSortKey] = useState(null);
+  const [sortDir, setSortDir] = useState("asc");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [columnFilters, setColumnFilters] = useState({});
+  const [clearAllOpen, setClearAllOpen] = useState(false);
+  const apiFilters = useMemo(() => {
+    const filters = {
+      clientId,
+      page,
+      limit: pageSize,
+      sortBy: sortKey || "createdAt",
+      sortOrder: sortKey ? sortDir : "desc",
+    };
 
-  // All useMemo hooks must be called unconditionally
-  const clientTasks = useMemo(() => {
-    if (!clientId) return [];
-    let filtered = tasks.filter(t => t.clientId === clientId);
-    if (filterStatus !== "all") filtered = filtered.filter(t => t.status === filterStatus);
-    return filtered;
-  }, [tasks, clientId, filterStatus]);
+    if (debouncedSearch) filters.search = debouncedSearch;
 
-  const filteredTasks = useMemo(() => {
-    if (filterStatus === "all") return tasks;
-    return tasks.filter((t) => t.status === filterStatus);
-  }, [tasks, filterStatus]);
+    const effectiveStatus = columnFilters.status || (statusFilter !== "all" ? statusFilter : "");
+    if (effectiveStatus) filters.status = effectiveStatus;
+    if (columnFilters.priority) filters.priority = columnFilters.priority;
+    if (columnFilters.dueDate) filters.dueDateFilter = columnFilters.dueDate;
 
-  // Derived state
+    const assignedByFilter =
+      columnFilters.assignedByName || columnFilters.assignedById || columnFilters.assignedBy || "";
+    if (assignedByFilter) filters.assignedBy = assignedByFilter;
+
+    return filters;
+  }, [clientId, page, pageSize, sortKey, sortDir, debouncedSearch, statusFilter, columnFilters]);
+
+  const { data: clientData, isLoading: clientLoading, error: clientError } = useGetClientProfileQuery(clientId, {
+    skip: !clientId,
+  });
+
+  const { data: tasksData, isLoading: tasksLoading } = useGetTasksQuery(apiFilters, { skip: !clientId });
+  const [updateTaskStatusMutation] = useUpdateTaskStatusMutation();
+  const [deleteTaskMutation] = useDeleteTaskMutation();
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   const client = clientData?.data?.client;
-  console.log('hgasfdhsagda', client)
-  const allClientTasks = clientId ? tasks.filter(t => t.clientId === clientId) : [];
-  const completedCount = allClientTasks.filter(t => t.status === "COMPLETED").length;
-  const totalCount = allClientTasks.length;
+  const createTaskClientList = useMemo(() => {
+    if (!client) return [];
+    return [
+      {
+        _id: client._id || client.id || clientId,
+        first_name: client.first_name || client.name || "",
+        last_name: client.last_name || "",
+        email: client.email || "",
+      },
+    ];
+  }, [client, clientId]);
+  const taskPayload = tasksData?.data;
+  const taskPagination = taskPayload?.pagination || tasksData?.pagination || {};
+  const isServerPaginated =
+    Number.isFinite(taskPagination?.totalPages) &&
+    Number.isFinite(taskPagination?.totalItems);
+  const rawTasks = Array.isArray(taskPayload?.tasks)
+    ? taskPayload.tasks
+    : Array.isArray(taskPayload?.items)
+      ? taskPayload.items
+      : Array.isArray(taskPayload)
+        ? taskPayload
+        : [];
+  const today = startOfDay(new Date());
+  const weekStart = startOfWeek(today, { weekStartsOn: 1 });
+  const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
+
+  const normalizedTasks = useMemo(
+    () =>
+      rawTasks.map((task) => ({
+        ...task,
+        id: getTaskId(task),
+        assignedByName: getName(task.assignedBy),
+      })),
+    [rawTasks],
+  );
+
+  const completedCount = normalizedTasks.filter((task) => task.status === "COMPLETED").length;
+  const totalCount = normalizedTasks.length;
   const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
-  // NOW we can do conditional returns after all hooks are called
-  // Check if clientId is missing
+  const assignedByOptions = useMemo(() => {
+    const map = new Map();
+    normalizedTasks.forEach((task) => {
+      if (task.assignedByName && task.assignedByName !== "-") {
+        map.set(task.assignedByName, task.assignedByName);
+      }
+    });
+    return Array.from(map.values()).map((name) => ({ label: name, value: name }));
+  }, [normalizedTasks]);
+
+  const filtered = useMemo(() => {
+    if (isServerPaginated) {
+      return normalizedTasks;
+    }
+
+    let result = normalizedTasks;
+
+    if (debouncedSearch) {
+      const q = debouncedSearch.toLowerCase();
+      result = result.filter(
+        (task) =>
+          String(task.title || "").toLowerCase().includes(q) ||
+          String(task.description || "").toLowerCase().includes(q) ||
+          String(task.assignedByName || "").toLowerCase().includes(q),
+      );
+    }
+
+    if (statusFilter !== "all") {
+      result = result.filter((task) => task.status === statusFilter);
+    }
+
+    const localAssignedBy =
+      columnFilters.assignedByName || columnFilters.assignedById || columnFilters.assignedBy || "";
+    if (localAssignedBy) {
+      result = result.filter((task) => task.assignedByName === localAssignedBy);
+    }
+    if (columnFilters.status) {
+      result = result.filter((task) => task.status === columnFilters.status);
+    }
+    if (columnFilters.priority) {
+      result = result.filter((task) => task.priority === columnFilters.priority);
+    }
+    if (columnFilters.dueDate) {
+      const dueDateFilter = columnFilters.dueDate;
+      if (dueDateFilter === "overdue") {
+        result = result.filter((task) => task.status !== "COMPLETED" && task.dueDate && isBefore(new Date(task.dueDate), today));
+      } else if (dueDateFilter === "today") {
+        result = result.filter((task) => task.dueDate && isToday(new Date(task.dueDate)));
+      } else if (dueDateFilter === "this_week") {
+        result = result.filter((task) => {
+          if (!task.dueDate) return false;
+          const d = new Date(task.dueDate);
+          return d >= weekStart && d <= weekEnd;
+        });
+      }
+    }
+
+    if (sortKey) {
+      result = [...result].sort((a, b) => {
+        const aVal = String(a[sortKey] ?? "");
+        const bVal = String(b[sortKey] ?? "");
+        return sortDir === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      });
+    }
+
+    return result;
+  }, [isServerPaginated, normalizedTasks, debouncedSearch, statusFilter, columnFilters, sortKey, sortDir, today, weekStart, weekEnd]);
+
+  const totalPages = isServerPaginated
+    ? Math.max(1, taskPagination.totalPages || 1)
+    : Math.max(1, Math.ceil(filtered.length / pageSize));
+  const paginatedTasks = useMemo(
+    () => (isServerPaginated ? filtered : filtered.slice((page - 1) * pageSize, page * pageSize)),
+    [filtered, isServerPaginated, page, pageSize],
+  );
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, statusFilter, columnFilters, sortKey, sortDir, pageSize]);
+
+  const handleSort = (key, dir) => {
+    setSortKey(key);
+    setSortDir(dir);
+  };
+
+  const handleColumnFilterChange = (columnKey, value) => {
+    setColumnFilters((prev) => {
+      const next = { ...prev };
+      if (!value) {
+        delete next[columnKey];
+      } else {
+        next[columnKey] = value;
+      }
+      return next;
+    });
+    setPage(1);
+  };
+
+  const handleTaskAction = async (action, task) => {
+    const taskId = getTaskId(task);
+    if (!taskId) return;
+
+    try {
+      if (action === "mark_in_progress") {
+        await updateTaskStatusMutation({ id: taskId, status: "IN_PROGRESS" }).unwrap();
+        toast.success("Task marked in progress");
+        return;
+      }
+      if (action === "mark_completed") {
+        await updateTaskStatusMutation({ id: taskId, status: "COMPLETED" }).unwrap();
+        toast.success("Task marked completed");
+        return;
+      }
+      if (action === "delete") {
+        await deleteTaskMutation(taskId).unwrap();
+        toast.success("Task deleted");
+      }
+    } catch {
+      toast.error("Failed to update task");
+    }
+  };
+
+  const handleCreateTask = async (taskData) => {
+    try {
+      await createTask({ ...taskData, clientId });
+      setCreateOpen(false);
+      toast.success("Task created");
+    } catch {
+      toast.error("Failed to create task");
+    }
+  };
+
+  const activeStatusLabel = STATUS_FILTERS.find((item) => item.value === statusFilter)?.label || "All Tasks";
+  const hasAnyFilter = statusFilter !== "all" || !!debouncedSearch || Object.keys(columnFilters).length > 0;
+
+  const handleClearAll = () => {
+    setSearchQuery("");
+    setDebouncedSearch("");
+    setStatusFilter("all");
+    setColumnFilters({});
+    setPage(1);
+    setClearAllOpen(false);
+    toast.success("All filters cleared");
+  };
+
+  const columns = [
+    {
+      key: "title",
+      label: "Title",
+      sortable: true,
+      render: (task) => (
+        <div>
+          <div className="font-medium text-foreground">{task.title}</div>
+          {task.description && <div className="text-xs text-muted-foreground mt-0.5">{task.description}</div>}
+        </div>
+      ),
+    },
+    {
+      key: "assignedByName",
+      label: "Assigned By",
+      sortable: true,
+      filterable: true,
+      filterOptions: [{ label: "All", value: "" }, ...assignedByOptions],
+      render: (task) => <span className="text-sm text-muted-foreground">{task.assignedByName}</span>,
+    },
+    {
+      key: "status",
+      label: "Status",
+      sortable: true,
+      filterable: true,
+      filterOptions: [
+        { label: "All", value: "" },
+        { label: "Not Started", value: "NOT_STARTED" },
+        { label: "In Progress", value: "IN_PROGRESS" },
+        { label: "Pending Review", value: "PENDING_REVIEW" },
+        { label: "Needs Revision", value: "NEEDS_REVISION" },
+        { label: "Completed", value: "COMPLETED" },
+        { label: "Cancelled", value: "CANCELLED" },
+      ],
+      render: (task) => <TaskStatusBadge status={task.status} />,
+    },
+    {
+      key: "priority",
+      label: "Priority",
+      sortable: true,
+      filterable: true,
+      filterOptions: [
+        { label: "All", value: "" },
+        { label: "Low", value: "LOW" },
+        { label: "Medium", value: "MEDIUM" },
+        { label: "High", value: "HIGH" },
+      ],
+      render: (task) => <TaskPriorityBadge priority={task.priority} />,
+    },
+    {
+      key: "dueDate",
+      label: "Due Date",
+      sortable: true,
+      filterable: true,
+      filterOptions: [{ label: "All", value: "" }],
+      filterGroups: [
+        {
+          options: [
+            { label: "Overdue", value: "overdue" },
+            { label: "Today", value: "today" },
+            { label: "This Week", value: "this_week" },
+          ],
+        },
+      ],
+      render: (task) => <span className="text-sm">{task.dueDate ? format(new Date(task.dueDate), "MMM d, yyyy") : "-"}</span>,
+    },
+  ];
+
+  const rowActions = [
+    { label: "Mark In Progress", value: "mark_in_progress" },
+    { label: "Mark Completed", value: "mark_completed" },
+    { label: "Delete", value: "delete", variant: "destructive" },
+  ];
+
   if (!clientId) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
@@ -106,7 +370,6 @@ export default function AdminClientDetail() {
     );
   }
 
-  // Loading state
   if (clientLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -118,13 +381,10 @@ export default function AdminClientDetail() {
     );
   }
 
-  // Error state
   if (clientError || !client) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-        <p className="text-lg mb-4">
-          {clientError?.data?.message || "Client not found"}
-        </p>
+        <p className="text-lg mb-4">{clientError?.data?.message || "Client not found"}</p>
         <Link to="/admin/clients">
           <Button variant="outline"><ArrowLeft className="mr-2 h-4 w-4" /> Back to Clients</Button>
         </Link>
@@ -132,51 +392,8 @@ export default function AdminClientDetail() {
     );
   }
 
-  /* ================= FILTER ================= */
-
-  /* ================= ACTIONS ================= */
-
-  const handleQuickStatusChange = async (taskId, status) => {
-    try {
-      await updateTaskStatusMutation({
-        id: taskId,
-        status,
-      }).unwrap();
-
-      toast.success("Status updated");
-    } catch (err) {
-      toast.error("Failed to update status");
-    }
-  };
-
-  // const deleteTask = async (taskId) => {
-  //   try {
-  //     await deleteTaskMutation(taskId).unwrap();
-  //     toast.success("Task deleted");
-  //   } catch (err) {
-  //     toast.error("Delete failed");
-  //   }
-  // };
-
-  // const createTask = async (task) => {
-  //   try {
-  //     await createTaskMutation({
-  //       ...task,
-  //       clientId,
-  //     }).unwrap();
-
-  //     toast.success("Task created");
-  //     setCreateOpen(false);
-  //   } catch (err) {
-  //     toast.error("Create failed");
-  //   }
-  // };
-
-  /* ================= UI ================= */
-
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Back */}
       <Link
         to="/admin/clients"
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors no-underline"
@@ -184,7 +401,6 @@ export default function AdminClientDetail() {
         <ArrowLeft className="h-4 w-4" /> Back to Clients
       </Link>
 
-      {/* Header */}
       <div className="bg-card border border-border rounded-xl p-6">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
@@ -193,203 +409,130 @@ export default function AdminClientDetail() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-foreground">
-              {client.firstName + " " + client.lastName || "-"}
+                {getName(client)}
               </h1>
               <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
                 <Mail className="h-3.5 w-3.5" />
-               {client.email || "Unknown Client"}
+                {client.email || "Unknown Client"}
               </div>
-              {client.phone && (
-                <p className="text-sm text-muted-foreground mt-1">Phone: {client.phone}</p>
-              )}
+              {client.phone && <p className="text-sm text-muted-foreground mt-1">Phone: {client.phone}</p>}
             </div>
           </div>
 
-          <Button
-            onClick={() => setCreateOpen(true)}
-            className="gap-2"
-          >
+          <Button onClick={() => setCreateOpen(true)} className="gap-2">
             <Plus className="h-4 w-4" /> Create Task
           </Button>
         </div>
       </div>
 
-      {/* Progress */}
       <div className="bg-card border border-border rounded-xl p-6">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold text-foreground">Task Progress</h3>
           <span className="text-sm text-muted-foreground">
-            {completedCount} of {totalCount} completed (
-            {progressPercent}%)
+            {completedCount} of {totalCount} completed ({progressPercent}%)
           </span>
         </div>
         <Progress value={progressPercent} className="h-3" />
       </div>
 
-      {/* Filter */}
-      <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-foreground">
-          Tasks ({filteredTasks.length})
-        </h3>
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-[220px] max-w-md">
+          {/* <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /> */}
+          <Input
+            placeholder="Search tasks..."
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setPage(1);
+            }}
+            className="h-10 pl-9"
+          />
+        </div>
 
-        <Select
-          value={filterStatus}
-          onValueChange={setFilterStatus}
-        >
-          <SelectTrigger className="w-[150px]">
-            <SelectValue placeholder="Filter status" />
-          </SelectTrigger>
-          <SelectContent className="bg-popover z-50">
-            <SelectItem value="all">
-              All Status
-            </SelectItem>
-            <SelectItem value="NOT_STARTED">
-              Not Started
-            </SelectItem>
-            <SelectItem value="IN_PROGRESS">
-              In Progress
-            </SelectItem>
-            <SelectItem value="COMPLETED">
-              Completed
-            </SelectItem>
-          </SelectContent>
-        </Select>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant={statusFilter !== "all" ? "default" : "outline"}
+              className={cn(
+                "h-10 gap-2",
+                statusFilter !== "all"
+                  ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
+                  : "border-border text-foreground hover:bg-accent",
+              )}
+            >
+              <span>{activeStatusLabel}</span>
+              <ChevronDown className="h-3.5 w-3.5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="bg-popover z-50 min-w-[180px]">
+            {STATUS_FILTERS.map((item) => (
+              <DropdownMenuItem
+                key={item.value}
+                onClick={() => {
+                  setStatusFilter(item.value);
+                  setPage(1);
+                }}
+                className="flex items-center justify-between"
+              >
+                <span>{item.label}</span>
+                {statusFilter === item.value && <Check className="h-3.5 w-3.5 text-primary" />}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {hasAnyFilter && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-10 gap-1.5 text-muted-foreground hover:text-destructive"
+            onClick={() => setClearAllOpen(true)}
+          >
+            <X className="h-3.5 w-3.5" />
+            Clear All
+          </Button>
+        )}
       </div>
 
-      {/* Table */}
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead>Title</TableHead>
-              <TableHead>Assigned To</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Priority</TableHead>
-              <TableHead>Due Date</TableHead>
-              <TableHead className="w-12" />
-            </TableRow>
-          </TableHeader>
+      <DataTable
+        data={paginatedTasks}
+        columns={columns}
+        onSort={handleSort}
+        onRowAction={handleTaskAction}
+        rowActions={rowActions}
+        loading={tasksLoading}
+        getRowId={(row) => row.id}
+        columnFilters={columnFilters}
+        onColumnFilterChange={handleColumnFilterChange}
+        emptyMessage="No tasks found"
+        emptyDescription="Try adjusting your search or filters."
+      />
 
-          <TableBody>
-            {clientLoading ? (
-              <TableRow>
-                <TableCell
-                  colSpan={6}
-                  className="text-center py-12"
-                >
-                  Loading...
-                </TableCell>
-              </TableRow>
-            ) : filteredTasks.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={6}
-                  className="text-center py-12 text-muted-foreground"
-                >
-                  No tasks found.
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredTasks.map((task) => (
-                <TableRow key={task._id}>
-                  <TableCell>
-                    <div className="font-medium text-foreground">
-                      {task.title}
-                    </div>
-                    {task.description && (
-                      <div className="text-xs text-muted-foreground mt-0.5">
-                        {task.description}
-                      </div>
-                    )}
-                  </TableCell>
+      <PaginationControls
+        page={page}
+        totalPages={totalPages}
+        onPageChange={setPage}
+        totalItems={isServerPaginated ? taskPagination.totalItems || filtered.length : filtered.length}
+        pageSize={pageSize}
+        onPageSizeChange={setPageSize}
+      />
 
-                  <TableCell className="text-sm">
-                    {task.assignedTo?.email || "-"}
-                  </TableCell>
-
-                  <TableCell>
-                    <TaskStatusBadge
-                      status={task.status}
-                    />
-                  </TableCell>
-
-                  <TableCell>
-                    <TaskPriorityBadge
-                      priority={task.priority}
-                    />
-                  </TableCell>
-
-                  <TableCell className="text-sm">
-                    {task.dueDate
-                      ? format(
-                          new Date(task.dueDate),
-                          "MMM d, yyyy"
-                        )
-                      : "-"}
-                  </TableCell>
-
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8"
-                        >
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-
-                      <DropdownMenuContent align="end" className="bg-popover z-50">
-                        <DropdownMenuItem
-                          onClick={() =>
-                            handleQuickStatusChange(
-                              task._id,
-                              "IN_PROGRESS"
-                            )
-                          }
-                        >
-                          Mark In Progress
-                        </DropdownMenuItem>
-
-                        <DropdownMenuItem
-                          onClick={() =>
-                            handleQuickStatusChange(
-                              task._id,
-                              "COMPLETED"
-                            )
-                          }
-                        >
-                          Mark Completed
-                        </DropdownMenuItem>
-
-                        <DropdownMenuSeparator />
-
-                        <DropdownMenuItem
-                          className="text-destructive"
-                          onClick={() =>
-                            deleteTask(task._id)
-                          }
-                        >
-                          <Trash2 className="mr-2 h-3.5 w-3.5" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      {/* Create Dialog */}
-      <CreateTaskDialog
+      <CreateTaskWizard
         open={createOpen}
         onOpenChange={setCreateOpen}
-        onCreate={createTask}
-        prefillClientId={clientId}
+        onCreate={handleCreateTask}
+        defaultTarget="client"
+        clientList={createTaskClientList}
+      />
+
+      <ConfirmDialog
+        open={clearAllOpen}
+        onOpenChange={setClearAllOpen}
+        title="Clear All Filters?"
+        description="This will reset search, status, and table filters."
+        confirmLabel="Clear All"
+        variant="destructive"
+        onConfirm={handleClearAll}
       />
     </div>
   );

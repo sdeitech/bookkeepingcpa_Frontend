@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { useSelector } from "react-redux";
 import { selectCurrentUser } from "@/features/auth/authSlice";
 import { CreateTaskWizard } from "@/components/new_Admin/CreateTaskWizard";
+import StaffInviteModal from "@/components/new_Admin/StaffInviteModal";
 import { useState } from "react";
 
 const RECENT_ACTIVITY = [
@@ -23,11 +24,12 @@ const RECENT_ACTIVITY = [
 export default function AdminDashboardHome() {
   const { tasks, isLoading: tasksLoading } = useTasks();
   const { data: clientsData, isLoading: clientsLoading } = useGetAllClientsQuery();
-  const { data: staffData, isLoading: staffLoading } = useGetAllStaffQuery();
+  const { data: staffData, isLoading: staffLoading, refetch: refetchStaff } = useGetAllStaffQuery();
   const navigate = useNavigate();
   const today = startOfDay(new Date());
   const user = useSelector(selectCurrentUser);
   const [createOpen, setCreateOpen] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
 
   const clients = clientsData?.data || [];
   const staffMembers = staffData?.data || [];
@@ -50,6 +52,13 @@ export default function AdminDashboardHome() {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      <StaffInviteModal
+        open={inviteOpen}
+        onOpenChange={setInviteOpen}
+        mode="new"
+        onSuccess={refetchStaff}
+      />
+
       {/* Welcome */}
       <div>
         <h1 className="text-2xl font-bold text-foreground">Welcome back,{user?.first_name} {user?.last_name}</h1>
@@ -109,7 +118,7 @@ export default function AdminDashboardHome() {
             <Button onClick={() => setCreateOpen(true)} className="justify-start gap-2 h-11 bg-primary hover:bg-primary/90">
               <Plus className="w-4 h-4" /> Create Task
             </Button>
-            <Button variant="outline" onClick={() => navigate("/admin/staff")} className="justify-start gap-2 h-11">
+            <Button variant="outline" onClick={() => setInviteOpen(true)} className="justify-start gap-2 h-11">
               <UserPlus className="w-4 h-4" /> Add Staff
             </Button>
             <Button variant="outline" onClick={() => navigate("/admin/assign-clients")} className="justify-start gap-2 h-11">

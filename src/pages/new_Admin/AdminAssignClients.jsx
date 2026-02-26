@@ -32,6 +32,9 @@ import {
   Users,
   UserCheck,
   UserX,
+  UserPlus,
+  UserMinus,
+  RefreshCcw,
   Briefcase,
   Search,
   Check,
@@ -48,7 +51,7 @@ import {
   useUnassignClientMutation,
 } from "@/features/auth/authApi";
 
-const PAGE_SIZE = 6;
+const DEFAULT_PAGE_SIZE = 10;
 const CLIENT_FILTERS = [
   { label: "All Clients", value: "all" },
   { label: "Assigned", value: "assigned" },
@@ -69,6 +72,7 @@ export default function AdminAssignClients() {
   const [sortField, setSortField] = useState("name");
   const [sortAsc, setSortAsc] = useState(true);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
   const [assignModal, setAssignModal] = useState(null);
   const [selectedStaff, setSelectedStaff] = useState("");
@@ -76,13 +80,25 @@ export default function AdminAssignClients() {
 
   const [unassignClient, setUnassignClient] = useState(null);
   const [clearFiltersOpen, setClearFiltersOpen] = useState(false);
+  const apiFilters = useMemo(() => {
+    const filters = {
+      page,
+      limit: pageSize,
+      sortBy: sortField,
+      sortOrder: sortAsc ? "asc" : "desc",
+    };
+    if (debouncedSearch) filters.search = debouncedSearch;
+    if (filter !== "all") filters.assignment = filter;
+    if (staffFilter !== "all") filters.staffId = staffFilter;
+    return filters;
+  }, [page, pageSize, sortField, sortAsc, debouncedSearch, filter, staffFilter]);
 
   const {
     data: assignmentsData,
     isLoading: assignmentsLoading,
     isFetching: assignmentsFetching,
     refetch: refetchAssignments,
-  } = useGetClientsWithAssignmentsQuery();
+  } = useGetClientsWithAssignmentsQuery(apiFilters);
 
   const { data: staffData, isLoading: staffLoading } = useGetAllStaffQuery();
 
@@ -105,19 +121,32 @@ export default function AdminAssignClients() {
       }));
   }, [staffData]);
 
+  const assignmentsPayload = assignmentsData?.data;
+  const assignmentPagination = assignmentsPayload?.pagination || {};
+  const isServerPaginated =
+    Number.isFinite(assignmentPagination?.totalPages) &&
+    Number.isFinite(assignmentPagination?.totalItems);
+
   const clients = useMemo(() => {
-    const list = Array.isArray(assignmentsData?.data) ? assignmentsData.data : [];
+    const list = Array.isArray(assignmentsPayload)
+      ? assignmentsPayload
+      : Array.isArray(assignmentsPayload?.clients)
+        ? assignmentsPayload.clients
+        : Array.isArray(assignmentsPayload?.items)
+          ? assignmentsPayload.items
+          : Array.isArray(assignmentsPayload?.data)
+            ? assignmentsPayload.data
+            : [];
     return list.map((client) => ({
       id: client._id,
       name: getFullName(client.first_name, client.last_name, client.email),
       email: client.email || "-",
-      company: client.businessName || client.company || "-",
       assignedStaffId: client.assignedStaff?.staffId || null,
       assignedStaffName: client.assignedStaff?.staffName || null,
       status: client.active ? "active" : "inactive",
       raw: client,
     }));
-  }, [assignmentsData]);
+  }, [assignmentsPayload]);
 
   const workload = useMemo(() => {
     return staffMembers.map((staff) => ({
@@ -135,8 +164,7 @@ export default function AdminAssignClients() {
       const q = debouncedSearch.toLowerCase();
       result = result.filter((client) =>
         client.name.toLowerCase().includes(q) ||
-        client.email.toLowerCase().includes(q) ||
-        client.company.toLowerCase().includes(q)
+        client.email.toLowerCase().includes(q)
       );
     }
 
@@ -153,21 +181,28 @@ export default function AdminAssignClients() {
     return result;
   }, [clients, debouncedSearch, filter, staffFilter, sortField, sortAsc]);
 
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const totalPages = isServerPaginated
+    ? Math.max(1, assignmentPagination.totalPages || 1)
+    : Math.max(1, Math.ceil(filtered.length / pageSize));
+  const paginated = useMemo(
+    () => (isServerPaginated ? clients : filtered.slice((page - 1) * pageSize, page * pageSize)),
+    [clients, filtered, isServerPaginated, page, pageSize],
+  );
 
   useEffect(() => {
-    if (page > totalPages && totalPages > 0) {
+    if (page > totalPages) {
       setPage(totalPages);
-    }
-    if (totalPages === 0 && page !== 1) {
-      setPage(1);
     }
   }, [page, totalPages]);
 
-  const totalClients = clients.length;
-  const assignedClients = clients.filter((client) => client.assignedStaffId).length;
-  const unassignedClients = totalClients - assignedClients;
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, filter, staffFilter, pageSize, sortField, sortAsc]);
+
+  const serverStats = assignmentsPayload?.stats || assignmentsData?.stats || {};
+  const totalClients = serverStats.totalClients ?? (isServerPaginated ? assignmentPagination.totalItems || clients.length : clients.length);
+  const assignedClients = serverStats.assignedClients ?? clients.filter((client) => client.assignedStaffId).length;
+  const unassignedClients = serverStats.unassignedClients ?? Math.max(0, totalClients - assignedClients);
   const activeClientFilterLabel = CLIENT_FILTERS.find((item) => item.value === filter)?.label || "All Clients";
   const activeStaffFilterLabel = staffFilter === "all"
     ? "All Staff"
@@ -276,12 +311,6 @@ export default function AdminAssignClients() {
       render: (client) => <span className="text-sm text-muted-foreground">{client.email}</span>,
     },
     {
-      key: "company",
-      label: "Company",
-      sortable: true,
-      render: (client) => <span className="text-sm text-muted-foreground">{client.company}</span>,
-    },
-    {
       key: "assignedStaffName",
       label: "Assigned Staff",
       sortable: true,
@@ -317,35 +346,59 @@ export default function AdminAssignClients() {
       key: "actions",
       label: "Actions",
       render: (client) => (
-        <div className="flex items-center justify-end gap-2">
-          {!client.assignedStaffId ? (
-            <Button size="sm" onClick={() => openAssignModal(client)}>
-              Assign
-            </Button>
-          ) : (
-            <>
-              <Button size="sm" variant="outline" onClick={() => openAssignModal(client)}>
-                Reassign
-              </Button>
+        <div className=" flex w-[40px] items-center justify-end gap-2">
+          <div className="flex h-8 w-8 items-center justify-center">
+            {client.assignedStaffId ? (
               <Button
-                size="sm"
+                size="icon"
+                variant="outline"
+                className="h-8 w-8"
+                onClick={() => openAssignModal(client)}
+                title="Reassign"
+                aria-label="Reassign"
+              >
+                <RefreshCcw className="h-3.5 w-3.5" />
+              </Button>
+            ) : (
+              <span className="h-8 w-8" aria-hidden="true" />
+            )}
+          </div>
+          <div className="flex h-8 w-8 items-center justify-center">
+            {!client.assignedStaffId ? (
+              <Button
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => openAssignModal(client)}
+                title="Assign"
+                aria-label="Assign"
+              >
+                <UserPlus className="h-3.5 w-3.5" />
+              </Button>
+            ) : (
+              <Button
+                size="icon"
                 variant="destructive"
+                className="h-8 w-8"
                 onClick={() => setUnassignClient(client)}
                 disabled={unassignLoading}
+                title="Unassign"
+                aria-label="Unassign"
               >
-                Unassign
+                <UserMinus className="h-3.5 w-3.5" />
               </Button>
-            </>
-          )}
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-8 w-8"
-            onClick={() => navigate(`/admin/clients/${client.id}`)}
-            title="View Client"
-          >
-            <Eye className="h-4 w-4" />
-          </Button>
+            )}
+          </div>
+          <div className="flex h-8 w-8 items-center justify-center">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8"
+              onClick={() => navigate(`/admin/clients/${client.id}`)}
+              title="View Client"
+            >
+              <Eye className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       ),
     },
@@ -380,7 +433,7 @@ export default function AdminAssignClients() {
             <div className="relative flex-1 min-w-[200px] max-w-xs">
               {/* <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /> */}
               <Input
-                placeholder="Search name, email, company..."
+                placeholder="Search name or email..."
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
@@ -491,9 +544,10 @@ export default function AdminAssignClients() {
           <PaginationControls
             page={page}
             totalPages={totalPages}
-            totalItems={filtered.length}
-            pageSize={PAGE_SIZE}
+            totalItems={isServerPaginated ? totalClients : filtered.length}
+            pageSize={pageSize}
             onPageChange={setPage}
+            onPageSizeChange={setPageSize}
           />
         </div>
 
@@ -540,7 +594,7 @@ export default function AdminAssignClients() {
             <div>
               <Label className="text-xs text-muted-foreground">Client</Label>
               <p className="text-sm font-medium text-foreground mt-1">
-                {assignModal?.name} - {assignModal?.company}
+                {assignModal?.name}
               </p>
             </div>
             <div className="space-y-1.5">

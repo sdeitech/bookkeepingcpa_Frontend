@@ -21,8 +21,8 @@ import { format, isBefore, startOfDay, endOfWeek, startOfWeek, isToday } from "d
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-const CURRENT_STAFF = "Sarah Mitchell";
-const PAGE_SIZE = 8;
+
+const DEFAULT_PAGE_SIZE = 10;
 
 const VIEW_FILTERS = [
   { label: "All Tasks", value: "all" },
@@ -85,6 +85,7 @@ export default function AdminTasks() {
   const [sortKey, setSortKey] = useState("createdAt");
   const [sortDir, setSortDir] = useState("desc");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [columnFilters, setColumnFilters] = useState({});
   const [clearAllOpen, setClearAllOpen] = useState(false);
 
@@ -92,7 +93,7 @@ export default function AdminTasks() {
   const apiFilters = useMemo(() => {
     const filters = {
       page,
-      limit: PAGE_SIZE,
+      limit: DEFAULT_PAGE_SIZE,
       sortBy: sortKey || 'createdAt',
       sortOrder: sortDir || 'desc',
     };
@@ -138,7 +139,7 @@ export default function AdminTasks() {
   // Fetch tasks with filters
   const { tasks: apiTasks, filterOptions, pagination, isLoading, refetch, createTask, deleteTask, deleteTasks, reassignTasks } = useTasks(apiFilters);
   const { data: staffData } = useGetAllStaffQuery();
-  const staffMembers = staffData?.data || [];
+  const staffMembers = staffData?.data.staffMembers || [];
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
@@ -345,7 +346,11 @@ export default function AdminTasks() {
         { label: "Completed", value: "completed" },
         { label: "Blocked", value: "blocked" },
       ],
-      render: (row) => <TaskStatusBadge status={row.status} />,
+      render: (row) => (
+        <div className="flex justify-center">
+          <TaskStatusBadge status={row.status} />
+        </div>
+      ),
     },
     {
       key: "priority",
@@ -359,7 +364,11 @@ export default function AdminTasks() {
         { label: "High", value: "high" },
         { label: "Urgent", value: "urgent" },
       ],
-      render: (row) => <TaskPriorityBadge priority={row.priority} />,
+      render: (row) => (
+        <div className="flex justify-center">
+          <TaskPriorityBadge priority={row.priority} />
+        </div>
+      ),
     },
     {
       key: "dueDate",
@@ -552,6 +561,7 @@ export default function AdminTasks() {
           onPageChange={setPage}
           totalItems={pagination.totalItems}
           pageSize={pagination.itemsPerPage}
+          showCount={false}
         />
       )}
 
