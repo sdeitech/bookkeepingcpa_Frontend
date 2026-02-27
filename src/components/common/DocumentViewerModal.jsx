@@ -30,6 +30,7 @@ export function DocumentViewerModal({
     // Remove /api from baseUrl if present, and remove leading slash from fileUrl
     const baseUrl = config.api.baseUrl.replace('/api', '');
     const cleanPath = fileUrl.startsWith('/') ? fileUrl : `/${fileUrl}`;
+    console.log("Constructed file URL:", `${baseUrl}${cleanPath}`);
     
     return `${baseUrl}${cleanPath}`;
   };
