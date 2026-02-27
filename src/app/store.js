@@ -16,6 +16,7 @@ import { quickbooksApi } from '../features/quickbooks/quickbooksApi';
 import { questionnaireApi } from '../features/questionnaire/questionnaireApi';
 import { tasksApi } from '@/features/tasks/tasksApi';
 import { taskTemplateApi } from '@/features/tasks/taskTemplateApi';
+import { taskDocumentApi } from '@/features/taskDocuments/taskDocumentApi';
 
 export const store = configureStore({
   reducer: {
@@ -38,6 +39,7 @@ export const store = configureStore({
     [questionnaireApi.reducerPath]: questionnaireApi.reducer,
     [tasksApi.reducerPath]: tasksApi.reducer,
     [taskTemplateApi.reducerPath]: taskTemplateApi.reducer,
+    [taskDocumentApi.reducerPath]: taskDocumentApi.reducer,
    
   },
 
@@ -67,7 +69,8 @@ export const store = configureStore({
       .concat(quickbooksApi.middleware)
       .concat(questionnaireApi.middleware)
       .concat(tasksApi.middleware)
-      .concat(taskTemplateApi.middleware),
+      .concat(taskTemplateApi.middleware)
+      .concat(taskDocumentApi.middleware),
 });
 
 // optional, but required for refetchOnFocus/refetchOnReconnect behaviors
