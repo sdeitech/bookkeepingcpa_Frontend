@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { useGetTaskByIdQuery, useUpdateTaskMutation, useDeleteTaskMutation, useUpdateTaskStatusMutation, useUploadDocumentMutation } from "@/features/tasks/tasksApi";
+import { useGetTaskDocumentsQuery, useApproveDocumentMutation, useRejectDocumentMutation } from "@/features/taskDocuments/taskDocumentApi";
 import { selectCurrentUser } from "@/features/auth/authSlice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DocumentViewerModal } from "@/components/common/DocumentViewerModal";
-import { ArrowLeft, Edit, Trash2, Save, X, Upload, FileText, Download, CheckCircle, Clock, AlertCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, Save, X, Upload, FileText, Download, CheckCircle, Clock, AlertCircle, Loader2, Check, XCircle } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -36,6 +37,12 @@ export default function AdminTaskDetail() {
   const [deleteTask] = useDeleteTaskMutation();
   const [updateTaskStatus] = useUpdateTaskStatusMutation();
   const [uploadDocument] = useUploadDocumentMutation();
+  
+  // Document queries and mutations
+  const { data: documentsData, refetch: refetchDocuments } = useGetTaskDocumentsQuery(taskId);
+  const documents = documentsData?.data || [];
+  const [approveDocument] = useApproveDocumentMutation();
+  const [rejectDocument] = useRejectDocumentMutation();
 
   // Edit mode state
   const [editTitle, setEditTitle] = useState("");
@@ -48,6 +55,8 @@ export default function AdminTaskDetail() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [uploadingDocType, setUploadingDocType] = useState(null);
   const [viewingDocument, setViewingDocument] = useState(null);
+  const [rejectingDocId, setRejectingDocId] = useState(null);
+  const [rejectionReason, setRejectionReason] = useState("");
   const [uploadProgress, setUploadProgress] = useState(0);
 
   // Initialize edit state when task loads or edit mode changes
@@ -274,6 +283,9 @@ export default function AdminTaskDetail() {
             duration: 5000,
           });
         }
+        
+        // Refetch documents
+        refetchDocuments();
       }, 300);
     } catch (error) {
       clearInterval(progressInterval);
@@ -290,8 +302,56 @@ export default function AdminTaskDetail() {
   };
 
   const getFilesForDocType = (docType) => {
-    if (!task?.documents) return [];
-    return task.documents.filter((doc) => doc.documentType === docType);
+    return documents.filter((doc) => doc.documentType === docType);
+  };
+  
+  const handleApproveDocument = async (documentId) => {
+    try {
+      await approveDocument({ documentId, reviewNotes: '' }).unwrap();
+      toast.success("Document approved successfully");
+      refetch();
+      refetchDocuments();
+    } catch (error) {
+      toast.error("Failed to approve document");
+      console.error("Approve error:", error);
+    }
+  };
+  
+  const handleRejectDocument = async (documentId) => {
+    if (!rejectionReason.trim()) {
+      toast.error("Please provide a rejection reason");
+      return;
+    }
+    
+    try {
+      await rejectDocument({ documentId, rejectionReason }).unwrap();
+      toast.success("Document rejected successfully");
+      setRejectingDocId(null);
+      setRejectionReason("");
+      refetch();
+      refetchDocuments();
+    } catch (error) {
+      toast.error("Failed to reject document");
+      console.error("Reject error:", error);
+    }
+  };
+  
+  const getDocumentStatusBadge = (reviewStatus) => {
+    const statusConfig = {
+      pending_review: { label: "Pending Review", className: "bg-yellow-100 text-yellow-800", icon: Clock },
+      approved: { label: "Approved", className: "bg-green-100 text-green-800", icon: CheckCircle },
+      rejected: { label: "Rejected", className: "bg-red-100 text-red-800", icon: XCircle }
+    };
+    
+    const config = statusConfig[reviewStatus] || statusConfig.pending_review;
+    const Icon = config.icon;
+    
+    return (
+      <span className={cn("inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium", config.className)}>
+        <Icon className="h-3 w-3" />
+        {config.label}
+      </span>
+    );
   };
 
   const getFileIcon = (fileName, mimeType) => {
@@ -544,38 +604,106 @@ export default function AdminTaskDetail() {
                             {files.map((file) => (
                               <div
                                 key={file._id}
-                                className="flex items-center justify-between p-2 bg-white rounded border border-gray-200 hover:border-primary/50 transition-colors"
+                                className="flex flex-col gap-2 p-3 bg-white rounded border border-gray-200 hover:border-primary/50 transition-colors"
                               >
-                              <div className="flex items-center gap-2 flex-1 min-w-0">
-                                  {getFileIcon(file.fileName, file.mimeType)}
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-sm text-foreground truncate">
-                                      {file.fileName || "Document"}
-                                    </p>
-                                    <div className="flex flex-wrap items-center gap-1 sm:gap-2 text-xs text-muted-foreground">
-                                      {file.fileSize && (
-                                        <>
-                                          <span>{formatFileSize(file.fileSize)}</span>
-                                          <span className="hidden sm:inline">•</span>
-                                        </>
-                                      )}
-                                      <span>
-                                        {file.uploadedAt
-                                          ? format(new Date(file.uploadedAt), "MMM dd, yyyy")
-                                          : ""}
-                                      </span>
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                                    {getFileIcon(file.originalName || file.fileName, file.mimeType)}
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm text-foreground truncate">
+                                        {file.originalName || file.fileName || "Document"}
+                                      </p>
+                                      <div className="flex flex-wrap items-center gap-1 sm:gap-2 text-xs text-muted-foreground">
+                                        {file.fileSize && (
+                                          <>
+                                            <span>{formatFileSize(file.fileSize)}</span>
+                                            <span className="hidden sm:inline">•</span>
+                                          </>
+                                        )}
+                                        <span>
+                                          {file.createdAt || file.uploadedAt
+                                            ? format(new Date(file.createdAt || file.uploadedAt), "MMM dd, yyyy")
+                                            : ""}
+                                        </span>
+                                      </div>
                                     </div>
                                   </div>
+                                  <div className="flex items-center gap-2">
+                                    {getDocumentStatusBadge(file.reviewStatus)}
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => setViewingDocument(file)}
+                                      className="gap-2 flex-shrink-0"
+                                    >
+                                      <Download className="h-4 w-4" />
+                                      <span className="hidden sm:inline">View</span>
+                                    </Button>
+                                  </div>
                                 </div>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => setViewingDocument(file)}
-                                  className="gap-2 flex-shrink-0"
-                                >
-                                  <Download className="h-4 w-4" />
-                                  <span className="hidden sm:inline">View</span>
-                                </Button>
+                                
+                                {/* Rejection Notes */}
+                                {file.reviewStatus === 'rejected' && file.reviewNotes && (
+                                  <div className="pl-6 text-xs text-red-600 bg-red-50 p-2 rounded">
+                                    <strong>Rejection Reason:</strong> {file.reviewNotes}
+                                  </div>
+                                )}
+                                
+                                {/* Approve/Reject Buttons (Staff/Admin only) */}
+                                {(isAdmin || isStaff) && file.reviewStatus !== 'approved' && (
+                                  <div className="pl-6 flex items-center gap-2">
+                                    {rejectingDocId === file._id ? (
+                                      <div className="flex items-center gap-2 flex-1">
+                                        <Input
+                                          placeholder="Enter rejection reason..."
+                                          value={rejectionReason}
+                                          onChange={(e) => setRejectionReason(e.target.value)}
+                                          className="flex-1"
+                                          autoFocus
+                                        />
+                                        <Button
+                                          size="sm"
+                                          variant="destructive"
+                                          onClick={() => handleRejectDocument(file._id)}
+                                        >
+                                          <XCircle className="h-4 w-4 mr-1" />
+                                          Reject
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          onClick={() => {
+                                            setRejectingDocId(null);
+                                            setRejectionReason("");
+                                          }}
+                                        >
+                                          Cancel
+                                        </Button>
+                                      </div>
+                                    ) : (
+                                      <>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                          onClick={() => handleApproveDocument(file._id)}
+                                        >
+                                          <Check className="h-4 w-4 mr-1" />
+                                          Approve
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                          onClick={() => setRejectingDocId(file._id)}
+                                        >
+                                          <XCircle className="h-4 w-4 mr-1" />
+                                          Reject
+                                        </Button>
+                                      </>
+                                    )}
+                                  </div>
+                                )}
                               </div>
                             ))}
                           </div>
