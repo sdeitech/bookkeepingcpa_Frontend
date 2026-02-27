@@ -106,7 +106,17 @@ export const tasksApi = createApi({
       }),
       invalidatesTags: (result, error, { taskId }) => ['Tasks', { type: "Task", id: taskId }],
     }),
-    
+
+    getAllDocuments: builder.query({
+      query: (params) => ({
+        url: "/all-task-documents",
+        method: "GET",
+        params, // page, limit, search, etc (optional)
+      }),
+      transformResponse: (response) => response.data || [],
+      providesTags: ["Documents"],
+    }),
+
 
 
   }),
@@ -123,4 +133,5 @@ export const {
   useApproveTaskMutation,
   useRejectTaskMutation,
   useRequestHelpMutation,
+  useGetAllDocumentsQuery,
 } = tasksApi;

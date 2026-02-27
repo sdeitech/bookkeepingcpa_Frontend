@@ -51,6 +51,7 @@ import StaffCompleteInvite from './pages/staff/StaffCompleteInvite';
 import AdminLayout from './pages/new_Admin/AdminLayout';
 import AdminDashboardHome from './pages/new_Admin/AdminDashboardHome';
 import AdminStaff from './pages/new_Admin/AdminStaff';
+import AdminStaffDetail from './pages/new_Admin/AdminStaffDetail';
 import AdminDocuments from './pages/new_Admin/AdminDocuments';
 import AdminMessages from './pages/new_Admin/AdminMessages';
 import AdminSettings from './pages/new_Admin/AdminSettings';
@@ -174,6 +175,7 @@ function App() {
             <Route path="assign-clients" element={<AdminAssignClients />} />
             <Route path="clients/:clientId" element={<AdminClientDetail />} />
             <Route path="staff" element={<AdminStaff />} />
+            <Route path="staff/:staffId" element={<AdminStaffDetail />} />
             <Route path="documents" element={<AdminDocuments />} />
             <Route path="messages" element={<AdminMessages />} />
             <Route path="settings" element={<AdminSettings />} />

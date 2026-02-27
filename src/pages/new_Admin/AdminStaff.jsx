@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { DataTable } from "@/components/common/DataTable";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import StaffInviteModal from "@/components/new_Admin/StaffInviteModal";
+import { useNavigate } from "react-router-dom";
 
 
 const STATUS_FILTERS = [
@@ -45,6 +46,7 @@ const statusBadgeClass = {
 const DEFAULT_PAGE_SIZE = 10;
 
 export default function AdminStaff() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -160,7 +162,7 @@ export default function AdminStaff() {
 
   const handleStaffAction = async (action, row) => {
     if (action === "view") {
-      toast.info("View staff details coming soon");
+      navigate(`/admin/staff/${row._id}`);
       return;
     }
     if (action === "edit") {

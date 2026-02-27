@@ -138,7 +138,13 @@ export const authApi = createApi({
     }),
     
     getStaffClients: builder.query({
-      query: (staffId) => `/admin/staff-clients/${staffId}`,
+      query: ({ staffId, ...params } = {}) => {
+        const filteredParams = Object.fromEntries(
+          Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== ""),
+        );
+        const queryString = new URLSearchParams(filteredParams).toString();
+        return `/admin/staff-clients/${staffId}${queryString ? `?${queryString}` : ""}`;
+      },
     }),
     
     getClientsWithAssignments: builder.query({

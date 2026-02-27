@@ -37,7 +37,7 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
   const [priority, setPriority] = useState("MEDIUM");
   const [dueDate, setDueDate] = useState("");
   const [description, setDescription] = useState("");
-  
+
   // NEW: Document types state
   const [selectedDocTypes, setSelectedDocTypes] = useState([]); // Array of {type, isCustom, isRequired}
   const [customDocInput, setCustomDocInput] = useState("");
@@ -61,7 +61,7 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
   const templates = templatesData?.data?.templates || [];
   const clientsPayload = clientsData?.data;
   const staffPayload = staffData?.data;
-  const clients =clientsPayload || []
+  const clients = clientsPayload || []
   const staffMembers = staffPayload?.staffMembers || [];
 
   const isActiveStaff = (staff) => {
@@ -91,10 +91,10 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
       return clientList
         .filter(isActiveClient)
         .map(c => ({
-        id: c._id || c.id,
-        name: `${c.first_name || c.firstName || ""} ${c.last_name || c.lastName || ""}`.trim() || c.name || "Unnamed Client",
-        email: c.email,
-      }));
+          id: c._id || c.id,
+          name: `${c.first_name || c.firstName || ""} ${c.last_name || c.lastName || ""}`.trim() || c.name || "Unnamed Client",
+          email: c.email,
+        }));
     }
     return activeClients.map(c => ({
       id: c._id || c.id,
@@ -138,7 +138,7 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
       const exists = prev.find(t => t._id === template._id);
       if (exists) {
         // Remove template and its document type
-        setSelectedDocTypes(prevDocs => 
+        setSelectedDocTypes(prevDocs =>
           prevDocs.filter(doc => doc.type !== template.documentType)
         );
         return prev.filter(t => t._id !== template._id);
@@ -159,11 +159,10 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
     );
   };
 
-  const addCustomDocType = () => {
+  const addCustomDocType = (isRequired = true) => {
     const trimmed = customDocInput.trim();
     if (!trimmed) return;
-    
-    // Check for duplicates
+
     if (selectedDocTypes.find(doc => doc.type.toLowerCase() === trimmed.toLowerCase())) {
       toast.error("Document type already added");
       return;
@@ -171,8 +170,9 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
 
     setSelectedDocTypes(prev => [
       ...prev,
-      { type: trimmed, isCustom: true, isRequired: true }
+      { type: trimmed, isCustom: true, isRequired }
     ]);
+
     setCustomDocInput("");
   };
 
@@ -258,7 +258,7 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
     }
   };
 
-  const canProceedStep3 = category === "custom" ? customTitle.trim() : 
+  const canProceedStep3 = category === "custom" ? customTitle.trim() :
     (category === "documents" ? selectedDocTypes.length > 0 : selectedTemplates.length > 0);
 
   const canCreate = () => {
@@ -385,7 +385,7 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
                       {categoryTemplates.map((template) => {
                         const isSelected = selectedTemplates.find(t => t._id === template._id);
                         const docType = selectedDocTypes.find(d => d.type === template.documentType);
-                        
+
                         return (
                           <label
                             key={template._id}
@@ -429,54 +429,77 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
 
                     {/* Custom Document Type Input */}
                     <div className="pt-2 border-t border-border">
-                      <Label className="text-sm font-medium">Add Custom Document Type</Label>
+                      <Label className="text-sm font-medium">
+                        Add Custom Document Type
+                      </Label>
+
                       <div className="flex gap-2 mt-2">
                         <Input
                           value={customDocInput}
                           onChange={(e) => setCustomDocInput(e.target.value)}
-                          onKeyPress={(e) => {
-                            if (e.key === 'Enter') {
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
                               e.preventDefault();
-                              addCustomDocType();
+                              addCustomDocType(true);
                             }
                           }}
                           placeholder="e.g., Rental Income Proof"
                           className="flex-1"
                         />
-                        <Button type="button" onClick={addCustomDocType} size="sm">
+
+                        {/* Required / Optional selector */}
+                        <Select defaultValue="required">
+                          <SelectTrigger className="w-[120px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="required">Required</SelectItem>
+                            <SelectItem value="optional">Optional</SelectItem>
+                          </SelectContent>
+                        </Select>
+
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => addCustomDocType(true)}
+                        >
                           Add
                         </Button>
                       </div>
                     </div>
 
                     {/* Selected Document Types as Chips */}
-                    {selectedDocTypes.length > 0 && (
-                      <div className="pt-2">
-                        <Label className="text-sm font-medium">Selected Documents ({selectedDocTypes.length})</Label>
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          {selectedDocTypes.map((doc) => (
-                            <div
-                              key={doc.type}
-                              className={cn(
-                                "flex items-center gap-2 px-3 py-1.5 rounded-full text-sm border",
-                                doc.isCustom ? "bg-purple-50 border-purple-200" : "bg-accent border-border"
-                              )}
-                            >
-                              <span className="font-medium">{doc.type}</span>
-                              <span className="text-xs text-muted-foreground">
-                                ({doc.isRequired ? "Required" : "Optional"})
-                              </span>
-                              <button
-                                onClick={() => removeDocType(doc.type)}
-                                className="ml-1 hover:text-destructive"
-                              >
-                                <X className="h-3 w-3" />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
+                    {selectedDocTypes.map((doc) => (
+                      <div
+                        key={doc.type}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm border bg-accent border-border"
+                      >
+                        <span className="font-medium">{doc.type}</span>
+
+                        {/* Required/Optional selector */}
+                        <Select
+                          value={doc.isRequired ? "required" : "optional"}
+                          onValueChange={(val) =>
+                            toggleDocTypeRequired(doc.type, val === "required")
+                          }
+                        >
+                          <SelectTrigger className="h-6 w-[95px] text-xs border-none bg-transparent p-0">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="required">Required</SelectItem>
+                            <SelectItem value="optional">Optional</SelectItem>
+                          </SelectContent>
+                        </Select>
+
+                        <button
+                          onClick={() => removeDocType(doc.type)}
+                          className="hover:text-destructive"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
                       </div>
-                    )}
+                    ))}
                   </>
                 ) : (
                   // OTHER CATEGORIES: Single select with radio buttons
@@ -573,7 +596,7 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
                   {taskTarget === "staff" ? "Staff Task" : "Client Task"}
                 </span>
               </div>
-              
+
               {/* Show selected document types for document upload tasks */}
               {category === "documents" && selectedDocTypes.length > 0 && (
                 <div className="mt-2 pt-2 border-t border-border/50">
@@ -584,8 +607,8 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
                         key={doc.type}
                         className={cn(
                           "text-xs px-2 py-0.5 rounded-full",
-                          doc.isRequired 
-                            ? "bg-primary/10 text-primary" 
+                          doc.isRequired
+                            ? "bg-primary/10 text-primary"
                             : "bg-muted text-muted-foreground"
                         )}
                       >

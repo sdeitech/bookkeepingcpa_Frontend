@@ -104,14 +104,14 @@ export default function AdminAssignClients() {
 
   const [assignClient, { isLoading: assignLoading }] = useAssignClientMutation();
   const [unassignClientMutation, { isLoading: unassignLoading }] = useUnassignClientMutation();
-
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 300);
     return () => clearTimeout(timer);
   }, [search]);
 
   const staffMembers = useMemo(() => {
-    const list = Array.isArray(staffData?.data) ? staffData.data : [];
+    const list = staffData?.data?.staffMembers || [];
+    console.log("Staff Members:", list);
     return list
       .filter((member) => member.active)
       .map((member) => ({
