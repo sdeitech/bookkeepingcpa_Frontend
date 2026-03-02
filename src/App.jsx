@@ -52,16 +52,17 @@ import AdminLayout from './pages/new_Admin/AdminLayout';
 import AdminDashboardHome from './pages/new_Admin/AdminDashboardHome';
 import AdminStaff from './pages/new_Admin/AdminStaff';
 import AdminStaffDetail from './pages/new_Admin/AdminStaffDetail';
-import AdminDocuments from './pages/new_Admin/AdminDocuments';
+// import AdminDocuments from './pages/new_Admin/AdminDocuments'; // moved to common DocumentsPage with role-based rendering
 import AdminMessages from './pages/new_Admin/AdminMessages';
 import AdminSettings from './pages/new_Admin/AdminSettings';
 import AdminTasks from './pages/new_Admin/AdminTasks';
-import AdminClients from './pages/new_Admin/AdminClients';
+// import AdminClients from './pages/new_Admin/AdminClients';
 import AdminClientDetail from './pages/new_Admin/AdminClientDetail';
 import AdminTaskDetail from './pages/new_Admin/AdminTaskDetail';
 import { Profile } from './components/common/profile';
 import AdminAssignClients from './pages/new_Admin/AdminAssignClients';
 import ErrorBoundary from './components/common/ErrorBoundary';
+import DocumentsPage from './pages/common/DocumentsPage';
 
 
 // import Questionnaire from './pages/questionnaire/Questionnaire';
@@ -135,6 +136,7 @@ function App() {
           >
             <Route path="quickbooks" element={<QuickBooksData />} />
             <Route path="tasks" element={<ClientTasks />} />
+            <Route path="documents" element={<DocumentsPage role="client" />} />
             <Route path="tasks/:taskId" element={
               <ErrorBoundary fallbackMessage="Unable to load task details. The task may not exist or there was an error loading it." showHomeButton>
                 <AdminTaskDetail />
@@ -176,7 +178,7 @@ function App() {
             <Route path="clients/:clientId" element={<AdminClientDetail />} />
             <Route path="staff" element={<AdminStaff />} />
             <Route path="staff/:staffId" element={<AdminStaffDetail />} />
-            <Route path="documents" element={<AdminDocuments />} />
+            <Route path="documents" element={<DocumentsPage role="admin" />} />
             <Route path="messages" element={<AdminMessages />} />
             <Route path="settings" element={<AdminSettings />} />
             <Route path='profile' element={<Profile />} />

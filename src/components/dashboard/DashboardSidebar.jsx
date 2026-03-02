@@ -6,7 +6,7 @@ import { cn } from "../../lib/utils";
 const navItems = [
   { icon: Home, label: "Home", href: "/new-dashboard" },
   { icon: CheckSquare, label: "My Tasks", href: "/new-dashboard/tasks" },
-  { icon: FileText, label: "Documents", href: "/dashboard/documents" },
+  { icon: FileText, label: "Documents", href: "/new-dashboard/documents" },
   { icon: CreditCard, label: "Billing", href: "/dashboard/billing" },
   { icon: HelpCircle, label: "Support", href: "/dashboard/support" },
   { icon: BookOpen, label: "QuickBooks Data", href: "/new-dashboard/quickbooks" },
