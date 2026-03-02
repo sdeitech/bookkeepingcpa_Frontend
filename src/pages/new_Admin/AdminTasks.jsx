@@ -416,7 +416,7 @@ export default function AdminTasks() {
             <ul className="mt-1 space-y-0.5 text-sm text-destructive/80">
               {overdueTasks.slice(0, 3).map((task) => (
                 <li key={task.id}>
-                  • {task.title} - {task.clientName} (due {format(new Date(task.dueDate), "MMM d")})
+                  {task.title} - {task.clientName} (due {format(new Date(task.dueDate), "MMM d")})
                 </li>
               ))}
               {overdueTasks.length > 3 && <li>...and {overdueTasks.length - 3} more</li>}

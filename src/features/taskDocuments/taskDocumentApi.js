@@ -23,6 +23,12 @@ export const taskDocumentApi = createApi({
       ]
     }),
 
+    getTaskDocumentUrl: builder.query({
+      query: (documentId) => ({
+        url: `/documents/${documentId}/url`,
+        method: "GET",
+      }),
+    }),
     // Approve document or undo approval
     approveDocument: builder.mutation({
       query: ({ documentId, reviewNotes, undo = false }) => ({
@@ -56,10 +62,9 @@ export const taskDocumentApi = createApi({
         method: 'DELETE'
       }),
       invalidatesTags: (result, error, documentId) => [
-        { type: 'TaskDocument' },
-        { type: 'Task' }
+        { type: 'TaskDocument' }
       ]
-    })
+    }),
   })
 });
 
@@ -67,5 +72,7 @@ export const {
   useGetTaskDocumentsQuery,
   useApproveDocumentMutation,
   useRejectDocumentMutation,
-  useDeleteDocumentMutation
+  useDeleteDocumentMutation,
+  useGetTaskDocumentUrlQuery,
+  useLazyGetTaskDocumentUrlQuery,
 } = taskDocumentApi;
