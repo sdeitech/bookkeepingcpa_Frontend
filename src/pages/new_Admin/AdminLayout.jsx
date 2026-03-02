@@ -1,6 +1,6 @@
 import { Outlet, useLocation } from "react-router-dom";
 import { AdminSidebar } from "@/components/new_Admin/AdminSidebar";
-import { NotificationPanel } from "@/components/Notifications/Notification";
+import NotificationBell from "@/components/notifications/NotificationBell";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -45,7 +45,7 @@ export default function AdminLayout() {
             </div>
           </div> */}
           <div className="flex items-center gap-2 shrink-0">
-            <NotificationPanel />
+            <NotificationBell />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-2 rounded-full border border-border bg-background px-2 py-1 pr-3 hover:bg-accent/50 transition-colors whitespace-nowrap">

@@ -3,6 +3,7 @@ import { useParams, useNavigate, useSearchParams, useLocation } from "react-rout
 import { useSelector } from "react-redux";
 import { useGetTaskByIdQuery, useUpdateTaskMutation, useDeleteTaskMutation, useUpdateTaskStatusMutation, useUploadDocumentMutation } from "@/features/tasks/tasksApi";
 import { useGetTaskDocumentsQuery, useApproveDocumentMutation, useRejectDocumentMutation } from "@/features/taskDocuments/taskDocumentApi";
+import { useGetTaskMessagesQuery, useSendMessageMutation, useMarkTaskMessagesAsReadMutation } from "@/features/messages/messageApi";
 import { selectCurrentUser } from "@/features/auth/authSlice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,10 +12,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DocumentViewerModal } from "@/components/common/DocumentViewerModal";
-import { ArrowLeft, Edit, Trash2, Save, X, Upload, FileText, Download, CheckCircle, Clock, AlertCircle, Loader2, Check, XCircle } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, Save, X, Upload, FileText, Download, CheckCircle, Clock, AlertCircle, Loader2, Check, XCircle, MessageCircle } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import MessageList from "@/components/messages/MessageList";
+import MessageInput from "@/components/messages/MessageInput";
 
 export default function StaffTaskDetail() {
   const { taskId } = useParams();
@@ -41,6 +44,12 @@ export default function StaffTaskDetail() {
   const [approveDocument] = useApproveDocumentMutation();
   const [rejectDocument] = useRejectDocumentMutation();
 
+  // Message queries and mutations
+  const { data: messagesData, isLoading: loadingMessages, refetch: refetchMessages } = useGetTaskMessagesQuery({ taskId, page: 1, limit: 10 });
+  const messages = messagesData?.data?.messages || [];
+  const [sendMessage, { isLoading: sendingMessage }] = useSendMessageMutation();
+  const [markAsRead] = useMarkTaskMessagesAsReadMutation();
+
   // Edit mode state
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
@@ -66,6 +75,22 @@ export default function StaffTaskDetail() {
       setEditStatus(task.status || "NOT_STARTED");
     }
   }, [task, isEditMode]);
+
+  // Poll for new messages every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refetchMessages();
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [refetchMessages]);
+
+  // Mark messages as read when viewing task
+  useEffect(() => {
+    if (taskId && messages.length > 0) {
+      markAsRead(taskId);
+    }
+  }, [taskId, messages.length, markAsRead]);
 
   // Status and priority options
   const statusOptions = [
@@ -397,6 +422,10 @@ export default function StaffTaskDetail() {
 
   const assignedToId = task?.assignedTo?._id || task?.assignedTo?.id || task?.assignedTo;
   const canUpload = String(assignedToId || "") === String(user?._id || "");
+
+  const handleSendMessage = async (message) => {
+    await sendMessage({ taskId, message }).unwrap();
+  };
 
   if (isLoading) {
     return (
@@ -787,6 +816,25 @@ export default function StaffTaskDetail() {
             ) : (
               <p className="text-sm text-muted-foreground">No activity history yet.</p>
             )}
+          </div>
+
+          {/* Messages Section */}
+          <div className="bg-card border border-border rounded-xl p-4 sm:p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <MessageCircle className="h-5 w-5 text-primary" />
+              <h2 className="text-lg font-semibold text-foreground">Messages</h2>
+            </div>
+            <div className="space-y-4">
+              <MessageList
+                messages={messages}
+                isLoading={loadingMessages}
+                currentUserId={user?._id}
+              />
+              <MessageInput
+                onSendMessage={handleSendMessage}
+                isLoading={sendingMessage}
+              />
+            </div>
           </div>
         </div>
 

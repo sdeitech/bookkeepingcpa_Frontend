@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
-import NotificationPanel from "../Notifications/Notification";
+import NotificationBell from "../notifications/NotificationBell";
 import { useDispatch } from "react-redux";
 
 export function StaffHeader({ title,user,logout }) {
@@ -34,11 +34,7 @@ export function StaffHeader({ title,user,logout }) {
           />
         </div>
 
-        {/* <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full" />
-        </Button> */}
-        <NotificationPanel/>
+        <NotificationBell />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
