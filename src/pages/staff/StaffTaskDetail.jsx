@@ -299,7 +299,7 @@ export default function StaffTaskDetail() {
   
   const handleApproveDocument = async (documentId) => {
     try {
-      await approveDocument({ documentId, reviewNotes: '' }).unwrap();
+      await approveDocument({ documentId, reviewNotes: '', undo: false }).unwrap();
       toast.success("Document approved successfully");
       refetch();
       refetchDocuments();
@@ -316,7 +316,7 @@ export default function StaffTaskDetail() {
     }
     
     try {
-      await rejectDocument({ documentId, rejectionReason }).unwrap();
+      await rejectDocument({ documentId, rejectionReason, undo: false }).unwrap();
       toast.success("Document rejected successfully");
       setRejectingDocId(null);
       setRejectionReason("");
@@ -325,6 +325,30 @@ export default function StaffTaskDetail() {
     } catch (error) {
       toast.error("Failed to reject document");
       console.error("Reject error:", error);
+    }
+  };
+  
+  const handleUndoApproval = async (documentId) => {
+    try {
+      await approveDocument({ documentId, reviewNotes: '', undo: true }).unwrap();
+      toast.success("Document approval undone");
+      refetch();
+      refetchDocuments();
+    } catch (error) {
+      toast.error("Failed to undo approval");
+      console.error("Undo approval error:", error);
+    }
+  };
+  
+  const handleUndoRejection = async (documentId) => {
+    try {
+      await rejectDocument({ documentId, rejectionReason: '', undo: true }).unwrap();
+      toast.success("Document rejection undone");
+      refetch();
+      refetchDocuments();
+    } catch (error) {
+      toast.error("Failed to undo rejection");
+      console.error("Undo rejection error:", error);
     }
   };
   
@@ -640,10 +664,11 @@ export default function StaffTaskDetail() {
                                   </div>
                                 )}
                                 
-                                {/* Approve/Reject Buttons (Staff only) */}
-                                {file.reviewStatus !== 'approved' && (
-                                  <div className="pl-6 flex items-center gap-2">
-                                    {rejectingDocId === file._id ? (
+                                {/* Review Action Buttons (Staff only) */}
+                                <div className="pl-6 flex items-center gap-2">
+                                  {file.reviewStatus === 'pending_review' ? (
+                                    // Show Approve/Reject buttons for pending documents
+                                    rejectingDocId === file._id ? (
                                       <div className="flex items-center gap-2 flex-1">
                                         <Input
                                           placeholder="Enter rejection reason..."
@@ -692,9 +717,31 @@ export default function StaffTaskDetail() {
                                           Reject
                                         </Button>
                                       </>
-                                    )}
-                                  </div>
-                                )}
+                                    )
+                                  ) : file.reviewStatus === 'approved' ? (
+                                    // Show Undo button for approved documents
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="text-gray-600 hover:text-gray-700 hover:bg-gray-50"
+                                      onClick={() => handleUndoApproval(file._id)}
+                                    >
+                                      <X className="h-4 w-4 mr-1" />
+                                      Undo Approval
+                                    </Button>
+                                  ) : file.reviewStatus === 'rejected' ? (
+                                    // Show Undo button for rejected documents
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="text-gray-600 hover:text-gray-700 hover:bg-gray-50"
+                                      onClick={() => handleUndoRejection(file._id)}
+                                    >
+                                      <X className="h-4 w-4 mr-1" />
+                                      Undo Rejection
+                                    </Button>
+                                  ) : null}
+                                </div>
                               </div>
                             ))}
                           </div>

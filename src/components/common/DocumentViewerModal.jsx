@@ -18,18 +18,30 @@ export function DocumentViewerModal({
   const [error, setError] = useState(null);
 
   // Helper function to get full file URL
-  const getFullFileUrl = (fileUrl) => {
-    if (!fileUrl) return '';
+  const getFullFileUrl = (doc) => {
+    if (!doc) return '';
+    
+    // For TaskDocument model, use the view endpoint with auth token
+    if (doc._id) {
+      const baseUrl = config.api.baseUrl;
+      const token = localStorage.getItem('token');
+      // Use view endpoint for inline display (not download)
+      return `${baseUrl}/task-documents/${doc._id}/view?auth=${encodeURIComponent(token)}`;
+    }
+    
+    // Fallback: Check for fileUrl or localPath (for old Document model)
+    const filePath = doc.fileUrl || doc.localPath;
+    
+    if (!filePath) return '';
     
     // If it's already a full URL (starts with http:// or https://), return as is
-    if (fileUrl.startsWith('http://') || fileUrl.startsWith('https://')) {
-      return fileUrl;
+    if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
+      return filePath;
     }
     
     // If it's a relative path, construct full URL
-    // Remove /api from baseUrl if present, and remove leading slash from fileUrl
     const baseUrl = config.api.baseUrl.replace('/api', '');
-    const cleanPath = fileUrl.startsWith('/') ? fileUrl : `/${fileUrl}`;
+    const cleanPath = filePath.startsWith('/') ? filePath : `/${filePath}`;
     console.log("Constructed file URL:", `${baseUrl}${cleanPath}`);
     
     return `${baseUrl}${cleanPath}`;
@@ -88,8 +100,8 @@ export function DocumentViewerModal({
 
   if (!document) return null;
 
-  const fileUrl = getFullFileUrl(document.fileUrl);
-  const fileExtension = document.fileName?.split('.').pop()?.toLowerCase() || '';
+  const fileUrl = getFullFileUrl(document);
+  const fileExtension = document.fileName?.split('.').pop()?.toLowerCase() || document.originalName?.split('.').pop()?.toLowerCase() || '';
   const isPDF = fileExtension === 'pdf' || document.mimeType?.includes('pdf');
   const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(fileExtension) || 
                   document.mimeType?.startsWith('image/');
@@ -132,13 +144,13 @@ export function DocumentViewerModal({
                 <File className="h-5 w-5 text-gray-500" />
               )}
               <div>
-                <DialogTitle className="text-base sm:text-lg truncate">{document.fileName || 'Document'}</DialogTitle>
+                <DialogTitle className="text-base sm:text-lg truncate">{document.originalName || document.fileName || 'Document'}</DialogTitle>
                 <p className="text-xs text-muted-foreground mt-1">
                   {formatFileSize(document.fileSize)}
-                  {document.uploadedAt && (
+                  {(document.uploadedAt || document.createdAt) && (
                     <>
                       <span className="hidden sm:inline"> • </span>
-                      <span className="hidden sm:inline">Uploaded {format(new Date(document.uploadedAt), 'MMM dd, yyyy')}</span>
+                      <span className="hidden sm:inline">Uploaded {format(new Date(document.uploadedAt || document.createdAt), 'MMM dd, yyyy')}</span>
                     </>
                   )}
                 </p>
@@ -189,7 +201,7 @@ export function DocumentViewerModal({
                     transform: `scale(${zoom / 100})`,
                     transformOrigin: 'top center'
                   }}
-                  title={document.fileName}
+                  title={document.originalName || document.fileName}
                   onError={() => setError('Failed to load PDF. Please try downloading the file.')}
                 />
               </div>
@@ -197,7 +209,7 @@ export function DocumentViewerModal({
               <div className="flex items-center justify-center">
                 <img
                   src={fileUrl}
-                  alt={document.fileName}
+                  alt={document.originalName || document.fileName}
                   className="max-w-full max-h-full object-contain rounded-lg shadow-lg"
                   style={{
                     transform: `scale(${zoom / 100}) rotate(${rotation}deg)`,
