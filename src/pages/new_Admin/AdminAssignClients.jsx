@@ -550,34 +550,6 @@ export default function AdminAssignClients() {
             onPageSizeChange={setPageSize}
           />
         </div>
-
-        <div className="w-full xl:w-72 shrink-0 space-y-4">
-          <Card className="bg-card border-border">
-            <CardContent className="p-5 space-y-4">
-              <h3 className="text-sm font-semibold text-foreground">Staff Workload</h3>
-              {workload.map((staff) => (
-                <button
-                  key={staff.id}
-                  onClick={() => {
-                    setStaffFilter((prev) => (prev === staff.id ? "all" : staff.id));
-                    setPage(1);
-                  }}
-                  className={`w-full text-left p-3 rounded-lg transition-colors ${
-                    staffFilter === staff.id
-                      ? "bg-primary/10 border border-primary/20"
-                      : "hover:bg-muted/50"
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-foreground">{staff.name}</span>
-                    <span className="text-xs text-muted-foreground">{staff.count} clients</span>
-                  </div>
-                  <Progress value={(staff.count / maxWorkload) * 100} className="h-2" />
-                </button>
-              ))}
-            </CardContent>
-          </Card>
-        </div>
       </div>
 
       <Dialog open={!!assignModal} onOpenChange={(open) => !open && setAssignModal(null)}>

@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PaginationControls } from "@/components/ui/pagination-controls";
-import { FileClock, FileText, User } from "lucide-react";
+import { FileClock, FileText, User, X, ChevronDown } from "lucide-react";
 import { useGetAllDocumentsQuery } from "@/features/tasks/tasksApi";
+import { useGetAllClientsQuery } from "@/features/user/userApi";
 
 const DEFAULT_PAGE_SIZE = 12;
 
@@ -16,28 +17,29 @@ export default function AdminDocuments() {
 
   const [page, setPage] = useState(1);
   const [viewingDocument, setViewingDocument] = useState(null);
+  const [clientSearch, setClientSearch] = useState("");
+  const [showClientDropdown, setShowClientDropdown] = useState(false);
 
   const [filters, setFilters] = useState({
     status: "all",
     search: "",
     fromDate: "",
     toDate: "",
+    clientId: null,
+    clientLabel: "",
   });
 
-  // 🔥 Debounce search
+  // Debounce document search
   const [debouncedSearch, setDebouncedSearch] = useState("");
-
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(filters.search);
-    }, 500);
-
-    return () => clearTimeout(timer);
+    const t = setTimeout(() => setDebouncedSearch(filters.search), 500);
+    return () => clearTimeout(t);
   }, [filters.search]);
 
+  // Reset page on filter change
   useEffect(() => {
     setPage(1);
-  }, [filters.status, filters.fromDate, filters.toDate, debouncedSearch]);
+  }, [filters.status, filters.fromDate, filters.toDate, debouncedSearch, filters.clientId]);
 
   const { data, isLoading } = useGetAllDocumentsQuery({
     page,
@@ -46,16 +48,39 @@ export default function AdminDocuments() {
     search: debouncedSearch,
     fromDate: filters.fromDate,
     toDate: filters.toDate,
+    clientId: filters.clientId || undefined,
+  });
+
+  // Fetch all clients once, filter on frontend
+  const { data: clientsData } = useGetAllClientsQuery();
+  const allClients = clientsData?.data||  [];
+  const clients = allClients.filter((client) => {
+    const full = `${client.first_name} ${client.last_name}`.toLowerCase();
+    return full.includes(clientSearch.toLowerCase());
   });
 
   const documents = data?.documents || [];
   const pagination = data?.pagination || {};
 
   const statusTone = {
-    pending_review:
-      "bg-yellow-500/10 text-yellow-600 border-yellow-500/30",
+    pending_review: "bg-yellow-500/10 text-yellow-600 border-yellow-500/30",
     approved: "bg-green-500/10 text-green-600 border-green-500/30",
     rejected: "bg-red-500/10 text-red-600 border-red-500/30",
+  };
+
+  const handleSelectClient = (client) => {
+    setFilters((prev) => ({
+      ...prev,
+      clientId: client.id,
+      clientLabel: `${client.first_name} ${client.last_name}`,
+    }));
+    setClientSearch("");
+    setShowClientDropdown(false);
+  };
+
+  const handleClearClient = () => {
+    setFilters((prev) => ({ ...prev, clientId: null, clientLabel: "" }));
+    setClientSearch("");
   };
 
   const handleView = (doc) => {
@@ -84,23 +109,15 @@ export default function AdminDocuments() {
 
       {/* FILTERS */}
       <div className="rounded-2xl border bg-card p-6 space-y-6">
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
 
           {/* Status */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">
-              Status
-            </label>
+            <label className="text-sm font-medium text-foreground">Status</label>
             <select
-              className="w-full border rounded-md px-3 py-2"
+              className="w-full border rounded-md px-3 py-2 bg-background text-foreground"
               value={filters.status}
-              onChange={(e) =>
-                setFilters((prev) => ({
-                  ...prev,
-                  status: e.target.value,
-                }))
-              }
+              onChange={(e) => setFilters((prev) => ({ ...prev, status: e.target.value }))}
             >
               <option value="all">All Status</option>
               <option value="pending_review">Pending Review</option>
@@ -109,54 +126,108 @@ export default function AdminDocuments() {
             </select>
           </div>
 
+          {/* Client Filter */}
+          <div className="space-y-2 relative">
+            <label className="text-sm font-medium text-foreground">Client</label>
+
+            {/* Trigger button */}
+            <button
+              className="w-full border rounded-md px-3 py-2 bg-background text-foreground text-sm flex items-center justify-between"
+              onClick={() => setShowClientDropdown((prev) => !prev)}
+            >
+              <span className={filters.clientLabel ? "text-foreground" : "text-muted-foreground"}>
+                {filters.clientLabel || "Select client..."}
+              </span>
+              <div className="flex items-center gap-1">
+                {filters.clientId && (
+                  <X
+                    className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleClearClient();
+                    }}
+                  />
+                )}
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              </div>
+            </button>
+
+            {/* Dropdown */}
+            {showClientDropdown && (
+              <>
+                {/* Backdrop */}
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setShowClientDropdown(false)}
+                />
+
+                <div className="absolute z-50 w-full mt-1 bg-card border rounded-xl shadow-lg">
+
+                  {/* Search inside dropdown */}
+                  <div className="p-2 border-b">
+                    <Input
+                      autoFocus
+                      placeholder="Search by name or email..."
+                      value={clientSearch}
+                      onChange={(e) => setClientSearch(e.target.value)}
+                      className="h-8 text-sm"
+                    />
+                  </div>
+
+                  {/* List */}
+                  <div className="max-h-52 overflow-y-auto">
+                    {clients.length > 0 ? (
+                      clients.map((client) => (
+                        <button
+                          key={client.id}
+                          className={`w-full text-left px-4 py-2.5 text-sm hover:bg-muted transition-colors flex items-center gap-2 ${
+                            filters.clientId === client.id ? "bg-primary/10 text-primary" : ""
+                          }`}
+                          onClick={() => handleSelectClient(client)}
+                        >
+                          <User className="h-4 w-4 text-muted-foreground shrink-0" />
+                          <span>{client.first_name} {client.last_name}</span>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="p-3 text-sm text-muted-foreground text-center">
+                        {clientSearch ? "No clients found" : "No clients available"}
+                      </div>
+                    )}
+                  </div>
+
+                </div>
+              </>
+            )}
+          </div>
+
           {/* From Date */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">
-              From Date
-            </label>
+            <label className="text-sm font-medium text-foreground">From Date</label>
             <Input
               type="date"
               value={filters.fromDate}
-              onChange={(e) =>
-                setFilters((prev) => ({
-                  ...prev,
-                  fromDate: e.target.value,
-                }))
-              }
+              onChange={(e) => setFilters((prev) => ({ ...prev, fromDate: e.target.value }))}
             />
           </div>
 
           {/* To Date */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">
-              To Date
-            </label>
+            <label className="text-sm font-medium text-foreground">To Date</label>
             <Input
               type="date"
               value={filters.toDate}
-              onChange={(e) =>
-                setFilters((prev) => ({
-                  ...prev,
-                  toDate: e.target.value,
-                }))
-              }
+              onChange={(e) => setFilters((prev) => ({ ...prev, toDate: e.target.value }))}
             />
           </div>
 
-          {/* Search */}
+          {/* Search Document */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">
-              Search Document
-            </label>
+            <label className="text-sm font-medium text-foreground">Search Document</label>
             <Input
               placeholder="Search by name..."
               value={filters.search}
-              onChange={(e) =>
-                setFilters((prev) => ({
-                  ...prev,
-                  search: e.target.value,
-                }))
-              }
+              onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
             />
           </div>
 
@@ -166,14 +237,10 @@ export default function AdminDocuments() {
         <div className="flex justify-end">
           <Button
             variant="outline"
-            onClick={() =>
-              setFilters({
-                status: "all",
-                search: "",
-                fromDate: "",
-                toDate: "",
-              })
-            }
+            onClick={() => {
+              setFilters({ status: "all", search: "", fromDate: "", toDate: "", clientId: null, clientLabel: "" });
+              setClientSearch("");
+            }}
           >
             Reset Filters
           </Button>
@@ -226,20 +293,10 @@ export default function AdminDocuments() {
               </div>
 
               <div className="border-t bg-muted/20 p-4 flex justify-between">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleView(doc)}
-                >
+                <Button variant="outline" size="sm" onClick={() => handleView(doc)}>
                   View
                 </Button>
-
-                <Button
-                  size="sm"
-                  onClick={() =>
-                    navigate(`/admin/tasks/${doc.taskId?._id}`)
-                  }
-                >
+                <Button size="sm" onClick={() => navigate(`/admin/tasks/${doc.taskId?._id}`)}>
                   Go to Task
                 </Button>
               </div>
@@ -264,9 +321,7 @@ export default function AdminDocuments() {
       {/* MODAL */}
       <DocumentViewerModal
         open={!!viewingDocument}
-        onOpenChange={(open) =>
-          !open && setViewingDocument(null)
-        }
+        onOpenChange={(open) => !open && setViewingDocument(null)}
         document={viewingDocument}
         canDelete={false}
       />
