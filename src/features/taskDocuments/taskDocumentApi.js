@@ -23,12 +23,12 @@ export const taskDocumentApi = createApi({
       ]
     }),
 
-    // Approve document
+    // Approve document or undo approval
     approveDocument: builder.mutation({
-      query: ({ documentId, reviewNotes }) => ({
+      query: ({ documentId, reviewNotes, undo = false }) => ({
         url: `/task-documents/${documentId}/approve`,
         method: 'PATCH',
-        body: { reviewNotes }
+        body: { reviewNotes, undo }
       }),
       invalidatesTags: (result, error, { documentId }) => [
         { type: 'TaskDocument', id: result?.data?.taskId },
@@ -36,12 +36,12 @@ export const taskDocumentApi = createApi({
       ]
     }),
 
-    // Reject document
+    // Reject document or undo rejection
     rejectDocument: builder.mutation({
-      query: ({ documentId, rejectionReason }) => ({
+      query: ({ documentId, rejectionReason, undo = false }) => ({
         url: `/task-documents/${documentId}/reject`,
         method: 'PATCH',
-        body: { rejectionReason }
+        body: { rejectionReason, undo }
       }),
       invalidatesTags: (result, error, { documentId }) => [
         { type: 'TaskDocument', id: result?.data?.taskId },
