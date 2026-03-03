@@ -9,7 +9,7 @@ export default function AdminClients() {
   // Fetch real clients from backend
   const { data: clientsData, isLoading: clientsLoading, error: clientsError } = useGetAllClientsQuery();
 
-  console.log('client data ->', clientsData)
+  
   
   // Fetch real tasks from backend
   const { tasks, isLoading: tasksLoading } = useTasks();

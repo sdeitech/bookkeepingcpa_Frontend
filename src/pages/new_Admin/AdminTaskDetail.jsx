@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useState, useEffect, useMemo } from "react";
+import { useParams, useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { useGetTaskByIdQuery, useUpdateTaskMutation, useDeleteTaskMutation, useUpdateTaskStatusMutation, useUploadDocumentMutation } from "@/features/tasks/tasksApi";
 import { useGetTaskDocumentsQuery, useApproveDocumentMutation, useRejectDocumentMutation } from "@/features/taskDocuments/taskDocumentApi";
@@ -22,9 +22,11 @@ import MessageInput from "@/components/messages/MessageInput";
 export default function AdminTaskDetail() {
   const { taskId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const isEditMode = searchParams.get("mode") === "edit";
   const user = useSelector(selectCurrentUser);
+  const backTo = location.state?.backTo || "";
 
   // Role checks
   const isClient = user?.role_id === "3";
@@ -147,12 +149,24 @@ export default function AdminTaskDetail() {
     }
   };
 
+  const backLabel = useMemo(() => {
+    if (!backTo) return "Back";
+    if (backTo.includes("/clients")) return "Back to Client";
+    if (backTo.includes("/tasks")) return "Back to Tasks";
+    if (backTo.includes("/dashboard")) return "Back to Dashboard";
+    return "Back";
+  }, [backTo]);
+
   const handleBack = () => {
-    if (isClient) {
-      navigate("/new-dashboard/tasks");
-    } else {
-      navigate("/admin/tasks");
+    if (backTo) {
+      navigate(backTo);
+      return;
     }
+    if (window.history.length > 1) {
+      navigate(-1);
+      return;
+    }
+    navigate("/dashboard");
   };
 
   const handleEdit = () => {
@@ -202,7 +216,7 @@ export default function AdminTaskDetail() {
     try {
       await deleteTask(taskId).unwrap();
       toast.success("Task deleted successfully");
-      navigate("/admin/tasks");
+      handleBack();
     } catch (error) {
       toast.error("Failed to delete task");
       console.error("Delete error:", error);
@@ -448,7 +462,7 @@ export default function AdminTaskDetail() {
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
         <h2 className="text-2xl font-bold text-foreground">Task Not Found</h2>
         <p className="text-muted-foreground">The task you're looking for doesn't exist.</p>
-        <Button onClick={handleBack}>Back to Tasks</Button>
+        <Button onClick={handleBack}>{backLabel}</Button>
       </div>
     );
   }
@@ -458,7 +472,7 @@ export default function AdminTaskDetail() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <Button variant="ghost" onClick={handleBack} className="gap-2 self-start">
-          <ArrowLeft className="h-4 w-4" /> Back to Tasks
+          <ArrowLeft className="h-4 w-4" /> {backLabel}
         </Button>
         {!isClient && (
           <div className="flex gap-2">
