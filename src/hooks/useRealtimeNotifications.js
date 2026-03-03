@@ -12,6 +12,7 @@ import { useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { ref, onChildAdded, onChildChanged, onChildRemoved, onValue, off } from 'firebase/database';
 import { getFirebaseDatabase, initializeFirebase } from '../config/firebase';
+import firebaseAuthService from '../services/firebaseAuth.service';
 import {
   addNotification,
   updateNotification,
@@ -110,6 +111,18 @@ export const useRealtimeNotifications = () => {
       try {
         // Initialize Firebase if needed
         initializeFirebase();
+        
+        // Authenticate with Firebase using custom token
+        console.log('🔐 Authenticating with Firebase...');
+        try {
+          await firebaseAuthService.authenticateWithBackend();
+          console.log('✅ Firebase authentication successful');
+        } catch (authError) {
+          console.error('❌ Firebase authentication failed:', authError);
+          console.log('⚠️ Falling back to polling mode');
+          window.__firebaseRealtimeActive = false;
+          return;
+        }
         
         // Get database instance
         const database = getFirebaseDatabase();
