@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Bell } from 'lucide-react';
 import { useGetUnreadCountQuery } from '@/features/notifications/notificationApi';
+import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
 import { Button } from '@/components/ui/button';
 import NotificationDropdown from './NotificationDropdown';
 
@@ -9,10 +10,17 @@ export default function NotificationBell() {
   const { data: countData, refetch } = useGetUnreadCountQuery();
   const unreadCount = countData?.data?.count || 0;
 
-  // Poll for new notifications every 30 seconds
+  // 🔥 Enable Firebase real-time notifications (instant delivery!)
+  useRealtimeNotifications();
+
+  // Fallback: Poll for new notifications every 30 seconds (if Firebase fails)
   useEffect(() => {
     const interval = setInterval(() => {
-      refetch();
+      // Only poll if Firebase is not active
+      if (!window.__firebaseRealtimeActive) {
+        console.log('Firebase inactive, falling back to polling...');
+        refetch();
+      }
     }, 30000); // 30 seconds
 
     return () => clearInterval(interval);

@@ -4,6 +4,7 @@ import { useSelector } from "react-redux";
 import { useGetTaskByIdQuery, useUpdateTaskMutation, useDeleteTaskMutation, useUpdateTaskStatusMutation, useUploadDocumentMutation } from "@/features/tasks/tasksApi";
 import { useGetTaskDocumentsQuery, useApproveDocumentMutation, useRejectDocumentMutation } from "@/features/taskDocuments/taskDocumentApi";
 import { useGetTaskMessagesQuery, useSendMessageMutation, useMarkTaskMessagesAsReadMutation } from "@/features/messages/messageApi";
+import { useRealtimeMessages } from "@/hooks/useRealtimeMessages";
 import { selectCurrentUser } from "@/features/auth/authSlice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,6 +56,9 @@ export default function AdminTaskDetail() {
   const [sendMessage, { isLoading: sendingMessage }] = useSendMessageMutation();
   const [markAsRead] = useMarkTaskMessagesAsReadMutation();
 
+  // 🔥 Enable Firebase real-time messages (instant delivery!)
+  useRealtimeMessages(taskId, refetchMessages);
+
   // Edit mode state
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
@@ -81,10 +85,14 @@ export default function AdminTaskDetail() {
     }
   }, [task, isEditMode]);
 
-  // Poll for new messages every 30 seconds
+  // Fallback: Poll for new messages every 30 seconds (if Firebase fails)
   useEffect(() => {
     const interval = setInterval(() => {
-      refetchMessages();
+      // Only poll if Firebase is not active
+      if (!window.__firebaseRealtimeActive) {
+        console.log('Firebase inactive, falling back to polling messages...');
+        refetchMessages();
+      }
     }, 30000);
 
     return () => clearInterval(interval);

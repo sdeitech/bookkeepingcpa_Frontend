@@ -182,7 +182,10 @@ export default function NotificationDropdown({ onClose }) {
                     
                     <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
                       <Clock className="h-3 w-3" />
-                      {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+                      {notification.createdAt 
+                        ? formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })
+                        : 'Just now'
+                      }
                     </div>
                   </div>
                   
