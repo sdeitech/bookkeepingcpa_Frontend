@@ -34,6 +34,7 @@ export function DocumentViewerModal({
   open,
   onOpenChange,
   document,
+  onDeleted,
 }) {
   const [zoom, setZoom] = useState(100);
   const [rotation, setRotation] = useState(0);
@@ -112,9 +113,11 @@ export function DocumentViewerModal({
   // 🔥 Delete handler
   const handleDelete = async () => {
     try {
-      await deleteDocument(document._id).unwrap();
+      const taskId = document?.taskId?._id || document?.taskId;
+      await deleteDocument({ documentId: document._id, taskId }).unwrap();
 
       toast.success("Document deleted successfully");
+      onDeleted?.();
 
       setConfirmOpen(false);
       onOpenChange(false);
@@ -136,11 +139,10 @@ export function DocumentViewerModal({
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
-          className={`p-0 overflow-hidden rounded-xl transition-all duration-300 ${
-            expanded
+          className={`p-0 overflow-hidden rounded-xl transition-all duration-300 ${expanded
               ? "max-w-[95vw] h-[95vh]"
               : "max-w-5xl h-[85vh]"
-          } flex flex-col`}
+            } flex flex-col`}
         >
           {/* HEADER */}
           <DialogHeader className="p-0">

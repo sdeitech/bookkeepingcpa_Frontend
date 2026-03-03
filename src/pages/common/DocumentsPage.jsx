@@ -49,7 +49,7 @@ export default function DocumentsPage({ role = "admin" }) {
   ]);
 
   // 🔥 Common API
-  const { data, isLoading } = useGetAllDocumentsQuery({
+  const { data, isLoading, refetch } = useGetAllDocumentsQuery({
     page,
     limit: DEFAULT_PAGE_SIZE,
     status: filters.status,
@@ -396,6 +396,7 @@ export default function DocumentsPage({ role = "admin" }) {
         open={!!viewingDocument}
         onOpenChange={(open) => !open && setViewingDocument(null)}
         document={viewingDocument}
+        onDeleted={refetch}
         canDelete={false}
       />
     </div>

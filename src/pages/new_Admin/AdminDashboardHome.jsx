@@ -11,6 +11,7 @@ import { selectCurrentUser } from "@/features/auth/authSlice";
 import { CreateTaskWizard } from "@/components/new_Admin/CreateTaskWizard";
 import StaffInviteModal from "@/components/new_Admin/StaffInviteModal";
 import { useState } from "react";
+import { toast } from "sonner";
 
 const RECENT_ACTIVITY = [
   { icon: UserPlus, text: "New client 'Acme Corp' registered", time: "2 hours ago", color: "text-primary" },
@@ -25,6 +26,8 @@ export default function AdminDashboardHome() {
   const { tasks, isLoading: tasksLoading } = useTasks();
   const { data: clientsData, isLoading: clientsLoading } = useGetAllClientsQuery();
   const { data: staffData, isLoading: staffLoading, refetch: refetchStaff } = useGetAllStaffQuery();
+  const { createTask } = useTasks();
+
   const navigate = useNavigate();
   const today = startOfDay(new Date());
   const user = useSelector(selectCurrentUser);
@@ -44,11 +47,16 @@ export default function AdminDashboardHome() {
     { label: "Overdue Tasks", value: overdueTasks.length, icon: AlertTriangle, color: overdueTasks.length > 0 ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground", loading: tasksLoading },
   ];
 
-  const createTask = (taskData) => {
-    // Here you would typically call an API to create the task and then refresh your task list
-    console.log("Creating task with data:", taskData);
-    setCreateOpen(false);
+  const handleCreateTask = async (taskData) => {
+    try {
+      await createTask(taskData).unwrap();
+      setCreateOpen(false);
+      toast.success("Task created successfully!");
+    } catch (error) {
+      console.error("Failed to create task:", error);
+    }
   }
+
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -131,7 +139,7 @@ export default function AdminDashboardHome() {
         </Card>
       </div>
 
-      <CreateTaskWizard open={createOpen} onOpenChange={setCreateOpen} onCreate={createTask} />
+      <CreateTaskWizard open={createOpen} onOpenChange={setCreateOpen} onCreate={handleCreateTask} />
     </div>
   );
 }

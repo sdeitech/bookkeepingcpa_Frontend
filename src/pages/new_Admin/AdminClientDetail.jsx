@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
@@ -19,7 +19,7 @@ import { format, isBefore, isToday, startOfDay, startOfWeek, endOfWeek } from "d
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useGetClientProfileQuery } from "@/features/user/userApi";
-import { useGetTasksQuery, useUpdateTaskStatusMutation, useDeleteTaskMutation } from "@/features/tasks/tasksApi";
+import { useGetTasksQuery, useDeleteTaskMutation } from "@/features/tasks/tasksApi";
 import { useTasks } from "@/hooks/useTasks";
 
 const DEFAULT_PAGE_SIZE = 10;
@@ -45,6 +45,8 @@ const getName = (value) => {
 };
 
 export default function AdminClientDetail() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const { clientId } = useParams();
   const { createTask } = useTasks();
 
@@ -86,7 +88,6 @@ export default function AdminClientDetail() {
   });
 
   const { data: tasksData, isLoading: tasksLoading } = useGetTasksQuery(apiFilters, { skip: !clientId });
-  const [updateTaskStatusMutation] = useUpdateTaskStatusMutation();
   const [deleteTaskMutation] = useDeleteTaskMutation();
 
   useEffect(() => {
@@ -241,16 +242,15 @@ export default function AdminClientDetail() {
   const handleTaskAction = async (action, task) => {
     const taskId = getTaskId(task);
     if (!taskId) return;
+    const backTo = `${location.pathname}${location.search}`;
 
     try {
-      if (action === "mark_in_progress") {
-        await updateTaskStatusMutation({ id: taskId, status: "IN_PROGRESS" }).unwrap();
-        toast.success("Task marked in progress");
+      if (action === "view") {
+        navigate(`/admin/tasks/${taskId}`, { state: { backTo } });
         return;
       }
-      if (action === "mark_completed") {
-        await updateTaskStatusMutation({ id: taskId, status: "COMPLETED" }).unwrap();
-        toast.success("Task marked completed");
+      if (action === "edit") {
+        navigate(`/admin/tasks/${taskId}?mode=edit`, { state: { backTo } });
         return;
       }
       if (action === "delete") {
@@ -354,8 +354,8 @@ export default function AdminClientDetail() {
   ];
 
   const rowActions = [
-    { label: "Mark In Progress", value: "mark_in_progress" },
-    { label: "Mark Completed", value: "mark_completed" },
+    { label: "View", value: "view" },
+    { label: "Edit", value: "edit" },
     { label: "Delete", value: "delete", variant: "destructive" },
   ];
 

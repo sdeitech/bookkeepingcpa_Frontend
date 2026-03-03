@@ -57,13 +57,12 @@ export const taskDocumentApi = createApi({
 
     // Delete document
     deleteDocument: builder.mutation({
-      query: (documentId) => ({
+      query: ({ documentId }) => ({
         url: `/task-documents/${documentId}`,
-        method: 'DELETE'
+        method: 'DELETE',
       }),
-      invalidatesTags: (result, error, documentId) => [
-        { type: 'TaskDocument' }
-      ]
+      invalidatesTags: (result, error, { taskId }) =>
+        taskId ? [{ type: 'TaskDocument', id: taskId }] : [],
     }),
   })
 });

@@ -195,7 +195,11 @@ function App() {
             <Route path="clients" element={<StaffClients />} />
             <Route path="clients/:clientId" element={<StaffClientDetail />} />
             <Route path="tasks" element={<StaffTasks />} />
-            <Route path="tasks/:taskId" element={<StaffTaskDetail />} />
+            <Route path="tasks/:taskId" element={
+              <ErrorBoundary fallbackMessage="Unable to load task details. The task may not exist or there was an error loading it." showHomeButton>
+                <AdminTaskDetail />
+              </ErrorBoundary>
+            } />
             <Route path="reports" element={<StaffReports />} />
             <Route path="create-task" element={<StaffCreateTask />} />
             <Route path="profile" element={<Profile />} />
