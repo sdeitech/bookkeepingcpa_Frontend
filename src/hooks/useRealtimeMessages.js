@@ -11,6 +11,7 @@
 import { useEffect, useRef } from 'react';
 import { ref, onChildAdded, off } from 'firebase/database';
 import { getFirebaseDatabase, initializeFirebase } from '../config/firebase';
+import firebaseAuthService from '../services/firebaseAuth.service';
 
 /**
  * Hook to enable real-time message updates for a task
@@ -34,6 +35,19 @@ export const useRealtimeMessages = (taskId, refetchMessages) => {
       try {
         // Initialize Firebase if needed
         initializeFirebase();
+        
+        // Authenticate with Firebase (reuse existing auth if already signed in)
+        if (!firebaseAuthService.isSignedIn()) {
+          console.log('🔐 Authenticating with Firebase for messages...');
+          try {
+            await firebaseAuthService.authenticateWithBackend();
+            console.log('✅ Firebase authentication successful for messages');
+          } catch (authError) {
+            console.error('❌ Firebase authentication failed for messages:', authError);
+            console.log('⚠️ Falling back to polling mode for messages');
+            return;
+          }
+        }
         
         // Get database instance
         const database = getFirebaseDatabase();
