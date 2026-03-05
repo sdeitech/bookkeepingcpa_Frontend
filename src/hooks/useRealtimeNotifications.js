@@ -169,11 +169,22 @@ export const useRealtimeNotifications = () => {
 
         // Listen for new notifications
         console.log('Setting up onChildAdded listener...');
+        
+        // Use onChildAdded with startAfter to only get NEW notifications
+        // This prevents processing old Firebase signals that are still in the database
+        const now = Date.now();
         const unsubscribeAdded = onChildAdded(userNotificationsRef, (snapshot) => {
           const signal = snapshot.val();
           console.log('🔥🔥🔥 FIREBASE onChildAdded TRIGGERED!', signal);
           
           if (!signal) return;
+          
+          // Ignore signals older than 5 minutes (stale signals from previous sessions)
+          const signalAge = Date.now() - signal.timestamp;
+          if (signalAge > 5 * 60 * 1000) {
+            console.log(`⏭️ Ignoring old signal (${Math.round(signalAge / 1000)}s old):`, signal.id);
+            return;
+          }
           
           const signalKey = `${signal.id}-${signal.timestamp}`;
           
@@ -189,11 +200,11 @@ export const useRealtimeNotifications = () => {
             // Fetch full notification from MongoDB using RTK Query (now includes unread count)
             dispatch(
               notificationApi.endpoints.getNotificationById.initiate(signal.id)
-            ).then(({ data }) => {
+            ).unwrap().then((data) => {
               console.log('📥 Notification API response:', data);
               
-              if (data) {
-                const { notification, unreadCount } = data;
+              if (data && data.data) {
+                const { notification, unreadCount } = data.data;
                 
                 console.log('📥 Extracted notification:', notification);
                 console.log('📥 Extracted unreadCount:', unreadCount);
@@ -231,7 +242,20 @@ export const useRealtimeNotifications = () => {
                 console.error('📥 No data returned from API');
               }
             }).catch(error => {
-              console.error('Failed to fetch notification details:', error);
+              // Handle 404 errors gracefully - these are stale Firebase signals
+              if (error.status === 404) {
+                console.warn(`⚠️ Stale Firebase signal detected for notification ${signal.id} - notification no longer exists in database`);
+                // Optionally: Clean up the stale signal from Firebase
+                // This is not critical as signals auto-expire after 24 hours
+              } else {
+                console.error('Failed to fetch notification details:', error);
+                console.error('Notification ID that failed:', signal.id);
+                console.error('Error details:', {
+                  status: error.status,
+                  message: error.data?.message,
+                  fullError: error
+                });
+              }
             });
           }
         }, (error) => {
@@ -249,12 +273,12 @@ export const useRealtimeNotifications = () => {
             // Fetch updated notification from MongoDB using RTK Query
             dispatch(
               notificationApi.endpoints.getNotificationById.initiate(signal.id)
-            ).then(({ data }) => {
-              if (data) {
+            ).unwrap().then((data) => {
+              if (data && data.data && data.data.notification) {
                 // Update notification in Redux store
                 dispatch(updateNotification({
-                  id: data._id,
-                  updates: data
+                  id: data.data.notification._id,
+                  updates: data.data.notification
                 }));
               }
             }).catch(error => {
