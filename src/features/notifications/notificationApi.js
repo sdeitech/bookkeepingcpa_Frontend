@@ -22,6 +22,12 @@ export const notificationApi = createApi({
       providesTags: ['Notification']
     }),
 
+    // Get notification by id (used by realtime listener)
+    getNotificationById: builder.query({
+      query: (notificationId) => `/notifications/${notificationId}`,
+      providesTags: ['Notification']
+    }),
+
     // Get unread count
     getUnreadCount: builder.query({
       query: () => '/notifications/unread-count',
@@ -65,9 +71,12 @@ export const notificationApi = createApi({
 
 export const {
   useGetNotificationsQuery,
+  useGetNotificationByIdQuery,
   useGetUnreadCountQuery,
   useGetNotificationByIdQuery,
   useMarkAsReadMutation,
   useMarkAllAsReadMutation,
   useDeleteNotificationMutation
 } = notificationApi;
+
+export default notificationApi;

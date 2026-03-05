@@ -23,7 +23,7 @@ export function AdminSidebar() {
   };
 
   return (
-    <aside className="bg-sidebar text-sidebar-foreground flex flex-col min-h-screen w-64">
+    <aside className="bg-sidebar text-sidebar-foreground flex flex-col h-screen sticky top-0 w-64 shrink-0 overflow-y-auto">
       <div className="p-4 border-b border-sidebar-border flex items-center justify-between">
         <div>
           <PlutifyLogo variant="light" />

@@ -60,9 +60,10 @@ export const quickbooksApi = createApi({
 
     // Sync Data
     syncQuickBooksData: builder.mutation({
-      query: () => ({
+      query: (params = {}) => ({
         url: '/quickbooks/sync',
         method: 'GET',
+        params: params?.clientId ? { clientId: params.clientId } : {},
       }),
       invalidatesTags: ['Invoices', 'Customers', 'Expenses', 'Dashboard'],
     }),
@@ -164,6 +165,28 @@ export const quickbooksApi = createApi({
       }),
     }),
 
+    // new api quickbooks/reports/cash-flow
+    getQuickBooksCashFlowReport: builder.query({
+      query: (params = {}) => ({
+        url: '/quickbooks/reports/cash-flow',
+        params: {
+          ...params,
+          ...(params.clientId && { clientId: params.clientId }), // Add clientId for admin override
+        },
+      }),
+    }),
+    
+    //new api quickbooks/reports/trial-balance
+    getQuickBooksTrialBalanceReport: builder.query({
+      query: (params = {}) => ({
+        url: '/quickbooks/reports/trial-balance',
+        params: {
+          ...params,
+          ...(params.clientId && { clientId: params.clientId }), // Add clientId for admin override
+        },
+      }),
+    }),
+
     // Dashboard (supports admin override)
     getQuickBooksDashboard: builder.query({
       query: (clientId) => ({
@@ -205,6 +228,10 @@ export const {
   useGetQuickBooksEssentialStatsQuery,
   useLazyGetQuickBooksEssentialStatsQuery,
   useGetQuickBooksGeneralLedgerQuery,
+  useGetQuickBooksCashFlowReportQuery,
+  useLazyGetQuickBooksCashFlowReportQuery,
+  useGetQuickBooksTrialBalanceReportQuery,
+  useLazyGetQuickBooksTrialBalanceReportQuery,
 
   // Reports
   useGetQuickBooksProfitLossQuery,

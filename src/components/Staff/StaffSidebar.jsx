@@ -22,7 +22,7 @@ export function StaffSidebar() {
   const location = useLocation();
 
   return (
-    <aside className="relative flex flex-col min-h-screen w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border shadow-lg">
+    <aside className="relative flex flex-col h-screen sticky top-0 w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border shadow-lg shrink-0 overflow-y-auto">
       <div className="p-4 border-b border-sidebar-border">
         <PlutifyLogo variant="light" />
       </div>

@@ -21,6 +21,9 @@ import { toast } from "sonner";
 import { useGetClientProfileQuery } from "@/features/user/userApi";
 import { useGetTasksQuery, useDeleteTaskMutation } from "@/features/tasks/tasksApi";
 import { useTasks } from "@/hooks/useTasks";
+import QuickBooksData from "@/pages/dashboard/QuickBooksData";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useGetQuickBooksConnectionStatusQuery } from "@/features/quickbooks/quickbooksApi";
 
 const DEFAULT_PAGE_SIZE = 10;
 
@@ -60,6 +63,7 @@ export default function AdminClientDetail() {
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [columnFilters, setColumnFilters] = useState({});
   const [clearAllOpen, setClearAllOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("overview");
   const apiFilters = useMemo(() => {
     const filters = {
       clientId,
@@ -96,6 +100,21 @@ export default function AdminClientDetail() {
   }, [searchQuery]);
 
   const client = clientData?.data?.client;
+  const normalizedClientId = client?._id || client?.id || clientId;
+  const { data: qbStatusData } = useGetQuickBooksConnectionStatusQuery(normalizedClientId, {
+    skip: !normalizedClientId,
+  });
+  const qbConnected = Boolean(qbStatusData?.data?.connected);
+  const qbCompanyName = qbStatusData?.data?.companyName || "-";
+  const qbLastSynced = qbStatusData?.data?.lastSyncedAt
+    ? format(new Date(qbStatusData.data.lastSyncedAt), "MMM d, yyyy h:mm a")
+    : "-";
+  const subscriptionPlan = client?.subscription?.planName || client?.plan || "—";
+  const subscriptionStatus = client?.subscription?.status || "—";
+  const nextBillingDate = client?.subscription?.nextBillingDate
+    ? format(new Date(client.subscription.nextBillingDate), "MMM d, yyyy")
+    : "—";
+  const paymentMethod = client?.subscription?.paymentMethod || client?.paymentMethod || "—";
   const createTaskClientList = useMemo(() => {
     if (!client) return [];
     return [
@@ -123,15 +142,20 @@ export default function AdminClientDetail() {
   const weekStart = startOfWeek(today, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
 
-  const normalizedTasks = useMemo(
-    () =>
-      rawTasks.map((task) => ({
+  const normalizedTasks = useMemo(() => {
+    const targetId = String(normalizedClientId || clientId || "");
+    return rawTasks
+      .filter((task) => {
+        if (!targetId) return true;
+        const taskClientId = String(task?.clientId?._id || task?.clientId?.id || task?.clientId || task?.client?._id || task?.client?.id || "");
+        return taskClientId === targetId;
+      })
+      .map((task) => ({
         ...task,
         id: getTaskId(task),
         assignedByName: getName(task.assignedBy),
-      })),
-    [rawTasks],
-  );
+      }));
+  }, [rawTasks, normalizedClientId, clientId]);
 
   const completedCount = normalizedTasks.filter((task) => task.status === "COMPLETED").length;
   const totalCount = normalizedTasks.length;
@@ -393,7 +417,7 @@ export default function AdminClientDetail() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-8 animate-fade-in">
       <Link
         to="/admin/clients"
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors no-underline"
@@ -401,121 +425,285 @@ export default function AdminClientDetail() {
         <ArrowLeft className="h-4 w-4" /> Back to Clients
       </Link>
 
-      <div className="bg-card border border-border rounded-xl p-6">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center">
+      <div className="bg-card border border-border/70 rounded-2xl p-6 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex items-start gap-4">
+            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
               <Building2 className="h-7 w-7 text-primary" />
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">
-                {getName(client)}
-              </h1>
-              <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-                <Mail className="h-3.5 w-3.5" />
-                {client.email || "Unknown Client"}
+            <div className="space-y-2">
+              <div>
+                <h1 className="text-2xl font-semibold text-foreground">
+                  {getName(client)}
+                </h1>
+                <div className="flex flex-wrap items-center gap-2 mt-1 text-sm text-muted-foreground">
+                  <span className="inline-flex items-center gap-1">
+                    <Mail className="h-3.5 w-3.5" />
+                    {client.email || "Unknown Client"}
+                  </span>
+                  {client.phone && (
+                    <span className="inline-flex items-center gap-1">
+                      <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60" />
+                      {client.phone}
+                    </span>
+                  )}
+                </div>
               </div>
-              {client.phone && <p className="text-sm text-muted-foreground mt-1">Phone: {client.phone}</p>}
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                {client.subscription?.planName && (
+                  <span className="px-2.5 py-1 rounded-full bg-primary/10 text-primary font-medium">
+                    {client.subscription.planName}
+                  </span>
+                )}
+                {client.subscription?.status && (
+                  <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 font-medium">
+                    {client.subscription.status}
+                  </span>
+                )}
+                {client.status && (
+                  <span className="px-2.5 py-1 rounded-full bg-muted text-muted-foreground font-medium">
+                    {client.status}
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                <span>Tasks: {totalCount}</span>
+                <span>Completed: {completedCount}</span>
+                <span>Progress: {progressPercent}%</span>
+              </div>
             </div>
           </div>
 
-          <Button onClick={() => setCreateOpen(true)} className="gap-2">
-            <Plus className="h-4 w-4" /> Create Task
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={() => setCreateOpen(true)} className="gap-2">
+              <Plus className="h-4 w-4" /> Create Task
+            </Button>
+          </div>
         </div>
       </div>
 
-      <div className="bg-card border border-border rounded-xl p-6">
-        <div className="flex items-center justify-between mb-3">
+      <div className="bg-card border border-border/70 rounded-2xl p-6 shadow-sm">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h3 className="font-semibold text-foreground">Task Progress</h3>
           <span className="text-sm text-muted-foreground">
             {completedCount} of {totalCount} completed ({progressPercent}%)
           </span>
         </div>
-        <Progress value={progressPercent} className="h-3" />
+        <Progress value={progressPercent} className="h-3 mt-3" />
       </div>
 
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[220px] max-w-md">
-          {/* <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /> */}
-          <Input
-            placeholder="Search tasks..."
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setPage(1);
-            }}
-            className="h-10 pl-9"
-          />
-        </div>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant={statusFilter !== "all" ? "default" : "outline"}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList className="flex flex-wrap items-center justify-start gap-2 bg-muted/40 border border-border/60 rounded-xl p-1.5">
+          <TabsTrigger value="overview" className="gap-2">
+            Overview
+          </TabsTrigger>
+          <TabsTrigger value="tasks" className="gap-2">
+            Tasks
+            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+              {totalCount}
+            </span>
+          </TabsTrigger>
+          <TabsTrigger value="quickbooks" className="gap-2">
+            QuickBooks
+            <span
               className={cn(
-                "h-10 gap-2",
-                statusFilter !== "all"
-                  ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
-                  : "border-border text-foreground hover:bg-accent",
+                "rounded-full px-2 py-0.5 text-xs font-medium",
+                qbConnected
+                  ? "bg-emerald-100 text-emerald-700"
+                  : "bg-muted text-muted-foreground"
               )}
             >
-              <span>{activeStatusLabel}</span>
-              <ChevronDown className="h-3.5 w-3.5" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="bg-popover z-50 min-w-[180px]">
-            {STATUS_FILTERS.map((item) => (
-              <DropdownMenuItem
-                key={item.value}
-                onClick={() => {
-                  setStatusFilter(item.value);
+              {qbConnected ? "Connected" : "Not connected"}
+            </span>
+          </TabsTrigger>
+          <TabsTrigger value="billing" className="gap-2">
+            Billing
+            <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+              Soon
+            </span>
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="bg-card border border-border/70 rounded-2xl p-5 shadow-sm transition-shadow hover:shadow-md">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-sm font-semibold">
+                    QB
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">QuickBooks Online</p>
+                    <p className="text-xs text-muted-foreground">Connection managed by client</p>
+                  </div>
+                </div>
+                <span
+                  className={cn(
+                    "rounded-full px-2.5 py-1 text-xs font-medium",
+                    qbConnected ? "bg-emerald-100 text-emerald-700" : "bg-muted text-muted-foreground"
+                  )}
+                >
+                  {qbConnected ? "Connected" : "Not connected"}
+                </span>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-xs text-muted-foreground">Company</p>
+                  <p className="font-medium text-foreground">{qbCompanyName}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Last Synced</p>
+                  <p className="font-medium text-foreground">{qbLastSynced}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-card border border-border/70 rounded-2xl p-5 shadow-sm transition-shadow hover:shadow-md">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-sm font-semibold">
+                    SUB
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Subscription</p>
+                    <p className="text-xs text-muted-foreground">Billing overview</p>
+                  </div>
+                </div>
+                <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                  {subscriptionStatus}
+                </span>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-xs text-muted-foreground">Plan</p>
+                  <p className="font-medium text-foreground">{subscriptionPlan}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Next Billing</p>
+                  <p className="font-medium text-foreground">{nextBillingDate}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Payment Method</p>
+                  <p className="font-medium text-foreground">{paymentMethod}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="tasks" className="space-y-4">
+          <div className="bg-card border border-border/70 rounded-2xl p-4 shadow-sm">
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="relative flex-1 min-w-[220px] max-w-md">
+                <Input
+                  placeholder="Search tasks..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
                   setPage(1);
                 }}
-                className="flex items-center justify-between"
+                className="h-10 pl-9"
+              />
+            </div>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant={statusFilter !== "all" ? "default" : "outline"}
+                  className={cn(
+                    "h-10 gap-2",
+                    statusFilter !== "all"
+                      ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
+                      : "border-border text-foreground hover:bg-accent",
+                  )}
+                >
+                  <span>{activeStatusLabel}</span>
+                  <ChevronDown className="h-3.5 w-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="bg-popover z-50 min-w-[180px]">
+                {STATUS_FILTERS.map((item) => (
+                  <DropdownMenuItem
+                    key={item.value}
+                    onClick={() => {
+                      setStatusFilter(item.value);
+                      setPage(1);
+                    }}
+                    className="flex items-center justify-between"
+                  >
+                    <span>{item.label}</span>
+                    {statusFilter === item.value && <Check className="h-3.5 w-3.5 text-primary" />}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {hasAnyFilter && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-10 gap-1.5 text-muted-foreground hover:text-destructive"
+                onClick={() => setClearAllOpen(true)}
               >
-                <span>{item.label}</span>
-                {statusFilter === item.value && <Check className="h-3.5 w-3.5 text-primary" />}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+                <X className="h-3.5 w-3.5" />
+                Clear All
+              </Button>
+            )}
+            </div>
+          </div>
 
-        {hasAnyFilter && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-10 gap-1.5 text-muted-foreground hover:text-destructive"
-            onClick={() => setClearAllOpen(true)}
-          >
-            <X className="h-3.5 w-3.5" />
-            Clear All
-          </Button>
-        )}
-      </div>
+          <div className="bg-card border border-border/70 rounded-2xl shadow-sm overflow-hidden">
+            <div className="p-4">
+              <DataTable
+                data={paginatedTasks}
+                columns={columns}
+                onSort={handleSort}
+                onRowAction={handleTaskAction}
+                rowActions={rowActions}
+                loading={tasksLoading}
+                getRowId={(row) => row.id}
+                columnFilters={columnFilters}
+                onColumnFilterChange={handleColumnFilterChange}
+                emptyMessage="No tasks found"
+                emptyDescription="Try adjusting your search or filters."
+              />
+            </div>
+            <div className="border-t border-border/70 p-4">
+              <PaginationControls
+                page={page}
+                totalPages={totalPages}
+                onPageChange={setPage}
+                totalItems={isServerPaginated ? taskPagination.totalItems || filtered.length : filtered.length}
+                pageSize={pageSize}
+                onPageSizeChange={setPageSize}
+              />
+            </div>
+          </div>
+        </TabsContent>
 
-      <DataTable
-        data={paginatedTasks}
-        columns={columns}
-        onSort={handleSort}
-        onRowAction={handleTaskAction}
-        rowActions={rowActions}
-        loading={tasksLoading}
-        getRowId={(row) => row.id}
-        columnFilters={columnFilters}
-        onColumnFilterChange={handleColumnFilterChange}
-        emptyMessage="No tasks found"
-        emptyDescription="Try adjusting your search or filters."
-      />
+        <TabsContent value="quickbooks" className="space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">QuickBooks</h2>
+            <p className="text-sm text-muted-foreground">
+              Connection status and synced financial data for this client.
+            </p>
+          </div>
+          <QuickBooksData
+            clientId={client?._id || client?.id || clientId}
+            readOnly
+            showTitle={false}
+          />
+        </TabsContent>
 
-      <PaginationControls
-        page={page}
-        totalPages={totalPages}
-        onPageChange={setPage}
-        totalItems={isServerPaginated ? taskPagination.totalItems || filtered.length : filtered.length}
-        pageSize={pageSize}
-        onPageSizeChange={setPageSize}
-      />
+        <TabsContent value="billing" className="space-y-4">
+          <div className="bg-card border border-border/70 rounded-2xl p-6 shadow-sm">
+            <h3 className="text-lg font-semibold text-foreground">Billing</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Billing details will appear here in a future update.
+            </p>
+          </div>
+        </TabsContent>
+      </Tabs>
 
       <CreateTaskWizard
         open={createOpen}
