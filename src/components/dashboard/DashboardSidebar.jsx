@@ -16,7 +16,7 @@ export function DashboardSidebar() {
   const location = useLocation();
 
   return (
-    <aside className="w-64 bg-sidebar text-sidebar-foreground flex flex-col min-h-screen">
+    <aside className="w-64 bg-sidebar text-sidebar-foreground flex flex-col h-screen sticky top-0 shrink-0 overflow-y-auto">
       {/* Logo */}
       <div className="p-6 border-b border-sidebar-border">
         <PlutifyLogo variant="light" />

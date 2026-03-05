@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { DocumentViewerModal } from "@/components/common/DocumentViewerModal";
 import { Button } from "@/components/ui/button";
@@ -6,15 +6,19 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PaginationControls } from "@/components/ui/pagination-controls";
-import { FileClock, FileText, User, X, ChevronDown } from "lucide-react";
+import { FileClock, FileText, User, X, ChevronDown, Calendar as CalendarIcon } from "lucide-react";
 import { useGetAllDocumentsQuery } from "@/features/tasks/tasksApi";
 import { useGetAllClientsQuery } from "@/features/user/userApi";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+
 
 const DEFAULT_PAGE_SIZE = 12;
 
 export default function DocumentsPage({ role = "admin" }) {
   const navigate = useNavigate();
   const isAdmin = role === "admin";
+  const isStaff = role === "staff";
 
   const [page, setPage] = useState(1);
   const [viewingDocument, setViewingDocument] = useState(null);
@@ -29,34 +33,45 @@ export default function DocumentsPage({ role = "admin" }) {
     clientId: null,
     clientLabel: "",
   });
-
-  // Debounce search
+  const [appliedFilters, setAppliedFilters] = useState({
+    status: "all",
+    search: "",
+    fromDate: "",
+    toDate: "",
+    clientId: null,
+    clientLabel: "",
+  });
+  // Debounce search so it applies immediately without waiting on "Apply Filters"
   const [debouncedSearch, setDebouncedSearch] = useState("");
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(filters.search), 500);
     return () => clearTimeout(t);
   }, [filters.search]);
+  const dateRange = useMemo(() => ({
+    from: filters.fromDate ? new Date(filters.fromDate) : undefined,
+    to: filters.toDate ? new Date(filters.toDate) : undefined,
+  }), [filters.fromDate, filters.toDate]);
 
   // Reset page on filter change
   useEffect(() => {
     setPage(1);
   }, [
-    filters.status,
-    filters.fromDate,
-    filters.toDate,
+    appliedFilters.status,
+    appliedFilters.fromDate,
+    appliedFilters.toDate,
     debouncedSearch,
-    filters.clientId,
+    appliedFilters.clientId,
   ]);
 
   // 🔥 Common API
   const { data, isLoading, refetch } = useGetAllDocumentsQuery({
     page,
     limit: DEFAULT_PAGE_SIZE,
-    status: filters.status,
+    status: appliedFilters.status,
     search: debouncedSearch,
-    fromDate: filters.fromDate,
-    toDate: filters.toDate,
-    clientId: isAdmin ? filters.clientId || undefined : undefined,
+    fromDate: appliedFilters.fromDate,
+    toDate: appliedFilters.toDate,
+    clientId: isAdmin ? appliedFilters.clientId || undefined : undefined,
   });
 
   // Fetch clients only if admin
@@ -127,7 +142,29 @@ export default function DocumentsPage({ role = "admin" }) {
 
       {/* FILTERS */}
       <div className="rounded-2xl border bg-card p-6 space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
+        {/* Search */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground">
+            Search Document
+          </label>
+          <Input
+            placeholder="Search by name..."
+            value={filters.search}
+            onChange={(e) =>
+              setFilters((prev) => ({
+                ...prev,
+                search: e.target.value,
+              }))
+            }
+          />
+        </div>
+
+        <div
+          className={cn(
+            "grid grid-cols-1 md:grid-cols-2 gap-6",
+            isAdmin ? "lg:grid-cols-4" : "lg:grid-cols-3"
+          )}
+        >
           {/* Status */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-foreground">
@@ -269,26 +306,9 @@ export default function DocumentsPage({ role = "admin" }) {
               }
             />
           </div>
-
-          {/* Search */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">
-              Search Document
-            </label>
-            <Input
-              placeholder="Search by name..."
-              value={filters.search}
-              onChange={(e) =>
-                setFilters((prev) => ({
-                  ...prev,
-                  search: e.target.value,
-                }))
-              }
-            />
-          </div>
         </div>
 
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2">
           <Button
             variant="outline"
             onClick={() => {
@@ -301,9 +321,25 @@ export default function DocumentsPage({ role = "admin" }) {
                 clientLabel: "",
               });
               setClientSearch("");
+              setAppliedFilters({
+                status: "all",
+                search: "",
+                fromDate: "",
+                toDate: "",
+                clientId: null,
+                clientLabel: "",
+              });
             }}
           >
             Reset Filters
+          </Button>
+          <Button
+            onClick={() => {
+              setAppliedFilters(filters);
+              setPage(1);
+            }}
+          >
+            Apply Filters
           </Button>
         </div>
       </div>
@@ -368,7 +404,9 @@ export default function DocumentsPage({ role = "admin" }) {
                     navigate(
                       isAdmin
                         ? `/admin/tasks/${doc.taskId?._id}`
-                        : `/client/tasks/${doc.taskId?._id}`
+                        : isStaff
+                          ? `/staff/tasks/${doc.taskId?._id}`
+                          : `/new-dashboard/tasks/${doc.taskId?._id}`
                     )
                   }
                 >

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { Badge } from "../../components/ui/badge";
@@ -10,6 +10,7 @@ import {
     SelectContent,
     SelectItem,
 } from "../../components/ui/select";
+import { toast } from "sonner";
 
 
 import {
@@ -40,39 +41,59 @@ import {
     FileText,
     Users,
     Receipt,
-    CreditCard,
     BarChart3,
     RefreshCw,
     Link2,
-    EyeOff,
-    Eye,
     Unplug,
     Calendar,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 
+const toLocalDateInputValue = (date) => {
+    const offsetMs = date.getTimezoneOffset() * 60 * 1000;
+    return new Date(date.getTime() - offsetMs).toISOString().split("T")[0];
+};
 
+const getMonthRange = (date) => {
+    const start = new Date(date.getFullYear(), date.getMonth(), 1);
+    const end = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+    return {
+        startDate: toLocalDateInputValue(start),
+        endDate: toLocalDateInputValue(end),
+    };
+};
 
+const formatCurrency = (amount) => {
+    return new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "USD",
+    }).format(Number(amount || 0));
+};
 
-
-
-
-
-
-const mockProfitLoss = [
-    { item: "Income", children: [{ item: "Design Income", amount: 975.0 }, { item: "Consulting", amount: 1250.0 }] },
-    { item: "Cost of Goods Sold", children: [{ item: "Materials", amount: 320.0 }] },
-    { item: "Expenses", children: [{ item: "Office Supplies", amount: 150.0 }, { item: "Utilities", amount: 85.0 }] },
-];
-
-export default function QuickBooksData() {
+export default function QuickBooksData({ clientId = null, readOnly = false, showTitle = true }) {
     const navigate = useNavigate();
+    const effectiveClientId = clientId || undefined;
+
+    const today = useMemo(() => new Date(), []);
+    const thisMonthRange = useMemo(() => getMonthRange(today), [today]);
+    const lastMonthRange = useMemo(
+        () => getMonthRange(new Date(today.getFullYear(), today.getMonth() - 1, 1)),
+        [today]
+    );
+    const yearToDateRange = useMemo(() => {
+        const start = new Date(today.getFullYear(), 0, 1);
+        return {
+            startDate: toLocalDateInputValue(start),
+            endDate: toLocalDateInputValue(today),
+        };
+    }, [today]);
 
     const [dateRange, setDateRange] = useState({
-        startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-        endDate: new Date().toISOString().split('T')[0]
+        startDate: thisMonthRange.startDate,
+        endDate: thisMonthRange.endDate,
     });
+    const [quickRange, setQuickRange] = useState("thisMonth");
 
 
     const [appliedRange, setAppliedRange] = useState({
@@ -91,7 +112,7 @@ export default function QuickBooksData() {
         error: invoicesError,
         refetch: refetchInvoices
     } = useGetQuickBooksInvoicesQuery(
-        { startDate: appliedRange.startDate, endDate: appliedRange.endDate },
+        { startDate: appliedRange.startDate, endDate: appliedRange.endDate, clientId: effectiveClientId },
         { skip: activeTab !== 'invoices' }
     );
 
@@ -102,7 +123,7 @@ export default function QuickBooksData() {
         error: customersError,
         refetch: refetchCustomers
     } = useGetQuickBooksCustomersQuery(
-        { limit: 100 },
+        { limit: 100, clientId: effectiveClientId },
         { skip: activeTab !== 'customers' }
     );
 
@@ -113,7 +134,7 @@ export default function QuickBooksData() {
         error: expensesError,
         refetch: refetchExpenses
     } = useGetQuickBooksExpensesQuery(
-        { startDate: appliedRange.startDate, endDate: appliedRange.endDate },
+        { startDate: appliedRange.startDate, endDate: appliedRange.endDate, clientId: effectiveClientId },
         { skip: activeTab !== 'expenses' }
     );
 
@@ -123,7 +144,7 @@ export default function QuickBooksData() {
         isFetching: profitLossFetching,
         error: profitLossError
     } = useGetQuickBooksProfitLossQuery(
-        { startDate: appliedRange.startDate, endDate: appliedRange.endDate },
+        { startDate: appliedRange.startDate, endDate: appliedRange.endDate, clientId: effectiveClientId },
         { skip: activeTab !== 'reports' || selectedReport !== 'profitLoss' }
     );
 
@@ -133,18 +154,18 @@ export default function QuickBooksData() {
         isFetching: balanceSheetFetching,
         error: balanceSheetError
     } = useGetQuickBooksBalanceSheetQuery(
-        { startDate: appliedRange.startDate, endDate: appliedRange.endDate },
+        { startDate: appliedRange.startDate, endDate: appliedRange.endDate, clientId: effectiveClientId },
         { skip: activeTab !== 'reports' || selectedReport !== 'balanceSheet' }
     );
 
 
     const {
-        data: generalLegderData,
+        data: generalLedgerData,
         isLoading: generalLedgerLoading,
         isFetching: generalLedgerFetching,
         error: generalLedgerError
     } = useGetQuickBooksGeneralLedgerQuery(
-        { startDate: appliedRange.startDate, endDate: appliedRange.endDate },
+        { startDate: appliedRange.startDate, endDate: appliedRange.endDate, clientId: effectiveClientId },
         { skip: activeTab !== 'reports' || selectedReport !== 'generalLedger' }
     )
 
@@ -153,12 +174,11 @@ export default function QuickBooksData() {
         data: connectionStatus,
         isLoading: qbLoading,
         isFetching: qbFetching,
-    } = useGetQuickBooksConnectionStatusQuery();
+    } = useGetQuickBooksConnectionStatusQuery(effectiveClientId);
 
     const [getAuthUrl] = useGetQuickBooksAuthUrlMutation();
     const [disconnectQuickBooks] = useDisconnectQuickBooksMutation();
-    const [syncQuickBooks] = useSyncQuickBooksDataMutation();
-    const [refreshQuickBooksToken, { isLoading }] =
+    const [refreshQuickBooksToken, { isLoading: refreshLoading }] =
         useRefreshQuickBooksTokenMutation();
 
 
@@ -171,40 +191,48 @@ export default function QuickBooksData() {
 
 
     useEffect(() => {
-        if (companyInfo?.tokenExpired) {
+        if (!readOnly && companyInfo?.tokenExpired) {
             refreshQuickBooksToken();
         }
-    }, [companyInfo?.tokenExpired]);
+    }, [companyInfo?.tokenExpired, refreshQuickBooksToken, readOnly]);
 
 
     const handleConnect = async () => {
-        const result = await getAuthUrl().unwrap();
-        if (result?.data?.authUrl) {
-            window.location.href = result.data.authUrl;
+        try {
+            if (readOnly) return;
+            const result = await getAuthUrl().unwrap();
+            if (result?.data?.authUrl) {
+                window.location.href = result.data.authUrl;
+            }
+        } catch (error) {
+            toast.error("Failed to start QuickBooks connection.");
         }
     };
 
     const handleDisconnect = async () => {
-        await disconnectQuickBooks().unwrap();
-        navigate("/new-dashboard")
+        try {
+            if (readOnly) return;
+            await disconnectQuickBooks().unwrap();
+            toast.success("QuickBooks disconnected.");
+            navigate("/new-dashboard");
+        } catch (error) {
+            toast.error("Failed to disconnect QuickBooks.");
+        }
     };
 
     const handleRefresh = async () => {
-        // await syncQuickBooks().unwrap();
-        await refreshQuickBooksToken().unwrap();
-
+        try {
+            if (readOnly) return;
+            await refreshQuickBooksToken().unwrap();
+            toast.success("QuickBooks connection refreshed.");
+        } catch (error) {
+            toast.error("Failed to refresh QuickBooks connection.");
+        }
     };
 
     const formatDate = (dateString) => {
         if (!dateString) return 'N/A';
         return new Date(dateString).toLocaleDateString();
-    };
-
-    const formatCurrency = (amount) => {
-        return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'USD'
-        }).format(amount || 0);
     };
 
     const quickbooks = {
@@ -219,8 +247,7 @@ export default function QuickBooksData() {
 
         connect: handleConnect,
         disconnect: handleDisconnect,
-        refresh: handleRefresh,
-    };;
+    };
 
 
     const [syncData, { isLoading: syncing }] = useSyncQuickBooksDataMutation();
@@ -228,7 +255,7 @@ export default function QuickBooksData() {
     // Handle sync
     const handleSync = async () => {
         try {
-            await syncData().unwrap();
+            await syncData({ clientId: effectiveClientId }).unwrap();
 
             // Refetch data based on active tab
             switch (activeTab) {
@@ -245,25 +272,13 @@ export default function QuickBooksData() {
                     break;
             }
 
-            alert('QuickBooks data synced successfully!');
+            toast.success("QuickBooks data synced successfully.");
         } catch (error) {
             console.error('Sync failed:', error);
-            alert('Failed to sync QuickBooks data. Please try again.');
+            toast.error("Failed to sync QuickBooks data. Please try again.");
         }
     };
-    // const [showData, setShowData] = useState(true);
-
-
-
-
-    const QuickStats = [
-        { label: "Invoices", value: companyInfo?.stats?.totalInvoices || 0, icon: FileText },
-        { label: "Customers", value: companyInfo?.stats?.totalCustomers || 0, icon: Users },
-        { label: "Expenses", value: companyInfo?.stats?.totalExpenses || 0, icon: Receipt },
-        { label: "Bills", value: companyInfo?.stats?.totalBills || 0, icon: CreditCard },
-    ];
-
-
+  
     const getStatus = () => {
         if (companyInfo?.isPaused) return "paused";
         if (companyInfo?.tokenExpired) return "expired";
@@ -279,8 +294,11 @@ export default function QuickBooksData() {
     };
 
     const invoices = invoicesData?.data?.invoices || [];
-    const customers = customersData?.data.customers || [];
-    const expenses = expensesData?.data.expenses || [];
+    const customers = customersData?.data?.customers || [];
+    const expenses = expensesData?.data?.expenses || [];
+    const invoicesLoaded = Boolean(invoicesData?.data);
+    const customersLoaded = Boolean(customersData?.data);
+    const expensesLoaded = Boolean(expensesData?.data);
 
 
 
@@ -289,27 +307,51 @@ export default function QuickBooksData() {
     const profitLossRows = profitLossReport?.Rows?.Row || [];
     const profitLossPeriod = profitLossReport?.Header?.StartPeriod && profitLossReport?.Header?.EndPeriod
         ? `${formatDate(profitLossReport.Header.StartPeriod)} to ${formatDate(profitLossReport.Header.EndPeriod)}`
-        : `${formatDate(dateRange.startDate)} to ${formatDate(dateRange.endDate)}`;
+        : `${formatDate(appliedRange.startDate)} to ${formatDate(appliedRange.endDate)}`;
 
     const balanceSheetReport = balanceSheetData?.data;
     const balanceSheetRows = balanceSheetReport?.Rows?.Row || [];
     const balanceSheetPeriod = balanceSheetReport?.Header?.EndPeriod
         ? `${formatDate(balanceSheetReport.Header.EndPeriod)}`
-        : `${formatDate(dateRange.endDate)}`;
+        : `${formatDate(appliedRange.endDate)}`;
 
-    const generalLedgerReport = generalLegderData?.data;
+    const generalLedgerReport = generalLedgerData?.data;
     const generalLedgerRows = generalLedgerReport?.Rows?.Row || [];
     const generalLedgerPeriod = generalLedgerReport?.Header?.StartPeriod && generalLedgerReport?.Header?.EndPeriod
         ? `${formatDate(generalLedgerReport.Header.StartPeriod)} to ${formatDate(generalLedgerReport.Header.EndPeriod)}`
-        : `${formatDate(dateRange.startDate)} to ${formatDate(dateRange.endDate)}`;
+        : `${formatDate(appliedRange.startDate)} to ${formatDate(appliedRange.endDate)}`;
 
 
 
+
+    const isRangeDirty =
+        dateRange.startDate !== appliedRange.startDate ||
+        dateRange.endDate !== appliedRange.endDate;
+    const isRangeValid =
+        Boolean(dateRange.startDate) &&
+        Boolean(dateRange.endDate) &&
+        dateRange.startDate <= dateRange.endDate;
+
+    const handleApplyRange = () => {
+        if (!isRangeValid) {
+            toast.error("Start date must be before end date.");
+            return;
+        }
+        setAppliedRange(dateRange);
+    };
+
+    const quickRangeOptions = [
+        { value: "thisMonth", label: "This month", range: thisMonthRange },
+        { value: "lastMonth", label: "Last month", range: lastMonthRange },
+        { value: "ytd", label: "Year to date", range: yearToDateRange },
+    ];
 
     if (quickbooks.status !== "connected") {
         return (
-            <div className="space-y-6 animate-fade-in">
-                <h1 className="text-2xl font-bold text-foreground">QuickBooks Data</h1>
+            <div className={`animate-fade-in ${showTitle ? "space-y-6" : "space-y-4"}`}>
+                {showTitle && (
+                    <h1 className="text-2xl font-bold text-foreground">QuickBooks Data</h1>
+                )}
                 <Card>
                     <CardContent className="flex flex-col items-center justify-center py-16 gap-4">
                         <div className="w-16 h-16 rounded-2xl bg-success/10 flex items-center justify-center">
@@ -317,12 +359,16 @@ export default function QuickBooksData() {
                         </div>
                         <h2 className="text-xl font-semibold text-foreground">QuickBooks Not Connected</h2>
                         <p className="text-muted-foreground text-center max-w-md">
-                            Connect your QuickBooks account from the dashboard to view your financial data here.
+                            {readOnly
+                                ? "This client has not connected QuickBooks yet."
+                                : "Connect your QuickBooks account from the dashboard to view your financial data here."}
                         </p>
-                        <Button onClick={quickbooks.connect} className="gap-2 mt-2">
-                            <Link2 className="w-4 h-4" />
-                            {quickbooks.status === "connecting" ? "Connecting..." : "Connect QuickBooks"}
-                        </Button>
+                        {!readOnly && (
+                            <Button onClick={quickbooks.connect} className="gap-2 mt-2">
+                                <Link2 className="w-4 h-4" />
+                                {quickbooks.status === "connecting" ? "Connecting..." : "Connect QuickBooks"}
+                            </Button>
+                        )}
                     </CardContent>
                 </Card>
             </div>
@@ -331,8 +377,10 @@ export default function QuickBooksData() {
 
 
     return (
-        <div className="space-y-6 animate-fade-in">
-            <h1 className="text-2xl font-bold text-foreground">QuickBooks Data</h1>
+        <div className={`animate-fade-in ${showTitle ? "space-y-6" : "space-y-4"}`}>
+            {showTitle && (
+                <h1 className="text-2xl font-bold text-foreground">QuickBooks Data</h1>
+            )}
 
             {/* Company Information */}
             <Card>
@@ -368,61 +416,136 @@ export default function QuickBooksData() {
                 </CardContent>
             </Card>
 
-            {/* Quick Stats */}
-            {/* <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {QuickStats.map((stat) => (
-                    <Card key={stat.label}>
-                        <CardContent className="flex flex-col items-center justify-center py-6">
-                            <stat.icon className="w-5 h-5 text-primary mb-2" />
-                            <span className="text-3xl font-bold text-primary">{showData ? stat.value : "—"}</span>
-                            <span className="text-xs text-muted-foreground uppercase tracking-wider mt-1">{stat.label}</span>
-                        </CardContent>
-                    </Card>
-                ))}
-            </div> */}
-
             {/* Actions */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                {/* <Button variant="outline" className="gap-2" onClick={() => setShowData(!showData)}>
-                    {showData ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    {showData ? "Hide Data" : "Show Data"}
-                </Button> */}
-                <Button variant="destructive" className="gap-2" onClick={quickbooks.disconnect}>
-                    <Unplug className="w-4 h-4" />
-                    Disconnect QuickBooks
-                </Button>
-                <div className="flex items-center gap-2">
-                    <input
-                        type="date"
-                        value={dateRange.startDate}
-                        onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
-                        className="px-3 py-1.5 text-sm rounded-md border border-input bg-background"
-                    />
-                    <span className="text-muted-foreground text-sm">to</span>
-                    <input
-                        type="date"
-                        value={dateRange.endDate}
-                        onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
-                        className="px-3 py-1.5 text-sm rounded-md border border-input bg-background"
-                    />
-                    <Button
-                        size="sm"
-                        onClick={() => setAppliedRange(dateRange)}
-                        disabled={invoicesLoading || expensesLoading}
-                    >
-                        Apply
+            <div className="flex flex-col gap-4">
+                <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+                {!readOnly && (
+                    <Button variant="destructive" className="gap-2" onClick={quickbooks.disconnect}>
+                        <Unplug className="w-4 h-4" />
+                        Disconnect QuickBooks
                     </Button>
+                )}
 
+                    <div className="flex flex-1 flex-col sm:flex-row sm:items-center gap-3">
+                        <div className="w-full sm:w-48">
+                            <Select
+                                value={quickRange}
+                                onValueChange={(value) => {
+                                    const match = quickRangeOptions.find((option) => option.value === value);
+                                    if (match) {
+                                        setDateRange(match.range);
+                                        setQuickRange(match.value);
+                                    }
+                                }}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Quick range" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {quickRangeOptions.map((option) => (
+                                        <SelectItem key={option.value} value={option.value}>
+                                            {option.label}
+                                        </SelectItem>
+                                    ))}
+                                    <SelectItem value="custom">Custom</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="date"
+                                value={dateRange.startDate}
+                                onChange={(e) => {
+                                    setDateRange({ ...dateRange, startDate: e.target.value });
+                                    setQuickRange("custom");
+                                }}
+                                className="px-3 py-1.5 text-sm rounded-md border border-input bg-background"
+                            />
+                            <span className="text-muted-foreground text-sm">to</span>
+                            <input
+                                type="date"
+                                value={dateRange.endDate}
+                                onChange={(e) => {
+                                    setDateRange({ ...dateRange, endDate: e.target.value });
+                                    setQuickRange("custom");
+                                }}
+                                className="px-3 py-1.5 text-sm rounded-md border border-input bg-background"
+                            />
+                            <Button
+                                size="sm"
+                                onClick={handleApplyRange}
+                                disabled={!isRangeDirty || !isRangeValid}
+                            >
+                                Apply
+                            </Button>
+                        </div>
+                        {!isRangeValid && (
+                            <span className="text-xs text-destructive">Invalid date range</span>
+                        )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        {!readOnly && status === "expired" && (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleRefresh}
+                                disabled={refreshLoading}
+                                className="gap-2"
+                            >
+                                <RefreshCw className={`w-4 h-4 ${refreshLoading ? "animate-spin" : ""}`} />
+                                Refresh Connection
+                            </Button>
+                        )}
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleSync}
+                            disabled={syncing}
+                            className="gap-2"
+                        >
+                            <RefreshCw className={`w-4 h-4 ${syncing ? "animate-spin" : ""}`} />
+                            {syncing ? "Syncing..." : "Sync Now"}
+                        </Button>
+                    </div>
                 </div>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleSync}
-                    className="gap-2"
-                >
-                    <RefreshCw className="w-4 h-4" />
-                    Sync Now
-                </Button>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <SummaryCard
+                        title="Invoices"
+                        value={invoicesLoaded ? `${invoices.length} total` : "—"}
+                        subValue={
+                            invoicesLoaded
+                                ? `Outstanding ${formatCurrency(
+                                    invoices.reduce((sum, inv) => sum + Number(inv.Balance || 0), 0)
+                                )}`
+                                : "Open Invoices tab to load"
+                        }
+                        icon={FileText}
+                    />
+                    <SummaryCard
+                        title="Customers"
+                        value={customersLoaded ? `${customers.length} total` : "—"}
+                        subValue={
+                            customersLoaded
+                                ? `${customers.filter((customer) => customer.Active).length} active`
+                                : "Open Customers tab to load"
+                        }
+                        icon={Users}
+                    />
+                    <SummaryCard
+                        title="Expenses"
+                        value={expensesLoaded ? `${expenses.length} total` : "—"}
+                        subValue={
+                            expensesLoaded
+                                ? `Total ${formatCurrency(
+                                    expenses.reduce((sum, exp) => sum + Number(exp.TotalAmt || 0), 0)
+                                )}`
+                                : "Open Expenses tab to load"
+                        }
+                        icon={Receipt}
+                    />
+                </div>
             </div>
 
 
@@ -447,23 +570,23 @@ export default function QuickBooksData() {
                     <Card>
                         <CardContent className="py-6">
                             {invoicesLoading || invoicesFetching ? (
-                                <p className="text-muted-foreground text-center">Loading invoices</p>
+                                <p className="text-muted-foreground text-center">Loading invoices...</p>
                             ) : invoicesError ? (
                                 <p className="text-red-500 text-center">
                                     Failed to load invoices.
                                 </p>
 
                             ) : invoices?.length ? (
-                                <div className="overflow-x-auto rounded-xl border border-border shadow-sm">
-                                    <table className="min-w-full text-sm">
-                                        <thead className="bg-muted/40">
-                                            <tr className="text-left text-muted-foreground uppercase text-xs tracking-wider">
+                                <div className="overflow-x-auto rounded-2xl border border-border bg-background shadow-sm">
+                                    <table className="min-w-full text-sm text-foreground">
+                                        <thead className="bg-muted/60">
+                                            <tr className="text-left text-muted-foreground uppercase text-[11px] tracking-wider">
                                                 <th className="px-4 py-3">Invoice</th>
                                                 <th className="px-4 py-3">Customer</th>
-                                                <th className="px-4 py-3">Date</th>
-                                                <th className="px-4 py-3">Due Date</th>
-                                                <th className="px-4 py-3 text-right">Amount</th>
-                                                <th className="px-4 py-3 text-right">Balance</th>
+                                                <th className="px-4 py-3 whitespace-nowrap">Date</th>
+                                                <th className="px-4 py-3 whitespace-nowrap">Due Date</th>
+                                                <th className="px-4 py-3 text-right whitespace-nowrap">Amount</th>
+                                                <th className="px-4 py-3 text-right whitespace-nowrap">Balance</th>
                                                 <th className="px-4 py-3 text-center">Status</th>
                                             </tr>
                                         </thead>
@@ -475,9 +598,9 @@ export default function QuickBooksData() {
                                                 return (
                                                     <tr
                                                         key={invoice.Id}
-                                                        className="hover:bg-muted/30 transition-colors"
+                                                        className="transition-colors hover:bg-muted/40 odd:bg-background even:bg-muted/20"
                                                     >
-                                                        <td className="px-4 py-3 font-medium">
+                                                        <td className="px-4 py-3 font-medium whitespace-nowrap">
                                                             {invoice.DocNumber || "N/A"}
                                                         </td>
 
@@ -485,19 +608,19 @@ export default function QuickBooksData() {
                                                             {invoice.CustomerRef?.name || "N/A"}
                                                         </td>
 
-                                                        <td className="px-4 py-3">
+                                                        <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
                                                             {formatDate(invoice.TxnDate)}
                                                         </td>
 
-                                                        <td className="px-4 py-3">
+                                                        <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
                                                             {formatDate(invoice.DueDate)}
                                                         </td>
 
-                                                        <td className="px-4 py-3 text-right font-medium">
+                                                        <td className="px-4 py-3 text-right font-medium whitespace-nowrap">
                                                             {formatCurrency(invoice.TotalAmt)}
                                                         </td>
 
-                                                        <td className="px-4 py-3 text-right">
+                                                        <td className="px-4 py-3 text-right whitespace-nowrap">
                                                             {formatCurrency(invoice.Balance)}
                                                         </td>
 
@@ -515,20 +638,20 @@ export default function QuickBooksData() {
                                                 );
                                             })}
                                             {invoices.length > 0 && (
-                                                <tr className="bg-muted/50 font-semibold">
+                                                <tr className="bg-muted/70 font-semibold">
                                                     <td className="px-4 py-3">
                                                         Total ({invoices.length})
                                                     </td>
 
                                                     <td colSpan={3}></td>
 
-                                                    <td className="px-4 py-3 text-right">
+                                                    <td className="px-4 py-3 text-right whitespace-nowrap">
                                                         {formatCurrency(
                                                             invoices.reduce((sum, inv) => sum + Number(inv.TotalAmt || 0), 0)
                                                         )}
                                                     </td>
 
-                                                    <td className="px-4 py-3 text-right">
+                                                    <td className="px-4 py-3 text-right whitespace-nowrap">
                                                         {formatCurrency(
                                                             invoices.reduce((sum, inv) => sum + Number(inv.Balance || 0), 0)
                                                         )}
@@ -551,22 +674,22 @@ export default function QuickBooksData() {
                     <Card>
                         <CardContent className="py-6">
                             {customersLoading || customersFetching ? (
-                                <p className="text-muted-foreground text-center">Loading Customers</p>
+                                <p className="text-muted-foreground text-center">Loading customers...</p>
                             ) : customersError ? (
                                 <p className="text-red-500 text-center">
                                     Failed to load Customers.
                                 </p>
 
                             ) : customers?.length ? (
-                                <div className="overflow-x-auto rounded-xl border border-border shadow-sm">
-                                    <table className="min-w-full text-sm">
-                                        <thead className="bg-muted/40">
-                                            <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground">
+                                <div className="overflow-x-auto rounded-2xl border border-border bg-background shadow-sm">
+                                    <table className="min-w-full text-sm text-foreground">
+                                        <thead className="bg-muted/60">
+                                            <tr className="text-left text-[11px] uppercase tracking-wider text-muted-foreground">
                                                 <th className="px-4 py-3">Name</th>
                                                 <th className="px-4 py-3">Company</th>
                                                 <th className="px-4 py-3">Email</th>
                                                 <th className="px-4 py-3">Phone</th>
-                                                <th className="px-4 py-3 text-right">Balance</th>
+                                                <th className="px-4 py-3 text-right whitespace-nowrap">Balance</th>
                                                 <th className="px-4 py-3 text-center">Status</th>
                                             </tr>
                                         </thead>
@@ -578,7 +701,7 @@ export default function QuickBooksData() {
                                                 return (
                                                     <tr
                                                         key={customer.Id}
-                                                        className="hover:bg-muted/30 transition-colors"
+                                                        className="transition-colors hover:bg-muted/40 odd:bg-background even:bg-muted/20"
                                                     >
                                                         <td className="px-4 py-3 font-medium">
                                                             {customer.DisplayName || "N/A"}
@@ -588,15 +711,15 @@ export default function QuickBooksData() {
                                                             {customer.CompanyName || "-"}
                                                         </td>
 
-                                                        <td className="px-4 py-3 text-muted-foreground">
+                                                        <td className="px-4 py-3 text-muted-foreground break-all">
                                                             {customer.PrimaryEmailAddr?.Address || "-"}
                                                         </td>
 
-                                                        <td className="px-4 py-3">
+                                                        <td className="px-4 py-3 whitespace-nowrap">
                                                             {customer.PrimaryPhone?.FreeFormNumber || "-"}
                                                         </td>
 
-                                                        <td className="px-4 py-3 text-right font-medium">
+                                                        <td className="px-4 py-3 text-right font-medium whitespace-nowrap">
                                                             {formatCurrency(customer.Balance)}
                                                         </td>
 
@@ -613,14 +736,14 @@ export default function QuickBooksData() {
                                                     </tr>
                                                 );
                                             })}
-                                            <tr className="bg-muted/50 font-semibold">
+                                            <tr className="bg-muted/70 font-semibold">
                                                 <td className="px-4 py-3">
                                                     Total ({customers.length}) | Active ({customers.filter(c => c.Active).length})
                                                 </td>
 
                                                 <td colSpan={3}></td>
 
-                                                <td className="px-4 py-3 text-right">
+                                                <td className="px-4 py-3 text-right whitespace-nowrap">
                                                     {formatCurrency(
                                                         customers.reduce(
                                                             (sum, cust) => sum + Number(cust.Balance || 0),
@@ -647,30 +770,30 @@ export default function QuickBooksData() {
                     <Card>
                         <CardContent className="py-6">
                             {expensesLoading || expensesFetching ? (
-                                <p className="text-muted-foreground text-center">Loading Expenses</p>
+                                <p className="text-muted-foreground text-center">Loading expenses...</p>
                             ) : expensesError ? (
                                 <p className="text-red-500 text-center">
                                     Failed to load expenses.
                                 </p>
 
                             ) : expenses?.length ? (
-                                <div className="overflow-x-auto rounded-2xl border bg-background shadow-sm">
-                                    <table className="min-w-full text-sm">
+                                <div className="overflow-x-auto rounded-2xl border border-border bg-background shadow-sm">
+                                    <table className="min-w-full text-sm text-foreground">
 
                                         {/* Header */}
-                                        <thead className="sticky top-0 z-10 bg-muted/50 backdrop-blur">
-                                            <tr className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                                <th className="px-5 py-3">Date</th>
+                                        <thead className="sticky top-0 z-10 bg-muted/60 backdrop-blur">
+                                            <tr className="text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                                <th className="px-5 py-3 whitespace-nowrap">Date</th>
                                                 <th className="px-5 py-3">Vendor</th>
                                                 <th className="px-5 py-3">Account</th>
                                                 <th className="px-5 py-3">Description</th>
-                                                <th className="px-5 py-3 text-right">Amount</th>
-                                                <th className="px-5 py-3 text-center">Payment Method</th>
+                                                <th className="px-5 py-3 text-right whitespace-nowrap">Amount</th>
+                                                <th className="px-5 py-3 text-center whitespace-nowrap">Payment Method</th>
                                             </tr>
                                         </thead>
 
                                         {/* Body */}
-                                        <tbody className="divide-y">
+                                        <tbody className="divide-y divide-border">
                                             {expenses?.map((expense) => {
                                                 const isActive = expense.Active;
                                                 const hasBalance = expense.Balance > 0;
@@ -678,9 +801,9 @@ export default function QuickBooksData() {
                                                 return (
                                                     <tr
                                                         key={expense.Id}
-                                                        className="transition-colors hover:bg-muted/40"
+                                                        className="transition-colors hover:bg-muted/40 odd:bg-background even:bg-muted/20"
                                                     >
-                                                        <td className="px-5 py-4 font-medium text-foreground">
+                                                        <td className="px-5 py-4 font-medium whitespace-nowrap">
                                                             {formatDate(expense.TxnDate)}
                                                         </td>
 
@@ -697,27 +820,27 @@ export default function QuickBooksData() {
                                                         </td>
 
                                                         <td
-                                                            className={`px-5 py-4 text-right font-semibold`}
+                                                            className="px-5 py-4 text-right font-semibold whitespace-nowrap"
                                                         >
                                                             {formatCurrency(expense.TotalAmt)}
                                                         </td>
 
-                                                        <td className="px-5 py-4 text-center">
+                                                        <td className="px-5 py-4 text-center whitespace-nowrap">
                                                             {expense.PaymentType || '-'}
                                                         </td>
                                                     </tr>
                                                 );
                                             })}
-                                            <tr className="bg-muted/50 font-semibold">
+                                            <tr className="bg-muted/70 font-semibold">
                                                 <td className="pl-12 py-3">
                                                     Total ({expenses.length})
                                                 </td>
                                                 <td colSpan={3}></td>
-                                                <td className="pr-8 py-3 text-right">
+                                                <td className="pr-8 py-3 text-right whitespace-nowrap">
                                                     {formatCurrency(expenses.reduce((sum, exp) => sum + exp.TotalAmt, 0))}
                                                 </td>
 
-                                                <td className="pr-[6rem] py-3 text-right">
+                                                <td className="pr-[6rem] py-3 text-right whitespace-nowrap">
                                                     Avg {formatCurrency(expenses.reduce((sum, exp) => sum + exp.TotalAmt, 0) / expenses.length)}
                                                 </td>
                                             </tr>
@@ -877,6 +1000,25 @@ function PlaceholderTab({ label }) {
     );
 }
 
+function SummaryCard({ title, value, subValue, icon: Icon }) {
+    return (
+        <Card>
+            <CardContent className="flex items-center gap-4 py-4">
+                <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                    <Icon className="h-5 w-5" />
+                </div>
+                <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        {title}
+                    </p>
+                    <p className="text-base font-semibold text-foreground">{value}</p>
+                    <p className="text-xs text-muted-foreground">{subValue}</p>
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
+
 
 const extractLabelAmount = (colData = []) => ({
     label: colData?.[0]?.value || '',
@@ -889,13 +1031,6 @@ const summaryDividerGroups = new Set([
     'NetOtherIncome',
     'NetIncome'
 ]);
-
-const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD'
-    }).format(amount || 0);
-};
 
 const formatMoneyValue = (value) => {
     if (value === null || value === undefined || value === '') return '';
@@ -1019,4 +1154,3 @@ const renderGeneralLegderReportRows = (rows = [], depth = 0, keyPrefix = 'report
         return items;
     });
 };
-

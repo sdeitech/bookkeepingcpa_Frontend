@@ -219,6 +219,7 @@ export default function AdminStaff() {
       key: "assignedCount",
       label: "Assigned Clients",
       sortable: true,
+      render: (row) => <span className="text-sm text-muted-foreground">{row.clientCount}</span>,
     },
     {
       key: "staffAccessStatus",
