@@ -1,27 +1,41 @@
 import { useState } from 'react';
-import { Send, Loader2 } from 'lucide-react';
+import { Send, Loader2, AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function MessageInput({ onSendMessage, isLoading }) {
   const [message, setMessage] = useState('');
+  const [error, setError] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError(null);
 
     if (!message.trim()) {
-      alert('Message cannot be empty');
+      setError('Message cannot be empty');
       return;
     }
 
     if (message.length > 2000) {
-      alert('Message too long (max 2000 characters)');
+      setError('Message too long (max 2000 characters)');
       return;
     }
 
     try {
       await onSendMessage(message.trim());
       setMessage(''); // Clear input after sending
+      setError(null);
     } catch (error) {
-      alert('Failed to send message');
+      const errorMessage = error?.data?.message || error?.message || 'Failed to send message';
+      setError(errorMessage);
+      
+      // Show toast with retry option
+      toast.error(errorMessage, {
+        duration: 5000,
+        action: {
+          label: 'Retry',
+          onClick: () => handleSubmit(e)
+        }
+      });
     }
   };
 
@@ -34,16 +48,25 @@ export default function MessageInput({ onSendMessage, isLoading }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-2">
+      {error && (
+        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+          <AlertCircle className="h-4 w-4 flex-shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
       <textarea
         value={message}
-        onChange={(e) => setMessage(e.target.value)}
+        onChange={(e) => {
+          setMessage(e.target.value);
+          setError(null); // Clear error when user types
+        }}
         onKeyDown={handleKeyDown}
         placeholder="Type your message... (Ctrl+Enter to send)"
         className="w-full min-h-[80px] p-3 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
         disabled={isLoading}
       />
       <div className="flex items-center justify-between">
-        <span className="text-xs text-gray-500">
+        <span className={`text-xs ${message.length > 2000 ? 'text-red-500 font-medium' : 'text-gray-500'}`}>
           {message.length}/2000 characters
         </span>
         <button
