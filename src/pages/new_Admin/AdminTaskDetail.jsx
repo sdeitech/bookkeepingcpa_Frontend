@@ -51,13 +51,56 @@ export default function AdminTaskDetail() {
   const [rejectDocument] = useRejectDocumentMutation();
 
   // Message queries and mutations
-  const { data: messagesData, isLoading: loadingMessages, refetch: refetchMessages } = useGetTaskMessagesQuery({ taskId, page: 1, limit: 10 });
+  const [messagePage, setMessagePage] = useState(1);
+  const [allMessages, setAllMessages] = useState([]);
+  const { data: messagesData, isLoading: loadingMessages, refetch: refetchMessages, isFetching } = useGetTaskMessagesQuery({ taskId, page: messagePage, limit: 50 });
   const messages = messagesData?.data?.messages || [];
+  const hasMoreMessages = messagesData?.data?.pagination?.hasMore || false;
   const [sendMessage, { isLoading: sendingMessage }] = useSendMessageMutation();
   const [markAsRead] = useMarkTaskMessagesAsReadMutation();
 
+  // Accumulate messages from all pages
+  useEffect(() => {
+    if (messages && messages.length > 0) {
+      if (messagePage === 1) {
+        // First page - replace all messages
+        setAllMessages(messages);
+      } else {
+        // Subsequent pages - prepend older messages
+        setAllMessages(prev => [...messages, ...prev]);
+      }
+    }
+  }, [messages, messagePage]);
+
+  // Load more messages
+  const handleLoadMore = () => {
+    if (!isFetching && hasMoreMessages) {
+      setMessagePage(prev => prev + 1);
+    }
+  };
+
+  // Reset pagination when task changes
+  useEffect(() => {
+    setMessagePage(1);
+    setAllMessages([]);
+  }, [taskId]);
+
   // 🔥 Enable Firebase real-time messages (instant delivery!)
   useRealtimeMessages(taskId, refetchMessages);
+
+  // Mark messages as read when viewing task
+  useEffect(() => {
+    if (taskId && allMessages && allMessages.length > 0) {
+      // Mark messages as read after a short delay to ensure user is viewing them
+      const timer = setTimeout(() => {
+        markAsRead(taskId).catch(error => {
+          console.error('Failed to mark messages as read:', error);
+        });
+      }, 1000); // 1 second delay
+
+      return () => clearTimeout(timer);
+    }
+  }, [taskId, allMessages, markAsRead]);
 
   // Edit mode state
   const [editTitle, setEditTitle] = useState("");
@@ -859,9 +902,12 @@ export default function AdminTaskDetail() {
             </div>
             <div className="space-y-4">
               <MessageList
-                messages={messages}
+                messages={allMessages}
                 isLoading={loadingMessages}
                 currentUserId={user?._id}
+                onLoadMore={handleLoadMore}
+                hasMore={hasMoreMessages}
+                loadingMore={isFetching && messagePage > 1}
               />
               <MessageInput
                 onSendMessage={handleSendMessage}
