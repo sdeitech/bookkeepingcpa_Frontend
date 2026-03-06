@@ -1,7 +1,9 @@
-import { Link, useLocation } from "react-router-dom";
-import { Home, Users, UserCheck, CheckSquare, FileText, Mail, Settings, ArrowLeft, UserPlus } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Home, Users, UserCheck, CheckSquare, FileText, Mail, Settings, LogOut } from "lucide-react";
 import { PlutifyLogo } from "@/components/PlutifyLogo";
 import { cn } from "@/lib/utils";
+import { useDispatch } from "react-redux";
+import { logout } from "@/features/auth/authSlice";
 
 const navItems = [
   { icon: Home, label: "Dashboard", href: "/admin" },
@@ -16,6 +18,8 @@ const navItems = [
 
 export function AdminSidebar() {
   const location = useLocation();
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   const isActive = (href) => {
     if (href === "/admin") return location.pathname === "/admin";
@@ -52,15 +56,19 @@ export function AdminSidebar() {
         })}
       </nav>
 
-      {/* <div className="p-3 border-t border-sidebar-border">
-        <Link
-          to="/dashboard"
-          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+      <div className="p-3 border-t border-sidebar-border">
+      <button
+          type="button"
+          onClick={() => {
+            dispatch(logout());
+            navigate("/");
+          }}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium bg-sidebar-accent text-sidebar-accent-foreground transition-colors"
         >
-          <ArrowLeft className="w-5 h-5 shrink-0" />
-          Back to Dashboard
-        </Link>
-      </div> */}
+          <LogOut className="w-5 h-5" />
+          Sign Out
+        </button>
+      </div>
     </aside>
   );
 }

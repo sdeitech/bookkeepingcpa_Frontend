@@ -1,19 +1,23 @@
-import { Link, useLocation } from "react-router-dom";
-import { Home, FileText, CreditCard, HelpCircle, LogOut, Shield, BookOpen, CheckSquare } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Home, FileText, CreditCard, HelpCircle, LogOut, BookOpen, CheckSquare } from "lucide-react";
 import { PlutifyLogo } from "../../components/PlutifyLogo";
 import { cn } from "../../lib/utils";
+import { useDispatch } from "react-redux";
+import { logout } from "@/features/auth/authSlice";
 
 const navItems = [
   { icon: Home, label: "Home", href: "/new-dashboard" },
   { icon: CheckSquare, label: "My Tasks", href: "/new-dashboard/tasks" },
   { icon: FileText, label: "Documents", href: "/new-dashboard/documents" },
-  { icon: CreditCard, label: "Billing", href: "/dashboard/billing" },
-  { icon: HelpCircle, label: "Support", href: "/dashboard/support" },
+  { icon: CreditCard, label: "Billing", href: "/new-dashboard/billing" },
+  { icon: HelpCircle, label: "Support", href: "/new-dashboard/support" },
   { icon: BookOpen, label: "QuickBooks Data", href: "/new-dashboard/quickbooks" },
 ];
 
 export function DashboardSidebar() {
   const location = useLocation();
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   return (
     <aside className="w-64 bg-sidebar text-sidebar-foreground flex flex-col h-screen sticky top-0 shrink-0 overflow-y-auto">
@@ -48,13 +52,17 @@ export function DashboardSidebar() {
 
       {/* Sign Out */}
       <div className="p-4 border-t border-sidebar-border">
-        <Link
-          to="/"
-          className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors no-underline"
+      <button
+          type="button"
+          onClick={() => {
+            dispatch(logout());
+            navigate("/");
+          }}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium bg-sidebar-accent text-sidebar-accent-foreground transition-colors"
         >
           <LogOut className="w-5 h-5" />
           Sign Out
-        </Link>
+        </button>
       </div>
     </aside>
   );

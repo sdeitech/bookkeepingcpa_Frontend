@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { useSelector } from 'react-redux';
 import { selectIsAuthenticated, selectCurrentUser, selectIsOnboardingCompleted } from './features/auth/authSlice';
 import { initializeFirebase } from './config/firebase';
-import { USER_ROLES, isClient } from './constants/userRoles';
+import { USER_ROLES, isClient, getRoleHomePath } from './constants/userRoles';
 
 // Route Guards
 import AuthGuard from './components/guards/AuthGuard';
@@ -30,6 +30,7 @@ import './utils/testFirebaseConnection';
 import './utils/debugFirebaseConnection';
 
 import './App.css';
+import { Toaster } from 'sonner';
 import Dashboard from './pages/Dashboard';
 import QuickBooksData from './pages/dashboard/QuickBooksData';
 import ClientTasks from './pages/dashboard/ClientTasks';
@@ -63,6 +64,7 @@ import { Profile } from './components/common/profile';
 import AdminAssignClients from './pages/new_Admin/AdminAssignClients';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import DocumentsPage from './pages/common/DocumentsPage';
+import ComingSoon from './pages/common/ComingSoon';
 
 
 // import Questionnaire from './pages/questionnaire/Questionnaire';
@@ -70,8 +72,7 @@ import DocumentsPage from './pages/common/DocumentsPage';
 // Simple redirect helper
 const getDefaultRedirect = (user, isAuth, isOnboarded) => {
   if (!isAuth) return '/login';
-  if (isClient(user) && !isOnboarded) return '/onboarding';
-  return '/dashboard';
+  return getRoleHomePath(user);
 };
 
 function App() {
@@ -99,11 +100,19 @@ function App() {
     }
   }, []);
 
-  const defaultRedirect = getDefaultRedirect(user, isAuthenticated, isOnboardingCompleted);
+  // const defaultRedirect = getDefaultRedirect(user, isAuthenticated, isOnboardingCompleted);
+
+  const defaultRedirect = getDefaultRedirect(user, isAuthenticated, true); // Temporarily bypass onboarding for testing
 
   return (
     <Router>
       <div className="app">
+        <Toaster
+          richColors
+          toastOptions={{
+            className: "bg-card text-foreground border border-border shadow-lg",
+          }}
+        />
         <Routes>
           {/* ============ Public Routes ============ */}
           <Route
@@ -137,6 +146,9 @@ function App() {
             <Route path="quickbooks" element={<QuickBooksData />} />
             <Route path="tasks" element={<ClientTasks />} />
             <Route path="documents" element={<DocumentsPage role="client" />} />
+            <Route path="onboarding" element={<ComingSoon title="Onboarding" message="Onboarding is coming soon." />} />
+            <Route path="billing" element={<ComingSoon title="Billing" message="Billing is coming soon." />} />
+            <Route path="support" element={<ComingSoon title="Support" message="Support is coming soon." />} />
             <Route path="tasks/:taskId" element={
               <ErrorBoundary fallbackMessage="Unable to load task details. The task may not exist or there was an error loading it." showHomeButton>
                 <AdminTaskDetail />
@@ -222,7 +234,7 @@ function App() {
           {/* ============ Protected Routes ============ */}
 
           {/* Onboarding - Client only, blocks if completed */}
-          <Route
+          {/* <Route
             path="/onboarding"
             element={
               <AuthGuard>
@@ -233,7 +245,7 @@ function App() {
                 </RoleGuard>
               </AuthGuard>
             }
-          />
+          /> */}
 
           {/* Subscription Management - Clients and Admins */}
           <Route

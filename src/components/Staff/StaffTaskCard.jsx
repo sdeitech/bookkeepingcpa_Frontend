@@ -16,6 +16,9 @@ const statusStyles = {
   in_progress: "bg-primary/15 text-primary",
   completed: "bg-success/15 text-success",
   blocked: "bg-destructive/15 text-destructive",
+  pending_review: "bg-warning/15 text-warning",
+  needs_revision: "bg-destructive/15 text-destructive",
+  cancelled: "bg-muted text-muted-foreground",
 };
 
 const statusLabels = {
@@ -23,11 +26,19 @@ const statusLabels = {
   in_progress: "In Progress",
   completed: "Completed",
   blocked: "Blocked",
+  pending_review: "Pending Review",
+  needs_revision: "Needs Revision",
+  cancelled: "Cancelled",
 };
 
 export function StaffTaskCard({ task, onEdit, onComplete }) {
   const dueDate = new Date(task.dueDate);
-  const overdue = isPast(dueDate) && !isToday(dueDate) && task.status !== "completed";
+  const statusKey = String(task.status || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_");
+  const priorityKey = String(task.priority || "").trim().toLowerCase();
+  const overdue = isPast(dueDate) && !isToday(dueDate) && statusKey !== "completed";
 
   return (
     <div
@@ -38,8 +49,8 @@ export function StaffTaskCard({ task, onEdit, onComplete }) {
     >
       <div className="flex items-start justify-between mb-3">
         <h4 className="font-semibold text-foreground text-sm leading-tight">{task.title}</h4>
-        <Badge className={cn("text-[11px] ml-2 shrink-0", priorityStyles[task.priority])} variant="secondary">
-          {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
+        <Badge className={cn("text-[11px] ml-2 shrink-0", priorityStyles[priorityKey])} variant="secondary">
+          {priorityKey ? priorityKey.charAt(0).toUpperCase() + priorityKey.slice(1) : "—"}
         </Badge>
       </div>
 
@@ -54,14 +65,14 @@ export function StaffTaskCard({ task, onEdit, onComplete }) {
       </div>
 
       <div className="flex items-center justify-between">
-        <Badge className={cn("text-[11px]", statusStyles[task.status])} variant="secondary">
-          {statusLabels[task.status]}
+        <Badge className={cn("text-[11px]", statusStyles[statusKey])} variant="secondary">
+          {statusLabels[statusKey] || "Unknown"}
         </Badge>
         <div className="flex gap-1">
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit?.(task)}>
             <Edit2 className="h-3.5 w-3.5" />
           </Button>
-          {task.status !== "completed" && (
+          {statusKey !== "completed" && (
             <Button
               variant="ghost"
               size="icon"

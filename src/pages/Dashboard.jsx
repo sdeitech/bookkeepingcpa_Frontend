@@ -167,13 +167,13 @@ function DashboardHome() {
         <div className="space-y-4">
           <h3 className="font-semibold text-foreground">Quick Actions</h3>
           <div className="grid gap-3">
-            <Link to="/dashboard/documents">
+            <Link to="/new-dashboard/documents">
               <Button variant="outline" className="w-full justify-start gap-3 h-12">
                 <Upload className="w-5 h-5" />
                 Upload Documents
               </Button>
             </Link>
-            <Link to="/dashboard/support">
+            <Link to="/new-dashboard/support">
               <Button variant="outline" className="w-full justify-start gap-3 h-12">
                 <Mail className="w-5 h-5" />
                 Submit Support Question
@@ -226,7 +226,7 @@ function DashboardHome() {
               <Calendar className="w-5 h-5" />
               Book Quarterly Strategy Call
             </Button>
-            <Link to="/dashboard/documents">
+            <Link to="/new-dashboard/documents">
               <Button variant="outline" className="w-full justify-start gap-3 h-12">
                 <Upload className="w-5 h-5" />
                 Upload Documents
@@ -297,7 +297,7 @@ function DashboardHome() {
       <AlertBanner
         message="Welcome! Please complete your Onboarding Checklist to initiate services."
         linkText="Complete Now"
-        linkTo="/dashboard/onboarding"
+        linkTo="/new-dashboard/onboarding"
       />
 
       {/* Plan Badge */}
@@ -365,5 +365,3 @@ export default function Dashboard() {
     </div>
   );
 }
-
-

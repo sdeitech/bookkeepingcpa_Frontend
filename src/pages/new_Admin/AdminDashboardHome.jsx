@@ -35,14 +35,40 @@ export default function AdminDashboardHome() {
   const [inviteOpen, setInviteOpen] = useState(false);
 
   const clients = clientsData?.data || [];
-  const staffMembers = staffData?.data || [];
+  const staffMembers = Array.isArray(staffData?.data?.staffMembers)
+    ? staffData.data.staffMembers
+    : Array.isArray(staffData?.data)
+      ? staffData.data
+      : [];
 
+  const isActiveClient = (client) => {
+    const raw = client?.active;
+    if (typeof raw === "boolean") return raw;
+    if (raw == null) return true;
+    const normalized = String(raw).toLowerCase();
+    if (normalized === "false" || normalized === "0" || normalized === "inactive") return false;
+    if (normalized === "true" || normalized === "1" || normalized === "active") return true;
+    return true;
+  };
+
+  const activeClients = clients.filter(isActiveClient);
+  const isActiveStaff = (staff) => {
+    const raw = staff?.active ?? staff?.status;
+    if (typeof raw === "boolean") return raw;
+    if (raw == null) return true;
+    const normalized = String(raw).toLowerCase();
+    if (normalized === "false" || normalized === "0" || normalized === "inactive") return false;
+    if (normalized === "true" || normalized === "1" || normalized === "active") return true;
+    return true;
+  };
+
+  const activeStaff = staffMembers.filter(isActiveStaff);
   const overdueTasks = tasks.filter(t => t.status !== "COMPLETED" && isBefore(new Date(t.dueDate), today));
   const pendingTasks = tasks.filter(t => t.status !== "COMPLETED");
 
   const stats = [
-    { label: "Total Clients", value: clients.length, icon: Users, color: "bg-primary/10 text-primary", loading: clientsLoading },
-    { label: "Active Staff", value: staffMembers.length, icon: UserCheck, color: "bg-success/10 text-success", loading: staffLoading },
+    { label: "Active Clients", value: activeClients.length, icon: Users, color: "bg-primary/10 text-primary", loading: clientsLoading },
+    { label: "Active Staff", value: activeStaff.length, icon: UserCheck, color: "bg-success/10 text-success", loading: staffLoading },
     { label: "Pending Tasks", value: pendingTasks.length, icon: CheckSquare, color: "bg-warning/10 text-warning", loading: tasksLoading },
     { label: "Overdue Tasks", value: overdueTasks.length, icon: AlertTriangle, color: overdueTasks.length > 0 ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground", loading: tasksLoading },
   ];
@@ -51,7 +77,6 @@ export default function AdminDashboardHome() {
     try {
       await createTask(taskData).unwrap();
       setCreateOpen(false);
-      toast.success("Task created successfully!");
     } catch (error) {
       console.error("Failed to create task:", error);
     }

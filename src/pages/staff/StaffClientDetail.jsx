@@ -59,7 +59,10 @@ const toLowerStatus = (value) => {
   const status = String(value || "").toLowerCase();
   if (status === "not_started") return "not_started";
   if (status === "in_progress") return "in_progress";
+  if (status === "pending_review") return "pending_review";
+  if (status === "needs_revision") return "needs_revision";
   if (status === "completed") return "completed";
+  if (status === "cancelled") return "cancelled";
   return "blocked";
 };
 const toLowerPriority = (value) => {
@@ -183,7 +186,13 @@ export default function StaffClientDetail() {
     if (columnFilters.dueDate) {
       const dueDateFilter = columnFilters.dueDate;
       if (dueDateFilter === "overdue") {
-        result = result.filter((task) => task.status !== "completed" && task.dueDate && isBefore(new Date(task.dueDate), today));
+        result = result.filter(
+          (task) =>
+            task.status !== "completed" &&
+            task.status !== "cancelled" &&
+            task.dueDate &&
+            isBefore(new Date(task.dueDate), today),
+        );
       } else if (dueDateFilter === "today") {
         result = result.filter((task) => task.dueDate && isToday(new Date(task.dueDate)));
       } else if (dueDateFilter === "this_week") {
@@ -337,7 +346,10 @@ export default function StaffClientDetail() {
         { label: "All", value: "" },
         { label: "Not Started", value: "not_started" },
         { label: "In Progress", value: "in_progress" },
+        { label: "Pending Review", value: "pending_review" },
+        { label: "Needs Revision", value: "needs_revision" },
         { label: "Completed", value: "completed" },
+        { label: "Cancelled", value: "cancelled" },
         { label: "Blocked", value: "blocked" },
       ],
       render: (task) => <TaskStatusBadge status={task.status} />,
@@ -688,6 +700,7 @@ export default function StaffClientDetail() {
         onCreate={handleCreateTask}
         defaultTarget="client"
         clientList={createTaskClientList}
+        defaultClientId={normalizedClientId}
       />
 
       <ConfirmDialog
