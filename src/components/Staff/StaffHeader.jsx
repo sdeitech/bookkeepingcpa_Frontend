@@ -1,6 +1,7 @@
 import { Bell, Search, User, Settings, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,6 +12,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import NotificationBell from "../notifications/NotificationBell";
 import { useDispatch } from "react-redux";
+import config from "@/config";
 
 export function StaffHeader({ title,user,logout }) {
   const navigate = useNavigate();
@@ -38,10 +40,13 @@ export function StaffHeader({ title,user,logout }) {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-                <User className="h-4 w-4 text-primary-foreground" />
-              </div>
+            <Button variant="ghost" className="flex items-center gap-2">
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={user?.profile ? `${config.api.baseUrl}${user.profile}` : undefined} />
+                <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                  {user?.first_name?.[0]}{user?.last_name?.[0]}
+                </AvatarFallback>
+              </Avatar>
               <span className="hidden sm:inline font-medium">{user?.first_name} {user?.last_name}</span>
             </Button>
           </DropdownMenuTrigger>

@@ -223,6 +223,11 @@ export const useRealtimeNotifications = () => {
                   // Set flag for new notifications
                   dispatch(setHasNewNotifications(true));
                   
+                  // 🔄 CRITICAL: Invalidate RTK Query cache to trigger UI update
+                  // This forces NotificationBell and NotificationDropdown to refetch
+                  console.log('🔄 Invalidating RTK Query cache for real-time UI update');
+                  dispatch(notificationApi.util.invalidateTags(['Notification']));
+                  
                   // Play notification sound if enabled
                   playNotificationSound();
                   
@@ -280,6 +285,10 @@ export const useRealtimeNotifications = () => {
                   id: data.data.notification._id,
                   updates: data.data.notification
                 }));
+                
+                // 🔄 Invalidate RTK Query cache to update UI
+                console.log('🔄 Invalidating cache after notification update');
+                dispatch(notificationApi.util.invalidateTags(['Notification']));
               }
             }).catch(error => {
               console.error('Failed to fetch updated notification:', error);
@@ -296,6 +305,10 @@ export const useRealtimeNotifications = () => {
           const signal = snapshot.val();
           console.log('🔥 FIREBASE onChildRemoved TRIGGERED!', signal);
           dispatch(removeNotification(signal.id));
+          
+          // 🔄 Invalidate RTK Query cache to update UI
+          console.log('🔄 Invalidating cache after notification removal');
+          dispatch(notificationApi.util.invalidateTags(['Notification']));
         }, (error) => {
           console.error('Firebase onChildRemoved error:', error);
         });

@@ -2,12 +2,13 @@ import { Outlet, useLocation } from "react-router-dom";
 import { AdminSidebar } from "@/components/new_Admin/AdminSidebar";
 import NotificationBell from "@/components/notifications/NotificationBell";
 import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Search, User, Settings, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { logout, selectCurrentUser } from "@/features/auth/authSlice";
+import config from "@/config";
 
 const pageTitles = {
   "/admin": "Dashboard",
@@ -50,7 +51,10 @@ export default function AdminLayout() {
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-2 rounded-full border border-border bg-background px-2 py-1 pr-3 hover:bg-accent/50 transition-colors whitespace-nowrap">
                   <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-primary text-primary-foreground text-xs">AD</AvatarFallback>
+                    <AvatarImage src={user?.profile ? `${config.api.baseUrl}${user.profile}` : undefined} />
+                    <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                      {user?.first_name?.[0]}{user?.last_name?.[0]}
+                    </AvatarFallback>
                   </Avatar>
                   <span className="text-sm font-medium text-foreground hidden md:block">{user?.first_name} {user?.last_name}</span>
                 </button>
