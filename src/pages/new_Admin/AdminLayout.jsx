@@ -27,6 +27,12 @@ export default function AdminLayout() {
   const title = pageTitles[baseRoute] || "Admin Panel";
   const user=useSelector(selectCurrentUser)
   const dispatch = useDispatch();
+  const getInitials = (u) => {
+    const first = (u?.first_name || "").trim();
+    const last = (u?.last_name || "").trim();
+    const initials = `${first[0] || ""}${last[0] || ""}`.toUpperCase();
+    return initials || "AD";
+  };
   const handleLogout = () => {
     dispatch(logout());
     navigate("/");
@@ -50,7 +56,9 @@ export default function AdminLayout() {
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-2 rounded-full border border-border bg-background px-2 py-1 pr-3 hover:bg-accent/50 transition-colors whitespace-nowrap">
                   <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-primary text-primary-foreground text-xs">AD</AvatarFallback>
+                    <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                      {getInitials(user)}
+                    </AvatarFallback>
                   </Avatar>
                   <span className="text-sm font-medium text-foreground hidden md:block">{user?.first_name} {user?.last_name}</span>
                 </button>

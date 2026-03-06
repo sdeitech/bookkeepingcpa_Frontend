@@ -155,8 +155,15 @@ export default function ClientTasks() {
   // Get filter options from API response
   const assignedByOptions = useMemo(() => {
     const options = filterOptions?.assignedBy || [];
-    return options;
-  }, [filterOptions]);
+    if (options.length > 0) return options;
+    const map = new Map();
+    normalizedTasks.forEach((task) => {
+      if (task.assignedById && task.assignedByName && task.assignedByName !== "-") {
+        map.set(task.assignedById, task.assignedByName);
+      }
+    });
+    return Array.from(map.entries()).map(([value, label]) => ({ label, value }));
+  }, [filterOptions, normalizedTasks]);
 
   const handleColumnFilterChange = (columnKey, value) => {
     setColumnFilters((prev) => {

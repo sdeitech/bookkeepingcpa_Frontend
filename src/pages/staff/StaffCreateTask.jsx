@@ -57,7 +57,10 @@ const toLowerStatus = (value) => {
   const status = String(value || "").toLowerCase();
   if (status === "not_started") return "not_started";
   if (status === "in_progress") return "in_progress";
+  if (status === "pending_review") return "pending_review";
+  if (status === "needs_revision") return "needs_revision";
   if (status === "completed") return "completed";
+  if (status === "cancelled") return "cancelled";
   return "blocked";
 };
 
@@ -85,6 +88,8 @@ export default function StaffCreateTask() {
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [columnFilters, setColumnFilters] = useState({});
   const [clearAllOpen, setClearAllOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const apiFilters = useMemo(() => {
     const filters = {
       page,
@@ -178,7 +183,13 @@ export default function StaffCreateTask() {
     if (columnFilters.dueDate) {
       const dueDateFilter = columnFilters.dueDate;
       if (dueDateFilter === "overdue") {
-        result = result.filter((task) => task.status !== "completed" && task.dueDate && isBefore(new Date(task.dueDate), today));
+        result = result.filter(
+          (task) =>
+            task.status !== "completed" &&
+            task.status !== "cancelled" &&
+            task.dueDate &&
+            isBefore(new Date(task.dueDate), today),
+        );
       } else if (dueDateFilter === "today") {
         result = result.filter((task) => task.dueDate && isToday(new Date(task.dueDate)));
       } else if (dueDateFilter === "this_week") {
@@ -217,7 +228,14 @@ export default function StaffCreateTask() {
   }, [debouncedSearch, viewFilter, categoryFilter, columnFilters, sortKey, sortDir, pageSize]);
 
   const overdueTasks = useMemo(
-    () => filtered.filter((task) => task.status !== "completed" && task.dueDate && isBefore(new Date(task.dueDate), today)),
+    () =>
+      filtered.filter(
+        (task) =>
+          task.status !== "completed" &&
+          task.status !== "cancelled" &&
+          task.dueDate &&
+          isBefore(new Date(task.dueDate), today),
+      ),
     [filtered, today],
   );
 
@@ -257,12 +275,8 @@ export default function StaffCreateTask() {
     }
 
     if (action === "delete") {
-      try {
-        await deleteTask(row.id);
-        toast.success("Task deleted");
-      } catch {
-        toast.error("Failed to delete task");
-      }
+      setDeleteTarget(row);
+      setDeleteConfirmOpen(true);
     }
   };
 
@@ -316,7 +330,10 @@ export default function StaffCreateTask() {
         { label: "All", value: "" },
         { label: "Not Started", value: "not_started" },
         { label: "In Progress", value: "in_progress" },
+        { label: "Pending Review", value: "pending_review" },
+        { label: "Needs Revision", value: "needs_revision" },
         { label: "Completed", value: "completed" },
+        { label: "Cancelled", value: "cancelled" },
         { label: "Blocked", value: "blocked" },
       ],
       render: (row) => (
@@ -335,7 +352,6 @@ export default function StaffCreateTask() {
         { label: "Low", value: "low" },
         { label: "Medium", value: "medium" },
         { label: "High", value: "high" },
-        { label: "Urgent", value: "urgent" },
       ],
       render: (row) => (
         <div className="flex justify-center">
@@ -359,7 +375,11 @@ export default function StaffCreateTask() {
         },
       ],
       render: (row) => {
-        const isOverdue = row.status !== "completed" && row.dueDate && isBefore(new Date(row.dueDate), today);
+        const isOverdue =
+          row.status !== "completed" &&
+          row.status !== "cancelled" &&
+          row.dueDate &&
+          isBefore(new Date(row.dueDate), today);
         return <span className={isOverdue ? "font-medium text-destructive" : ""}>{row.dueDate ? format(new Date(row.dueDate), "MMM d, yyyy") : "-"}</span>;
       },
     },
@@ -384,7 +404,7 @@ export default function StaffCreateTask() {
             <p className="font-semibold text-destructive">{overdueTasks.length} Overdue Task{overdueTasks.length > 1 ? "s" : ""}</p>
             <ul className="mt-1 space-y-0.5 text-sm text-destructive/80">
               {overdueTasks.slice(0, 3).map((task) => (
-                <li key={task.id}>• {task.title} - {task.clientName} (due {task.dueDate ? format(new Date(task.dueDate), "MMM d") : "-"})</li>
+                <li key={task.id}>{task.title} - {task.clientName} (due {task.dueDate ? format(new Date(task.dueDate), "MMM d") : "-"})</li>
               ))}
               {overdueTasks.length > 3 && <li>...and {overdueTasks.length - 3} more</li>}
             </ul>
@@ -518,6 +538,26 @@ export default function StaffCreateTask() {
         confirmLabel="Clear All"
         variant="destructive"
         onConfirm={handleClearAll}
+      />
+
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        title="Delete this task?"
+        description="This action cannot be undone."
+        confirmLabel="Delete"
+        variant="destructive"
+        onConfirm={async () => {
+          try {
+            await deleteTask(deleteTarget.id);
+            toast.success("Task deleted");
+          } catch {
+            toast.error("Failed to delete task");
+          } finally {
+            setDeleteConfirmOpen(false);
+            setDeleteTarget(null);
+          }
+        }}
       />
     </div>
   );
