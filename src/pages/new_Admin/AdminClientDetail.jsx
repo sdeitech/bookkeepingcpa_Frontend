@@ -38,6 +38,11 @@ const STATUS_FILTERS = [
 ];
 
 const getTaskId = (task) => task?._id || task?.id;
+const getId = (value) => {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  return value._id || value.id || "";
+};
 const getName = (value) => {
   if (!value) return "-";
   if (typeof value === "string") return value;
@@ -81,7 +86,7 @@ export default function AdminClientDetail() {
     if (columnFilters.dueDate) filters.dueDateFilter = columnFilters.dueDate;
 
     const assignedByFilter =
-      columnFilters.assignedByName || columnFilters.assignedById || columnFilters.assignedBy || "";
+      columnFilters.assignedById || columnFilters.assignedBy || "";
     if (assignedByFilter) filters.assignedBy = assignedByFilter;
 
     return filters;
@@ -154,6 +159,7 @@ export default function AdminClientDetail() {
         ...task,
         id: getTaskId(task),
         assignedByName: getName(task.assignedBy),
+        assignedById: getId(task.assignedBy),
       }));
   }, [rawTasks, normalizedClientId, clientId]);
 
@@ -164,11 +170,11 @@ export default function AdminClientDetail() {
   const assignedByOptions = useMemo(() => {
     const map = new Map();
     normalizedTasks.forEach((task) => {
-      if (task.assignedByName && task.assignedByName !== "-") {
-        map.set(task.assignedByName, task.assignedByName);
+      if (task.assignedById && task.assignedByName && task.assignedByName !== "-") {
+        map.set(task.assignedById, task.assignedByName);
       }
     });
-    return Array.from(map.values()).map((name) => ({ label: name, value: name }));
+    return Array.from(map.entries()).map(([value, label]) => ({ label, value }));
   }, [normalizedTasks]);
 
   const filtered = useMemo(() => {
@@ -193,9 +199,9 @@ export default function AdminClientDetail() {
     }
 
     const localAssignedBy =
-      columnFilters.assignedByName || columnFilters.assignedById || columnFilters.assignedBy || "";
+      columnFilters.assignedById || columnFilters.assignedBy || "";
     if (localAssignedBy) {
-      result = result.filter((task) => task.assignedByName === localAssignedBy);
+      result = result.filter((task) => task.assignedById === localAssignedBy);
     }
     if (columnFilters.status) {
       result = result.filter((task) => task.status === columnFilters.status);
@@ -322,7 +328,7 @@ export default function AdminClientDetail() {
       ),
     },
     {
-      key: "assignedByName",
+      key: "assignedById",
       label: "Assigned By",
       sortable: true,
       filterable: true,
@@ -711,6 +717,7 @@ export default function AdminClientDetail() {
         onCreate={handleCreateTask}
         defaultTarget="client"
         clientList={createTaskClientList}
+        defaultClientId={client?._id || client?.id || clientId}
       />
 
       <ConfirmDialog

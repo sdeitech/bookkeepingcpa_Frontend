@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
@@ -9,6 +9,8 @@ import {
 } from "lucide-react";
 import { PlutifyLogo } from "@/components/PlutifyLogo";
 import { cn } from "@/lib/utils";
+import { useDispatch } from "react-redux";
+import { logout } from "@/features/auth/authSlice";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/staff" },
@@ -20,6 +22,8 @@ const navItems = [
 
 export function StaffSidebar() {
   const location = useLocation();
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   return (
     <aside className="relative flex flex-col h-screen sticky top-0 w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border shadow-lg shrink-0 overflow-y-auto">
@@ -51,15 +55,17 @@ export function StaffSidebar() {
         </nav>
 
       <div className="p-3 border-t border-sidebar-border">
-        <Link
-          to="/"
-          className={cn(
-            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all duration-200",
-          )}
+      <button
+          type="button"
+          onClick={() => {
+            dispatch(logout());
+            navigate("/");
+          }}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium bg-sidebar-accent text-sidebar-accent-foreground transition-colors"
         >
-          <LogOut className="w-5 h-5 shrink-0" />
-          <span>Sign Out</span>
-        </Link>
+          <LogOut className="w-5 h-5" />
+          Sign Out
+        </button>
       </div>
     </aside>
   );

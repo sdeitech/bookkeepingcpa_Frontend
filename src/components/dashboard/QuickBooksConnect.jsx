@@ -3,6 +3,7 @@ import { Button } from "../ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { CheckCircle2, Link2, RefreshCw, AlertCircle } from "lucide-react";
+import { toast } from "sonner";
 
 
 
@@ -16,6 +17,24 @@ export function QuickBooksConnect({
   lastSynced,
   companyName,
 }) {
+  const handleConnect = async () => {
+    toast.message("Connecting to QuickBooks...");
+    try {
+      await Promise.resolve(onConnect?.());
+    } catch (error) {
+      toast.error("Failed to start QuickBooks connection");
+    }
+  };
+
+  const handleDisconnect = async () => {
+    try {
+      await Promise.resolve(onDisconnect?.());
+      toast.success("QuickBooks disconnected");
+    } catch (error) {
+      toast.error("Failed to disconnect QuickBooks");
+    }
+  };
+
   const statusConfig= {
     disconnected: { label: "Not Connected", variant: "secondary" },
     connecting: { label: "Connecting...", variant: "outline" },
@@ -66,7 +85,7 @@ export function QuickBooksConnect({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={onDisconnect}
+                onClick={handleDisconnect}
                 className="text-muted-foreground hover:text-destructive"
               >
                 Disconnect
@@ -78,7 +97,7 @@ export function QuickBooksConnect({
             <p className="text-sm text-destructive">
               Unable to connect to QuickBooks. Please try again.
             </p>
-            <Button onClick={onConnect} className="gap-2">
+            <Button onClick={handleConnect} className="gap-2">
               <Link2 className="w-4 h-4" />
               Retry Connection
             </Button>
@@ -89,7 +108,7 @@ export function QuickBooksConnect({
               Connect QuickBooks to sync your financial data automatically.
             </p>
             <Button
-              onClick={onConnect}
+              onClick={handleConnect}
               disabled={status === "connecting"}
               className="gap-2"
             >

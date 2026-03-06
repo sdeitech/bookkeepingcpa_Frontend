@@ -21,13 +21,20 @@ export default function StaffDashboard({myClients}) {
   const { toast } = useToast();
   const [createOpen, setCreateOpen] = useState(false);
 
+  const normalizeStatus = (status) =>
+    String(status || "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "_");
 
   const myTasks = tasks.filter((t) => t.assignedTo === CURRENT_STAFF);
   const myClientIds = [...new Set(myTasks.map((t) => t.clientId))];
   const myClient = MOCK_CLIENTS.filter((c) => myClientIds.includes(c.id));
 
-  const pendingTasks = myTasks.filter((t) => t.status !== "completed").length;
-  const completedToday = myTasks.filter((t) => t.status === "completed" && isToday(new Date(t.updatedAt))).length;
+  const pendingTasks = myTasks.filter((t) => normalizeStatus(t.status) !== "completed").length;
+  const completedToday = myTasks.filter(
+    (t) => normalizeStatus(t.status) === "completed" && isToday(new Date(t.updatedAt)),
+  ).length;
   const activeClients = myClient.length;
 
   const handleComplete = (task) => {

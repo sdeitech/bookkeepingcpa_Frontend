@@ -28,6 +28,12 @@ export default function AdminLayout() {
   const title = pageTitles[baseRoute] || "Admin Panel";
   const user=useSelector(selectCurrentUser)
   const dispatch = useDispatch();
+  const getInitials = (u) => {
+    const first = (u?.first_name || "").trim();
+    const last = (u?.last_name || "").trim();
+    const initials = `${first[0] || ""}${last[0] || ""}`.toUpperCase();
+    return initials || "AD";
+  };
   const handleLogout = () => {
     dispatch(logout());
     navigate("/");
