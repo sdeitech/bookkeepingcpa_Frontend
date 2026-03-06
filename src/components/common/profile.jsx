@@ -11,7 +11,8 @@ import { Camera, Check, Eye, EyeOff, Loader2, Pencil, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDispatch, useSelector } from "react-redux";
 import { selectCurrentToken, selectCurrentUser, setCredentials } from "@/features/auth/authSlice";
-import { useChangePasswordMutation, useUpdateUserProfileMutation } from "@/features/user/userApi";
+import { useChangePasswordMutation, useUpdateUserProfileMutation, useUploadProfilePictureMutation } from "@/features/user/userApi";
+import config from "@/config";
 
 
 const PASSWORD_STRENGTH_LABELS = ["Weak", "Fair", "Good", "Strong"];
@@ -58,6 +59,14 @@ const normalizeProfile = (source = {}) => {
     const rawPhone = source.phoneNumber ?? source.phone ?? "";
     const { countryCode, localPhone } = splitPhoneNumber(rawPhone);
 
+    // Get profile picture path and convert to full URL if needed
+    let avatarUrl = source.avatarUrl ?? source.profile ?? "";
+    
+    // If we have a profile path but it's not a full URL, prepend the API base URL
+    if (avatarUrl && !avatarUrl.startsWith('http') && !avatarUrl.startsWith('blob:')) {
+        avatarUrl = `${config.api.baseUrl}${avatarUrl}`;
+    }
+
     return {
         first_name: source.first_name ?? source.firstName ?? "",
         last_name: source.last_name ?? source.lastName ?? "",
@@ -66,7 +75,7 @@ const normalizeProfile = (source = {}) => {
         localPhone,
         phoneNumber: buildPhoneNumber(countryCode, localPhone),
         address: source.address ?? "",
-        avatarUrl: source.avatarUrl ?? source.profile ?? "",
+        avatarUrl: avatarUrl,
     };
 };
 
@@ -147,6 +156,7 @@ export function Profile({
     const user = useSelector(selectCurrentUser);
     const token = useSelector(selectCurrentToken);
     const [updateUserProfile] = useUpdateUserProfileMutation();
+    const [uploadProfilePicture] = useUploadProfilePictureMutation();
     const [changePassword] = useChangePasswordMutation();
     const { toast } = useToast();
     const fileInputRef = useRef(null);
@@ -155,6 +165,7 @@ export function Profile({
     const [profile, setProfile] = useState(emptyProfile);
     const [editProfile, setEditProfile] = useState(emptyProfile);
     const [saving, setSaving] = useState(false);
+    const [uploadingAvatar, setUploadingAvatar] = useState(false);
     const [errors, setErrors] = useState({});
 
     useEffect(() => {
@@ -248,12 +259,84 @@ export function Profile({
         setErrors({});
     };
 
-    const handleAvatarChange = (event) => {
+    const handleAvatarChange = async (event) => {
         const file = event.target.files?.[0];
         if (!file) return;
 
+        // Validate file type
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (!allowedTypes.includes(file.type)) {
+            toast({
+                title: "Invalid file type",
+                description: "Please upload a JPEG, PNG, GIF, or WebP image.",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        // Validate file size (5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            toast({
+                title: "File too large",
+                description: "Please upload an image smaller than 5MB.",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        // Show preview immediately
         const previewUrl = URL.createObjectURL(file);
         setEditProfile((prev) => ({ ...prev, avatarUrl: previewUrl }));
+        setProfile((prev) => ({ ...prev, avatarUrl: previewUrl }));
+
+        // Upload to server
+        setUploadingAvatar(true);
+        const formData = new FormData();
+        formData.append('profilePicture', file);
+
+        try {
+            const result = await uploadProfilePicture(formData).unwrap();
+            
+            if (result.success) {
+                // Update with server URL
+                const serverUrl = `${config.api.baseUrl}${result.data.profilePicturePath}`;
+                setEditProfile((prev) => ({ ...prev, avatarUrl: serverUrl }));
+                setProfile((prev) => ({ ...prev, avatarUrl: serverUrl }));
+                
+                // Update Redux store
+                const updatedUser = {
+                    ...user,
+                    profile: result.data.profilePicturePath,
+                };
+                dispatch(
+                    setCredentials({
+                        user: updatedUser,
+                        token: token || localStorage.getItem("token"),
+                    })
+                );
+                
+                toast({
+                    title: "Profile picture updated",
+                    description: "Your profile picture has been uploaded successfully.",
+                });
+            }
+        } catch (error) {
+            console.error('Avatar upload error:', error);
+            // Revert preview on error
+            const oldUrl = user?.profile ? `${config.api.baseUrl}${user.profile}` : '';
+            setEditProfile((prev) => ({ ...prev, avatarUrl: oldUrl }));
+            setProfile((prev) => ({ ...prev, avatarUrl: oldUrl }));
+            
+            toast({
+                title: "Upload failed",
+                description: error?.data?.message || "Unable to upload profile picture.",
+                variant: "destructive",
+            });
+        } finally {
+            setUploadingAvatar(false);
+            // Clean up preview URL
+            URL.revokeObjectURL(previewUrl);
+        }
     };
 
     const handleUpdatePassword = async () => {
@@ -347,32 +430,49 @@ export function Profile({
 
                         <CardContent className="space-y-1">
                             <div className="flex items-center gap-4">
-                                <div
-                                    className={cn("relative group", isEditing ? "cursor-pointer" : "cursor-default")}
-                                    onClick={() => {
-                                        if (isEditing) fileInputRef.current?.click();
-                                    }}
-                                >
-                                    <Avatar className="h-20 w-20">
-                                        <AvatarImage src={displayProfile?.avatarUrl} />
-                                        <AvatarFallback className="bg-primary/10 text-primary text-xl font-semibold">
-                                            {initials}
-                                        </AvatarFallback>
-                                    </Avatar>
+                                <div className="flex flex-col items-center gap-2">
+                                    <div
+                                        className={cn(
+                                            "relative group",
+                                            isEditing ? "cursor-pointer" : "cursor-default"
+                                        )}
+                                        onClick={() => {
+                                            if (isEditing && !uploadingAvatar) fileInputRef.current?.click();
+                                        }}
+                                    >
+                                        <Avatar className="h-20 w-20">
+                                            <AvatarImage src={displayProfile?.avatarUrl} />
+                                            <AvatarFallback className="bg-primary/10 text-primary text-xl font-semibold">
+                                                {initials}
+                                            </AvatarFallback>
+                                        </Avatar>
 
+                                        {isEditing && !uploadingAvatar && (
+                                            <div className="absolute inset-0 rounded-full bg-foreground/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <Camera className="w-5 h-5 text-primary-foreground" />
+                                            </div>
+                                        )}
+
+                                        {uploadingAvatar && (
+                                            <div className="absolute inset-0 rounded-full bg-foreground/60 flex items-center justify-center">
+                                                <Loader2 className="w-6 h-6 text-primary-foreground animate-spin" />
+                                            </div>
+                                        )}
+
+                                        <input
+                                            ref={fileInputRef}
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={handleAvatarChange}
+                                            disabled={uploadingAvatar}
+                                        />
+                                    </div>
                                     {isEditing && (
-                                        <div className="absolute inset-0 rounded-full bg-foreground/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <Camera className="w-5 h-5 text-primary-foreground" />
-                                        </div>
+                                        <p className="text-xs text-muted-foreground text-center">
+                                            Click to upload photo
+                                        </p>
                                     )}
-
-                                    <input
-                                        ref={fileInputRef}
-                                        type="file"
-                                        accept="image/*"
-                                        className="hidden"
-                                        onChange={handleAvatarChange}
-                                    />
                                 </div>
 
                                 <div>
