@@ -71,7 +71,6 @@ export const notificationApi = createApi({
 
 export const {
   useGetNotificationsQuery,
-  useGetNotificationByIdQuery,
   useGetUnreadCountQuery,
   useGetNotificationByIdQuery,
   useMarkAsReadMutation,

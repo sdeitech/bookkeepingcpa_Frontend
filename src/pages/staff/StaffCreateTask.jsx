@@ -337,7 +337,7 @@ export default function StaffCreateTask() {
         { label: "Blocked", value: "blocked" },
       ],
       render: (row) => (
-        <div className="flex justify-center">
+        <div className="flex justify-center -ml-16">
           <TaskStatusBadge status={row.status} />
         </div>
       ),
@@ -354,7 +354,7 @@ export default function StaffCreateTask() {
         { label: "High", value: "high" },
       ],
       render: (row) => (
-        <div className="flex justify-center">
+        <div className="flex justify-center -ml-20">
           <TaskPriorityBadge priority={row.priority} />
         </div>
       ),

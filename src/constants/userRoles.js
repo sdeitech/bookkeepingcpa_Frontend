@@ -15,6 +15,12 @@ export const ROLE_NAMES = {
   [USER_ROLES.CLIENT]: 'Client'
 };
 
+export const ROLE_HOME_PATHS = {
+  [USER_ROLES.ADMIN]: '/admin',
+  [USER_ROLES.STAFF]: '/staff',
+  [USER_ROLES.CLIENT]: '/new-dashboard'
+};
+
 /**
  * Helper functions to check user roles
  */
@@ -41,4 +47,11 @@ export const isAdminOrStaff = (user) => {
  */
 export const getUserRoleName = (user) => {
   return ROLE_NAMES[user?.role_id] || 'Unknown';
+};
+
+/**
+ * Get default home path for a user role
+ */
+export const getRoleHomePath = (user) => {
+  return ROLE_HOME_PATHS[user?.role_id] || '/new-dashboard';
 };

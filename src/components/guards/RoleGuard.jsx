@@ -1,12 +1,12 @@
 import { Navigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { selectCurrentUser } from '../../features/auth/authSlice';
-import { USER_ROLES } from '../../constants/userRoles';
+import { getRoleHomePath } from '../../constants/userRoles';
 
 const RoleGuard = ({ 
   children, 
   allowedRoles = [], // Array of role IDs that can access this route
-  fallbackPath = '/dashboard'
+  fallbackPath = null
 }) => {
   const user = useSelector(selectCurrentUser);
   
@@ -19,7 +19,9 @@ const RoleGuard = ({
   const hasAccess = allowedRoles.includes(user?.role_id);
   
   if (!hasAccess) {
-    return <Navigate to={fallbackPath} replace />;
+    const roleHomePath = getRoleHomePath(user);
+    const targetPath = fallbackPath || roleHomePath;
+    return <Navigate to={targetPath} replace />;
   }
 
   return children;

@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { useLoginMutation } from '../../features/auth/authApi';
 import { setCredentials } from '../../features/auth/authSlice';
+import { getRoleHomePath } from '../../constants/userRoles';
 
 const LoginForm = () => {
   const navigate = useNavigate();
@@ -70,19 +71,8 @@ const LoginForm = () => {
         // STEP 2: Small delay to ensure storage is complete
         await new Promise(resolve => setTimeout(resolve, 100));
 
-        // STEP 3: Navigate based on user role and onboarding status
-        // For client users (role_id === '3'), check onboarding status from response
-        if (user?.role_id === '3') {
-          // Check onboarding status from backend response
-          if (user.onboarding_completed) {
-            navigate('/dashboard');
-          } else {
-            navigate('/onboarding');
-          }
-        } else {
-          // Admin and staff go directly to dashboard
-          navigate('/dashboard');
-        }
+        // STEP 3: Navigate based on user role (no onboarding check)
+        navigate(getRoleHomePath(user));
       }
     } catch (err) {
       console.error('Login failed:', err);

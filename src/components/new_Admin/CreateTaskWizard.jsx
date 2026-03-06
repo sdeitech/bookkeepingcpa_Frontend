@@ -21,7 +21,7 @@ const CATEGORIES = [
   { id: "custom", icon: Edit, title: "Custom Task", desc: "Create your own task", taskType: null },
 ];
 
-export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget = null, clientList }) {
+export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget = null, clientList, defaultClientId = "" }) {
 
 
   // State
@@ -32,15 +32,17 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
   const [customTitle, setCustomTitle] = useState("");
   const [customDesc, setCustomDesc] = useState("");
   const [customTaskType, setCustomTaskType] = useState("ACTION");
-  const [clientId, setClientId] = useState("");
+  const [clientId, setClientId] = useState(defaultClientId || "");
   const [staffId, setStaffId] = useState("");
   const [priority, setPriority] = useState("MEDIUM");
   const [dueDate, setDueDate] = useState("");
   const [description, setDescription] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
 
   // NEW: Document types state
   const [selectedDocTypes, setSelectedDocTypes] = useState([]); // Array of {type, isCustom, isRequired}
   const [customDocInput, setCustomDocInput] = useState("");
+  const [customDocRequired, setCustomDocRequired] = useState(true);
 
   const totalSteps = 4;
 
@@ -118,7 +120,7 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
     setCustomTitle("");
     setCustomDesc("");
     setCustomTaskType("ACTION");
-    setClientId("");
+    setClientId(defaultClientId || "");
     setStaffId("");
     setPriority("MEDIUM");
     setDueDate("");
@@ -174,6 +176,7 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
     ]);
 
     setCustomDocInput("");
+    setCustomDocRequired(true);
   };
 
   const removeDocType = (docType) => {
@@ -249,12 +252,15 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
     }
 
     try {
+      setIsCreating(true);
       await onCreate(taskData);
       toast.success("Task created successfully");
       handleClose();
     } catch (error) {
       toast.error("Failed to create task");
       console.error("Create task error:", error);
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -287,8 +293,11 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
     if (open) {
       setStep(defaultTarget ? 2 : 1);
       setTaskTarget(defaultTarget);
+      if (defaultClientId) {
+        setClientId(defaultClientId);
+      }
     }
-  }, [open, defaultTarget]);
+  }, [open, defaultTarget, defaultClientId]);
 
   const displayStep = defaultTarget ? step - 1 : step;
   const displayTotal = defaultTarget ? totalSteps - 1 : totalSteps;
@@ -440,7 +449,7 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
                           onKeyDown={(e) => {
                             if (e.key === "Enter") {
                               e.preventDefault();
-                              addCustomDocType(true);
+                              addCustomDocType(customDocRequired);
                             }
                           }}
                           placeholder="e.g., Rental Income Proof"
@@ -448,7 +457,10 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
                         />
 
                         {/* Required / Optional selector */}
-                        <Select defaultValue="required">
+                        <Select
+                          value={customDocRequired ? "required" : "optional"}
+                          onValueChange={(val) => setCustomDocRequired(val === "required")}
+                        >
                           <SelectTrigger className="w-[120px]">
                             <SelectValue />
                           </SelectTrigger>
@@ -461,7 +473,7 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
                         <Button
                           type="button"
                           size="sm"
-                          onClick={() => addCustomDocType(true)}
+                          onClick={() => addCustomDocType(customDocRequired)}
                         >
                           Add
                         </Button>
@@ -739,19 +751,30 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
         {/* Footer */}
         <div className="flex justify-between pt-2 border-t border-border">
           {step > 1 && !(step === 2 && defaultTarget) ? (
-            <Button variant="outline" onClick={() => setStep(step - 1)}>
+            <Button variant="outline" onClick={() => setStep(step - 1)} disabled={isCreating}>
               <ArrowLeft className="w-4 h-4" /> Back
             </Button>
           ) : (
-            <Button variant="ghost" onClick={handleClose}>Cancel</Button>
+            <Button variant="ghost" onClick={handleClose} disabled={isCreating}>Cancel</Button>
           )}
           {step < totalSteps ? (
-            <Button onClick={() => setStep(step + 1)} disabled={step === 3 && !canProceedStep3} className="gap-1.5">
+            <Button
+              onClick={() => setStep(step + 1)}
+              disabled={isCreating || (step === 3 && !canProceedStep3)}
+              className="gap-1.5"
+            >
               Next <ArrowRight className="w-4 h-4" />
             </Button>
           ) : (
-            <Button onClick={handleCreate} disabled={!canCreate()}>
-              Create Task
+            <Button onClick={handleCreate} disabled={isCreating || !canCreate()}>
+              {isCreating ? (
+                <span className="inline-flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Creating...
+                </span>
+              ) : (
+                "Create Task"
+              )}
             </Button>
           )}
         </div>
