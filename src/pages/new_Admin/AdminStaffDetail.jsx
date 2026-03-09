@@ -70,8 +70,8 @@ const pickPagination = (source) => {
     explicitTotalPages !== null
       ? explicitTotalPages
       : (totalItems !== null && itemsPerPage !== null && itemsPerPage > 0
-          ? Math.max(1, Math.ceil(totalItems / itemsPerPage))
-          : null);
+        ? Math.max(1, Math.ceil(totalItems / itemsPerPage))
+        : null);
 
   return {
     totalPages,
@@ -100,7 +100,10 @@ const toLowerStatus = (value) => {
   const status = String(value || "").toLowerCase();
   if (status === "not_started") return "not_started";
   if (status === "in_progress") return "in_progress";
+  if (status === "pending_review") return "pending_review";
+  if (status === "needs_revision") return "needs_revision";
   if (status === "completed") return "completed";
+  if (status === "cancelled") return "cancelled";
   return "blocked";
 };
 
@@ -190,6 +193,8 @@ export default function AdminStaffDetail() {
     };
     if (debouncedTaskSearch) filters.search = debouncedTaskSearch;
     if (taskColumnFilters.clientName) filters.clientId = taskColumnFilters.clientName;
+    if (taskColumnFilters.assignedToId) filters.assignedTo = taskColumnFilters.assignedToId;
+    if (taskColumnFilters.assignedById) filters.assignedBy = taskColumnFilters.assignedById;
     if (taskColumnFilters.status) filters.status = String(taskColumnFilters.status).toUpperCase();
     if (taskColumnFilters.priority) filters.priority = String(taskColumnFilters.priority).toUpperCase();
     if (taskColumnFilters.dueDate) filters.dueDateFilter = taskColumnFilters.dueDate;
@@ -214,7 +219,7 @@ export default function AdminStaffDetail() {
         ? staffClientsData.clients
         : Array.isArray(staffClientsData?.items)
           ? staffClientsData.items
-      : [];
+          : [];
 
   const rawTasks = Array.isArray(tasksData?.data?.tasks)
     ? tasksData.data.tasks
@@ -224,7 +229,7 @@ export default function AdminStaffDetail() {
         ? tasksData.tasks
         : Array.isArray(tasksData?.items)
           ? tasksData.items
-      : [];
+          : [];
   const tasksPagination = pickPagination(tasksData);
   const tasksTotalPagesFromServer = tasksPagination.totalPages;
   const tasksTotalItemsFromServer = tasksPagination.totalItems;
@@ -238,10 +243,10 @@ export default function AdminStaffDetail() {
     const scopedTasks = tasksIsServerPaginated
       ? rawTasks
       : rawTasks.filter((task) => {
-          const assignedToId = getId(task.assignedTo);
-          const taskStaffId = getId(task.staffId);
-          return String(assignedToId) === String(staffId) || String(taskStaffId) === String(staffId);
-        });
+        const assignedToId = getId(task.assignedTo);
+        const taskStaffId = getId(task.staffId);
+        return String(assignedToId) === String(staffId) || String(taskStaffId) === String(staffId);
+      });
 
     return scopedTasks
       .map((task) => ({
@@ -272,6 +277,28 @@ export default function AdminStaffDetail() {
     });
     return Array.from(seen.values());
   }, [taskFilterOptions, normalizedTasks]);
+
+  const taskAssignedToOptions = useMemo(() => {
+    const seen = new Map();
+    normalizedTasks.forEach((task) => {
+      if (!task.assignedToId) return;
+      if (!seen.has(task.assignedToId)) {
+        seen.set(task.assignedToId, { value: task.assignedToId, label: task.assignedToName || "Unknown" });
+      }
+    });
+    return Array.from(seen.values());
+  }, [normalizedTasks]);
+
+  const taskAssignedByOptions = useMemo(() => {
+    const seen = new Map();
+    normalizedTasks.forEach((task) => {
+      if (!task.assignedById) return;
+      if (!seen.has(task.assignedById)) {
+        seen.set(task.assignedById, { value: task.assignedById, label: task.assignedByName || "Unknown" });
+      }
+    });
+    return Array.from(seen.values());
+  }, [normalizedTasks]);
 
   const normalizedClients = useMemo(() => {
     return rawClients.map((item) => {
@@ -347,6 +374,12 @@ export default function AdminStaffDetail() {
     }
     if (taskColumnFilters.clientName) {
       result = result.filter((task) => task.clientId === taskColumnFilters.clientName);
+    }
+    if (taskColumnFilters.assignedToId) {
+      result = result.filter((task) => task.assignedToId === taskColumnFilters.assignedToId);
+    }
+    if (taskColumnFilters.assignedById) {
+      result = result.filter((task) => task.assignedById === taskColumnFilters.assignedById);
     }
     if (taskColumnFilters.priority) {
       result = result.filter((task) => task.priority === taskColumnFilters.priority);
@@ -436,6 +469,7 @@ export default function AdminStaffDetail() {
   }, [payload, tasksData, clientsIsServerPaginated, clientsTotalItemsFromServer, tasksIsServerPaginated, tasksTotalItemsFromServer, normalizedClients, normalizedTasks, today]);
   const activeClientFilterLabel = CLIENT_FILTERS.find((item) => item.value === clientFilter)?.label || "All Clients";
   const hasAnyClientFilter = clientFilter !== "all" || !!debouncedClientSearch;
+  const hasAnyTaskFilter = !!taskSearch || Object.keys(taskColumnFilters).length > 0;
 
   const handleStaffToggleStatus = async () => {
     if (!staff) return;
@@ -570,6 +604,7 @@ export default function AdminStaffDetail() {
       label: "Client",
       sortable: true,
       filterable: true,
+      filterSearchable: true,
       filterOptions: [{ label: "All", value: "" }, ...taskClientFilterOptions],
     },
     {
@@ -582,6 +617,9 @@ export default function AdminStaffDetail() {
       key: "assignedToId",
       label: "Assigned To",
       sortable: true,
+      filterable: true,
+      filterSearchable: true,
+      filterOptions: [{ label: "All", value: "" }, ...taskAssignedToOptions],
       render: (row) => (
         <span>
           {row.assignedToName}
@@ -593,6 +631,9 @@ export default function AdminStaffDetail() {
       key: "assignedById",
       label: "Assigned By",
       sortable: true,
+      filterable: true,
+      filterSearchable: true,
+      filterOptions: [{ label: "All", value: "" }, ...taskAssignedByOptions],
       render: (row) => <span className="text-muted-foreground">{row.assignedByName}</span>,
     },
     {
@@ -600,12 +641,12 @@ export default function AdminStaffDetail() {
       label: "Priority",
       sortable: true,
       filterable: true,
+      filterSearchable: false,
       filterOptions: [
         { label: "All", value: "" },
         { label: "Low", value: "low" },
         { label: "Medium", value: "medium" },
         { label: "High", value: "high" },
-        { label: "Urgent", value: "urgent" },
       ],
       render: (row) => <TaskPriorityBadge priority={row.priority} />,
     },
@@ -614,12 +655,15 @@ export default function AdminStaffDetail() {
       label: "Status",
       sortable: true,
       filterable: true,
+      filterSearchable: false,
       filterOptions: [
         { label: "All", value: "" },
         { label: "Not Started", value: "not_started" },
         { label: "In Progress", value: "in_progress" },
+        { label: "Pending Review", value: "pending_review" },
+        { label: "Needs Revision", value: "needs_revision" },
         { label: "Completed", value: "completed" },
-        { label: "Blocked", value: "blocked" },
+        { label: "Cancelled", value: "cancelled" },
       ],
       render: (row) => <TaskStatusBadge status={row.status} />,
     },
@@ -656,11 +700,9 @@ export default function AdminStaffDetail() {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
         <p className="text-lg mb-4">{staffError ? "Failed to load staff member." : "Staff member not found."}</p>
-        <Link to="/admin/staff">
-          <Button variant="outline">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Staff
-          </Button>
-        </Link>
+        <Button variant="ghost" onClick={() => navigate("/admin/staff")} className="gap-2 self-start">
+          <ArrowLeft className="h-4 w-4" /> Back
+        </Button>
       </div>
     );
   }
@@ -676,13 +718,9 @@ export default function AdminStaffDetail() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <Link
-        to="/admin/staff"
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-      >
-        <ArrowLeft className="h-4 w-4" /> Back to Staff
-      </Link>
-
+      <Button variant="ghost" onClick={() => navigate("/admin/staff")} className="gap-2 self-start">
+        <ArrowLeft className="h-4 w-4" /> Back
+      </Button>
       <div className="rounded-xl border border-border bg-card p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-start gap-4">
@@ -876,9 +914,29 @@ export default function AdminStaffDetail() {
                 }}
               />
             </div>
-            <Button variant="outline" className="gap-2" onClick={() => navigate("/admin/tasks")}>
-              <ListChecks className="h-4 w-4" /> Manage Tasks
-            </Button>
+            <div className="flex items-center gap-2">
+              {hasAnyTaskFilter && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-10 gap-1.5 text-muted-foreground hover:text-destructive"
+                  onClick={() => {
+                    setTaskSearch("");
+                    setDebouncedTaskSearch("");
+                    setTaskColumnFilters({});
+                    setTaskSortKey("dueDate");
+                    setTaskSortDir("asc");
+                    setTasksPage(1);
+                  }}
+                >
+                  <X className="h-3.5 w-3.5" />
+                  Clear All
+                </Button>
+              )}
+              <Button variant="outline" className="gap-2" onClick={() => navigate("/admin/tasks")}>
+                <ListChecks className="h-4 w-4" /> Manage Tasks
+              </Button>
+            </div>
           </div>
 
           <DataTable

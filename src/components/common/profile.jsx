@@ -386,7 +386,7 @@ export function Profile({
 
 
     return (
-        <div className={cn("w-full max-w-3xl mx-auto space-y-1 animate-fade-in", className)}>
+        <div className={cn("w-full max-w-6xl mx-auto space-y-6 animate-fade-in", className)}>
             <div>
                 <h2 className="text-2xl font-semibold text-foreground">{title}</h2>
                 <p className="text-muted-foreground text-sm">{subtitle}</p>
@@ -427,8 +427,7 @@ export function Profile({
                                 </div>
                             )}
                         </CardHeader>
-
-                        <CardContent className="space-y-1">
+                        <CardContent className="space-y-6 p-6">
                             <div className="flex items-center gap-4">
                                 <div className="flex flex-col items-center gap-2">
                                     <div
@@ -482,8 +481,7 @@ export function Profile({
                                     <p className="text-sm text-muted-foreground">{displayProfile?.email}</p>
                                 </div>
                             </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
                                     <Label>First Name</Label>
                                     <Input

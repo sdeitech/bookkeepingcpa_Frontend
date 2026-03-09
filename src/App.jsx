@@ -221,14 +221,14 @@ function App() {
 
 
           {/* Pricing is public but checkout requires auth */}
-          <Route path="/pricing" element={<PricingCheckout />} />
+          {/* <Route path="/pricing" element={<PricingCheckout />} /> */}
 
           {/* Questionnaire - Public route for pre-payment flow */}
           <Route path="/questionnaire" element={<Questionnaire />} />
 
           {/* OAuth callbacks */}
-          <Route path="/amazon-callback" element={<AmazonCallback />} />
-          <Route path="/shopify-callback" element={<ShopifyCallback />} />
+          {/* <Route path="/amazon-callback" element={<AmazonCallback />} />
+          <Route path="/shopify-callback" element={<ShopifyCallback />} /> */}
           <Route path="/quickbooks-callback" element={<QuickBooksCallback />} />
 
           {/* ============ Protected Routes ============ */}
@@ -248,7 +248,7 @@ function App() {
           /> */}
 
           {/* Subscription Management - Clients and Admins */}
-          <Route
+          {/* <Route
             path="/subscription"
             element={
               <AuthGuard>
@@ -257,10 +257,10 @@ function App() {
                 </RoleGuard>
               </AuthGuard>
             }
-          />
+          /> */}
 
           {/* Admin Plan Management */}
-          <Route
+          {/* <Route
             path="/admin/plans"
             element={
               <AuthGuard>
@@ -269,21 +269,21 @@ function App() {
                 </RoleGuard>
               </AuthGuard>
             }
-          />
+          /> */}
 
           {/* Main dashboard - DashboardRouter handles role-based rendering */}
-          <Route
+          {/* <Route
             path="/dashboard"
             element={
               <AuthGuard>
                 <DashboardRouter />
-                {/* <OnboardingGuard>
+                <OnboardingGuard>
                   <SubscriptionGuard>
                   </SubscriptionGuard>
-                </OnboardingGuard> */}
+                </OnboardingGuard>
               </AuthGuard>
             }
-          />
+          /> */}
 
           {/* ============ Default Routes ============ */}
 

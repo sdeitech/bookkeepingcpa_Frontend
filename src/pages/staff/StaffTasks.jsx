@@ -208,6 +208,7 @@ export default function StaffTasks() {
       label: "Client",
       sortable: true,
       filterable: true,
+      filterSearchable: true,
       filterOptions: [{ label: "All", value: "" }, ...clientOptions],
       render: (row) => <span className="text-muted-foreground">{row.clientName ?? "-"}</span>,
     },
@@ -216,6 +217,7 @@ export default function StaffTasks() {
       label: "Assigned By",
       sortable: true,
       filterable: true,
+      filterSearchable: true,
       filterOptions: [{ label: "All", value: "" }, ...assignedByOptions],
       render: (row) => <span className="text-muted-foreground">{row.assignedByName ?? "-"}</span>,
     },
@@ -224,6 +226,7 @@ export default function StaffTasks() {
       label: "Status",
       sortable: true,
       filterable: true,
+      filterSearchable: false,
       filterOptions: [
         { label: "All", value: "" },
         { label: "Not Started", value: "not_started" },
@@ -240,6 +243,7 @@ export default function StaffTasks() {
       label: "Priority",
       sortable: true,
       filterable: true,
+      filterSearchable: false,
       filterOptions: [
         { label: "All", value: "" },
         { label: "Low", value: "low" },

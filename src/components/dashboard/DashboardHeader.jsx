@@ -42,7 +42,7 @@ export function DashboardHeader({user,logout}) {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48 bg-popover">
             <DropdownMenuItem onClick={() => navigate("/new-dashboard/profile")}>Profile</DropdownMenuItem>
-            <DropdownMenuItem>Account</DropdownMenuItem>
+            {/* <DropdownMenuItem>Account</DropdownMenuItem> */}
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout}>
               Logout

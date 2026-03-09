@@ -18,6 +18,8 @@ import {
   AlertTriangle,
   Maximize2,
   Minimize2,
+  Printer,
+  Loader2
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -36,6 +38,7 @@ export function DocumentViewerModal({
   document,
   onDeleted,
 }) {
+
   const [zoom, setZoom] = useState(100);
   const [rotation, setRotation] = useState(0);
   const [expanded, setExpanded] = useState(false);
@@ -76,10 +79,9 @@ export function DocumentViewerModal({
     ["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(ext) ||
     document.mimeType?.startsWith("image/");
 
-  // ✅ Only CLIENT can delete
   const canDelete = user?.role_id === "3";
 
-  // 🔥 Download via backend streaming
+  /* DOWNLOAD */
   const handleDownload = async () => {
     try {
       const response = await fetch(
@@ -110,7 +112,40 @@ export function DocumentViewerModal({
     }
   };
 
-  // 🔥 Delete handler
+  /* PRINT */
+  const handlePrint = async () => {
+    try {
+      const response = await fetch(
+        `${config.api.baseUrl}/task-documents/${document._id}/download`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+
+      if (!response.ok) throw new Error("Failed to fetch file");
+
+      const blob = await response.blob();
+      const fileURL = window.URL.createObjectURL(blob);
+
+      const printWindow = window.open(fileURL);
+      if (!printWindow) {
+        toast.error("Popup blocked. Please allow popups.");
+        return;
+      }
+
+      printWindow.onload = () => {
+        printWindow.focus();
+        printWindow.print();
+      };
+    } catch (error) {
+      console.error(error);
+      toast.error("Print failed");
+    }
+  };
+
+  /* DELETE */
   const handleDelete = async () => {
     try {
       const taskId = document?.taskId?._id || document?.taskId;
@@ -130,67 +165,79 @@ export function DocumentViewerModal({
   const formatFileSize = (bytes) => {
     if (!bytes) return "Unknown size";
     if (bytes < 1024) return bytes + " B";
-    if (bytes < 1024 * 1024)
-      return (bytes / 1024).toFixed(1) + " KB";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
     return (bytes / (1024 * 1024)).toFixed(1) + " MB";
   };
 
   return (
     <>
+
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
-          className={`p-0 overflow-hidden rounded-xl transition-all duration-300 ${expanded
-              ? "max-w-[95vw] h-[95vh]"
-              : "max-w-5xl h-[85vh]"
+          className={`p-4 overflow-hidden rounded-xl transition-all duration-300 ${expanded ? "max-w-[95vw] h-[95vh]" : "max-w-5xl h-[85vh]"
             } flex flex-col`}
         >
-          {/* HEADER */}
-          <DialogHeader className="p-0">
-            <div className="flex items-center justify-between px-6 py-4 border-b bg-muted/30">
-              <div className="flex items-center gap-3">
-                {isPDF ? (
-                  <FileText className="h-5 w-5 text-red-500" />
-                ) : isImage ? (
-                  <ImageIcon className="h-5 w-5 text-blue-500" />
-                ) : (
-                  <File className="h-5 w-5 text-gray-500" />
+
+          {/* HEADER */} <DialogHeader className="p-0">
+
+            <div className="flex items-center justify-between px-6 py-4 border-b bg-muted/40">
+
+              <div className="flex items-center gap-3 min-w-0">
+
+                {isPDF ? (<FileText className="h-5 w-5 text-red-500" />
+                ) : isImage ? (<ImageIcon className="h-5 w-5 text-blue-500" />
+                ) : (<File className="h-5 w-5 text-gray-500" />
                 )}
 
-                <div>
-                  <DialogTitle>
+                <div className="truncate">
+                  <DialogTitle className="truncate max-w-[350px]">
                     {document.originalName || document.fileName}
                   </DialogTitle>
+
                   <p className="text-xs text-muted-foreground">
                     {formatFileSize(document.fileSize)} • Uploaded{" "}
                     {format(
-                      new Date(
-                        document.uploadedAt || document.createdAt
-                      ),
+                      new Date(document.uploadedAt || document.createdAt),
                       "MMM dd, yyyy"
                     )}
                   </p>
                 </div>
+
               </div>
 
-              <div className="flex items-center gap-2">
+              {/* ACTIONS */}
+
+              <div className="flex items-center gap-1 bg-background border rounded-lg p-1 shadow-sm">
+
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => setExpanded((e) => !e)}
+
                 >
-                  {expanded ? (
-                    <Minimize2 className="w-4 h-4" />
-                  ) : (
-                    <Maximize2 className="w-4 h-4" />
-                  )}
-                </Button>
+
+                  {expanded ? (<Minimize2 className="w-4 h-4" />
+                  ) : (<Maximize2 className="w-4 h-4" />
+                  )} </Button>
 
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={handleDownload}
+
                 >
+
                   <Download className="h-4 w-4" />
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handlePrint}
+
+                >
+
+                  <Printer className="h-4 w-4" />
                 </Button>
 
                 {canDelete && (
@@ -199,27 +246,35 @@ export function DocumentViewerModal({
                     size="icon"
                     onClick={() => setConfirmOpen(true)}
                     disabled={isDeleting}
+
                   >
+
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 )}
+
               </div>
             </div>
           </DialogHeader>
 
           {/* TOOLBAR */}
           {(isPDF || isImage) && (
-            <div className="flex items-center justify-between px-6 py-2 border-b bg-card">
+
+            <div className="flex items-center justify-between px-6 py-3 border-b bg-card">
+
               <div className="flex items-center gap-2">
+
                 <Button
                   variant="outline"
                   size="icon"
                   onClick={() => setZoom((z) => Math.max(25, z - 25))}
+
                 >
+
                   <ZoomOut className="w-4 h-4" />
                 </Button>
 
-                <div className="w-32">
+                <div className="w-36">
                   <Slider
                     value={[zoom]}
                     onValueChange={(v) => setZoom(v[0])}
@@ -233,7 +288,9 @@ export function DocumentViewerModal({
                   variant="outline"
                   size="icon"
                   onClick={() => setZoom((z) => Math.min(200, z + 25))}
+
                 >
+
                   <ZoomIn className="w-4 h-4" />
                 </Button>
 
@@ -244,14 +301,17 @@ export function DocumentViewerModal({
                     onClick={() =>
                       setRotation((r) => (r + 90) % 360)
                     }
+
                   >
+
                     <RotateCw className="w-4 h-4" />
                   </Button>
                 )}
 
-                <span className="text-xs w-10 text-center">
+                <span className="text-xs w-12 text-center font-medium">
                   {zoom}%
                 </span>
+
               </div>
 
               <Button
@@ -261,22 +321,35 @@ export function DocumentViewerModal({
                   setZoom(100);
                   setRotation(0);
                 }}
+
               >
-                Reset
-              </Button>
+
+                Reset </Button>
+
             </div>
           )}
 
           {/* PREVIEW */}
-          <div className="flex-1 bg-muted/20 overflow-auto flex items-center justify-center p-4">
-            {isLoading && <p>Loading document...</p>}
+
+          <div className="flex-1 bg-muted/30 overflow-auto flex items-center justify-center p-8">
+
+            {isLoading && (
+
+              <div className="flex flex-col items-center gap-3 text-muted-foreground">
+                <Loader2 className="h-6 w-6 animate-spin" />
+                <p className="text-sm">Loading document...</p>
+              </div>
+            )}
+
             {isError && (
+
               <p className="text-destructive">
                 Failed to load document
               </p>
             )}
 
             {!isLoading && fileUrl && (
+
               <div
                 style={{
                   transform: `scale(${zoom / 100}) rotate(${rotation}deg)`,
@@ -284,10 +357,12 @@ export function DocumentViewerModal({
                 }}
                 className="max-w-full max-h-full"
               >
+
                 {isPDF ? (
+
                   <iframe
                     src={`${fileUrl}#toolbar=0&navpanes=0`}
-                    className="w-[900px] h-[1000px] bg-white rounded shadow"
+                    className="w-[900px] h-[1100px] border rounded-xl shadow-lg bg-white"
                     title="PDF Viewer"
                   />
                 ) : isImage ? (
@@ -305,9 +380,12 @@ export function DocumentViewerModal({
                     </Button>
                   </div>
                 )}
+
               </div>
             )}
+
           </div>
+
         </DialogContent>
       </Dialog>
 
@@ -320,6 +398,7 @@ export function DocumentViewerModal({
         variant="destructive"
         onConfirm={handleDelete}
       />
+
     </>
   );
 }

@@ -48,9 +48,8 @@ const onboardingSteps = [
 
 
 function DashboardHome() {
-  const [searchParams] = useSearchParams();
-  const planParam = searchParams.get("plan");
-  const currentPlan = planParam || "essential";
+  const user = useSelector(selectCurrentUser);
+  const currentPlan = user?.plan || "startup"; // Default to 'startup' if plan is undefined
   const {
     data: connectionStatus,
     isLoading: qbLoading,
@@ -169,8 +168,8 @@ function DashboardHome() {
           <div className="grid gap-3">
             <Link to="/new-dashboard/documents">
               <Button variant="outline" className="w-full justify-start gap-3 h-12">
-                <Upload className="w-5 h-5" />
-                Upload Documents
+                <FileText className="w-5 h-5" />
+                View Documents
               </Button>
             </Link>
             <Link to="/new-dashboard/support">
@@ -294,11 +293,11 @@ function DashboardHome() {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Alert Banner */}
-      <AlertBanner
+      {/* <AlertBanner
         message="Welcome! Please complete your Onboarding Checklist to initiate services."
         linkText="Complete Now"
         linkTo="/new-dashboard/onboarding"
-      />
+      /> */}
 
       {/* Plan Badge */}
       <div className="flex items-center gap-3">

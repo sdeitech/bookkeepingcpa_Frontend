@@ -191,7 +191,7 @@ export default function AdminTasks() {
     return options;
   }, [filterOptions]);
 
-  const assignedToOptions = useMemo(() => {
+  const   assignedToOptions = useMemo(() => {
     const options = filterOptions?.assignedTo || [];
     return options;
   }, [filterOptions]);
@@ -311,6 +311,7 @@ export default function AdminTasks() {
       label: "Client",
       sortable: true,
       filterable: true,
+      filterSearchable: true,
       filterOptions: [{ label: "All", value: "" }, ...clientOptions],
       render: (row) => <span className="italic text-muted-foreground">{row.clientName}</span>,
     },
@@ -319,6 +320,7 @@ export default function AdminTasks() {
       label: "Assigned To",
       sortable: true,
       filterable: true,
+      filterSearchable: true,
       filterOptions: [{ label: "All", value: "" }, ...assignedToOptions],
       render: (row) => (
         <span>
@@ -332,6 +334,7 @@ export default function AdminTasks() {
       label: "Assigned By",
       sortable: true,
       filterable: true,
+      filterSearchable: true,
       filterOptions: [{ label: "All", value: "" }, ...assignedByOptions],
       render: (row) => <span className="text-muted-foreground">{row.assignedByName ?? "-"}</span>,
     },
@@ -340,6 +343,7 @@ export default function AdminTasks() {
       label: "Status",
       sortable: true,
       filterable: true,
+      filterSearchable: false,
       filterOptions: [
         { label: "All", value: "" },
         { label: "Not Started", value: "not_started" },
@@ -361,6 +365,7 @@ export default function AdminTasks() {
       label: "Priority",
       sortable: true,
       filterable: true,
+      filterSearchable: false,
       filterOptions: [
         { label: "All", value: "" },
         { label: "Low", value: "low" },

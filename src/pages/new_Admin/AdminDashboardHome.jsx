@@ -129,8 +129,8 @@ export default function AdminDashboardHome() {
               <Clock className="w-4 h-4 text-muted-foreground" /> Recent Activity
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            {RECENT_ACTIVITY.map((activity, i) => (
+          <CardContent className="space-y-3 flex justify-center items-center h-48">
+            {/* {RECENT_ACTIVITY.map((activity, i) => (
               <div key={i} className="flex items-start gap-3 py-2 border-b border-border last:border-0">
                 <activity.icon className={cn("w-4 h-4 mt-0.5 shrink-0", activity.color)} />
                 <div className="flex-1 min-w-0">
@@ -138,7 +138,8 @@ export default function AdminDashboardHome() {
                   <p className="text-xs text-muted-foreground mt-0.5">{activity.time}</p>
                 </div>
               </div>
-            ))}
+            ))} */}
+            <p className="text-sm text-muted-foreground mt-2">This section is under Development.</p>
           </CardContent>
         </Card>
 
@@ -157,9 +158,9 @@ export default function AdminDashboardHome() {
             <Button variant="outline" onClick={() => navigate("/admin/assign-clients")} className="justify-start gap-2 h-11">
               <UserCheck className="w-4 h-4" /> Assign Staff
             </Button>
-            <Button variant="outline" onClick={() => navigate("/admin/settings")} className="justify-start gap-2 h-11">
+            {/* <Button variant="outline" onClick={() => navigate("/admin/settings")} className="justify-start gap-2 h-11">
               <BarChart3 className="w-4 h-4" /> View Reports
-            </Button>
+            </Button> */}
           </CardContent>
         </Card>
       </div>
