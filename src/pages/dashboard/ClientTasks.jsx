@@ -65,8 +65,7 @@ const toLowerPriority = (value) => {
   const priority = String(value || "").toLowerCase();
   if (priority === "low") return "low";
   if (priority === "medium") return "medium";
-  if (priority === "high") return "high";
-  return "urgent";
+  return "high";
 };
 
 export default function ClientTasks() {
@@ -210,10 +209,10 @@ export default function ClientTasks() {
     setSortDir("desc");
     setPage(1);
     setClearAllOpen(false);
-    
+
     // Force refresh to get fresh data
     setTimeout(() => refetch(), 0);
-    
+
     toast.success("All filters cleared");
   };
 
@@ -248,6 +247,7 @@ export default function ClientTasks() {
       label: "Assigned By",
       sortable: true,
       filterable: true,
+      filterSearchable: true,
       filterOptions: [{ label: "All", value: "" }, ...assignedByOptions],
       render: (row) => <span className="text-muted-foreground">{row.assignedByName ?? "-"}</span>,
     },
@@ -256,6 +256,7 @@ export default function ClientTasks() {
       label: "Status",
       sortable: true,
       filterable: true,
+      filterSearchable: true,
       filterOptions: [
         { label: "All", value: "" },
         { label: "Not Started", value: "not_started" },
@@ -272,12 +273,12 @@ export default function ClientTasks() {
       label: "Priority",
       sortable: true,
       filterable: true,
+      filterSearchable: true,
       filterOptions: [
         { label: "All", value: "" },
         { label: "Low", value: "low" },
         { label: "Medium", value: "medium" },
         { label: "High", value: "high" },
-        { label: "Urgent", value: "urgent" },
       ],
       render: (row) => <TaskPriorityBadge priority={row.priority} />,
     },
@@ -307,17 +308,17 @@ export default function ClientTasks() {
       sortable: false,
       render: (row) => {
         const { uploaded, total, percentage } = getDocumentProgress(row);
-        
+
         if (total === 0) {
           return <span className="text-xs text-muted-foreground">No docs required</span>;
         }
 
         const isComplete = uploaded === total;
-        
+
         return (
           <div className="flex items-center gap-2">
             <div className="w-20 h-2 bg-muted rounded-full overflow-hidden">
-              <div 
+              <div
                 className={cn(
                   "h-full transition-all duration-300 rounded-full",
                   isComplete ? "bg-green-500" : "bg-primary"

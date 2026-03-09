@@ -118,6 +118,7 @@ export default function StaffClientDetail() {
       ? String(columnFilters.status).toUpperCase()
       : (statusFilter !== "all" ? statusFilter : "");
     if (effectiveStatus) filters.status = effectiveStatus;
+    if (columnFilters.assignedToId) filters.assignedTo = columnFilters.assignedToId;
     if (columnFilters.priority) filters.priority = String(columnFilters.priority).toUpperCase();
     if (columnFilters.dueDate) filters.dueDateFilter = columnFilters.dueDate;
 
@@ -149,9 +150,21 @@ export default function StaffClientDetail() {
           priority: toLowerPriority(task.priority),
           assignedToName: getName(task.assignedTo) || "-",
           assignedByName: getName(task.assignedBy) || "-",
+          assignedToId: getEntityId(task.assignedTo),
+          assignedById: getEntityId(task.assignedBy),
         })),
     [tasks, normalizedClientId],
   );
+
+  const assignedToOptions = useMemo(() => {
+    const map = new Map();
+    normalizedTasks.forEach((task) => {
+      if (task.assignedToId && task.assignedToName && task.assignedToName !== "-") {
+        map.set(task.assignedToId, task.assignedToName);
+      }
+    });
+    return Array.from(map.entries()).map(([value, label]) => ({ value, label }));
+  }, [normalizedTasks]);
 
   const isServerPaginated =
     Number.isFinite(pagination?.totalPages) &&
@@ -179,6 +192,9 @@ export default function StaffClientDetail() {
 
     if (columnFilters.status) {
       result = result.filter((task) => task.status === columnFilters.status);
+    }
+    if (columnFilters.assignedToId) {
+      result = result.filter((task) => task.assignedToId === columnFilters.assignedToId);
     }
     if (columnFilters.priority) {
       result = result.filter((task) => task.priority === columnFilters.priority);
@@ -332,9 +348,12 @@ export default function StaffClientDetail() {
       ),
     },
     {
-      key: "assignedToName",
+      key: "assignedToId",
       label: "Assigned To",
       sortable: true,
+      filterable: true,
+      filterSearchable: true,
+      filterOptions: [{ label: "All", value: "" }, ...assignedToOptions],
       render: (task) => <span>{task.assignedToName}</span>,
     },
     {
@@ -342,6 +361,7 @@ export default function StaffClientDetail() {
       label: "Status",
       sortable: true,
       filterable: true,
+      filterSearchable: true,
       filterOptions: [
         { label: "All", value: "" },
         { label: "Not Started", value: "not_started" },
@@ -359,12 +379,12 @@ export default function StaffClientDetail() {
       label: "Priority",
       sortable: true,
       filterable: true,
+      filterSearchable: true,
       filterOptions: [
         { label: "All", value: "" },
         { label: "Low", value: "low" },
         { label: "Medium", value: "medium" },
         { label: "High", value: "high" },
-        { label: "Urgent", value: "urgent" },
       ],
       render: (task) => <TaskPriorityBadge priority={task.priority} />,
     },

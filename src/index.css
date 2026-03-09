@@ -6,30 +6,30 @@
 @layer base {
   :root {
     /* Plutify Brand Colors */
-    --background: 220 20% 97%;
-    --foreground: 220 30% 15%;
+    --background: 220 20% 98%;
+    --foreground: 220 40% 12%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 30% 15%;
+    --card-foreground: 220 40% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 30% 15%;
+    --popover-foreground: 220 40% 12%;
 
     /* Primary - Plutify Blue */
     --primary: 217 91% 50%;
     --primary-foreground: 0 0% 100%;
 
     /* Secondary - Light Blue/Gray */
-    --secondary: 220 20% 96%;
-    --secondary-foreground: 220 30% 20%;
+    --secondary: 220 20% 97%;
+    --secondary-foreground: 220 35% 18%;
 
     /* Muted - Subtle grays */
-    --muted: 220 15% 94%;
-    --muted-foreground: 220 10% 45%;
+    --muted: 220 15% 95%;
+    --muted-foreground: 220 15% 35%;
 
     /* Accent - Highlight */
-    --accent: 217 91% 95%;
-    --accent-foreground: 217 91% 40%;
+    --accent: 217 91% 94%;
+    --accent-foreground: 217 91% 38%;
 
     /* Status Colors */
     --destructive: 0 84% 60%;
@@ -42,20 +42,20 @@
     --warning-foreground: 0 0% 100%;
 
     /* Borders & Inputs */
-    --border: 220 20% 88%;
-    --input: 220 20% 88%;
+    --border: 220 20% 86%;
+    --input: 220 20% 86%;
     --ring: 217 91% 50%;
 
     --radius: 0.75rem;
 
     /* Sidebar tokens (used by admin/staff dashboards) */
-    --sidebar-background: 220 30% 15%;
-    --sidebar-foreground: 220 10% 90%;
+    --sidebar-background: 220 30% 12%;
+    --sidebar-foreground: 220 15% 95%;
     --sidebar-primary: 217 91% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 30% 20%;
-    --sidebar-accent-foreground: 220 10% 95%;
-    --sidebar-border: 220 25% 25%;
+    --sidebar-accent: 220 25% 22%;
+    --sidebar-accent-foreground: 220 15% 96%;
+    --sidebar-border: 220 25% 20%;
     --sidebar-ring: 217 91% 50%;
 
     --chart-1: 217 91% 50%;
@@ -118,11 +118,13 @@ body {
   min-height: 100vh;
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* html {
-  font-size: 62.5%;
-} */
+html {
+  font-size: 12.7px;
+}
 
 /* code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',

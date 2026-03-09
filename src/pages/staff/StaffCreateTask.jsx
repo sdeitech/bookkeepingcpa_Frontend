@@ -101,6 +101,8 @@ export default function StaffCreateTask() {
     if (debouncedSearch) filters.search = debouncedSearch;
     if (viewFilter && viewFilter !== "all") filters.viewFilter = viewFilter;
     if (categoryFilter) filters.category = categoryFilter;
+    if (columnFilters.clientId) filters.clientId = columnFilters.clientId;
+    if (columnFilters.assignedToId) filters.assignedTo = columnFilters.assignedToId;
     if (columnFilters.status) filters.status = String(columnFilters.status).toUpperCase();
     if (columnFilters.priority) filters.priority = String(columnFilters.priority).toUpperCase();
     if (columnFilters.dueDate) filters.dueDateFilter = columnFilters.dueDate;
@@ -131,11 +133,13 @@ export default function StaffCreateTask() {
         id: getId(task),
         title: task.title || "Untitled Task",
         description: task.description || "",
+        clientId: getId(task.clientId || task.client),
         clientName: getName(task.clientName || task.clientId) || "Internal",
         status: toLowerStatus(task.status),
         priority: toLowerPriority(task.priority),
         dueDate: task.dueDate,
         taskType: String(task.taskType || "").toLowerCase(),
+        assignedToId: getId(task.assignedTo),
         assignedToName: getName(task.assignedTo) || "-",
       }));
   }, [tasks, myClientIds]);
@@ -176,6 +180,12 @@ export default function StaffCreateTask() {
 
     if (columnFilters.status) {
       result = result.filter((task) => task.status === columnFilters.status);
+    }
+    if (columnFilters.clientId) {
+      result = result.filter((task) => task.clientId === columnFilters.clientId);
+    }
+    if (columnFilters.assignedToId) {
+      result = result.filter((task) => task.assignedToId === columnFilters.assignedToId);
     }
     if (columnFilters.priority) {
       result = result.filter((task) => task.priority === columnFilters.priority);
@@ -254,6 +264,26 @@ export default function StaffCreateTask() {
     setPage(1);
   };
 
+  const clientOptions = useMemo(() => {
+    const map = new Map();
+    normalizedTasks.forEach((task) => {
+      if (task.clientId && task.clientName) {
+        map.set(task.clientId, task.clientName);
+      }
+    });
+    return Array.from(map.entries()).map(([value, label]) => ({ value, label }));
+  }, [normalizedTasks]);
+
+  const assignedToOptions = useMemo(() => {
+    const map = new Map();
+    normalizedTasks.forEach((task) => {
+      if (task.assignedToId && task.assignedToName && task.assignedToName !== "-") {
+        map.set(task.assignedToId, task.assignedToName);
+      }
+    });
+    return Array.from(map.entries()).map(([value, label]) => ({ value, label }));
+  }, [normalizedTasks]);
+
   const handleCreateTask = async (taskData) => {
     try {
       await createTask(taskData);
@@ -310,15 +340,21 @@ export default function StaffCreateTask() {
       ),
     },
     {
-      key: "clientName",
+      key: "clientId",
       label: "Client",
       sortable: true,
+      filterable: true,
+      filterSearchable: true,
+      filterOptions: [{ label: "All", value: "" }, ...clientOptions],
       render: (row) => <span className="italic text-muted-foreground">{row.clientName}</span>,
     },
     {
-      key: "assignedToName",
+      key: "assignedToId",
       label: "Assigned To",
       sortable: true,
+      filterable: true,
+      filterSearchable: true,
+      filterOptions: [{ label: "All", value: "" }, ...assignedToOptions],
       render: (row) => <span>{row.assignedToName}</span>,
     },
     {
@@ -326,6 +362,7 @@ export default function StaffCreateTask() {
       label: "Status",
       sortable: true,
       filterable: true,
+      filterSearchable: true,
       filterOptions: [
         { label: "All", value: "" },
         { label: "Not Started", value: "not_started" },
@@ -347,6 +384,7 @@ export default function StaffCreateTask() {
       label: "Priority",
       sortable: true,
       filterable: true,
+      filterSearchable: true,
       filterOptions: [
         { label: "All", value: "" },
         { label: "Low", value: "low" },

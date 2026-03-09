@@ -48,9 +48,8 @@ const onboardingSteps = [
 
 
 function DashboardHome() {
-  const [searchParams] = useSearchParams();
-  const planParam = searchParams.get("plan");
-  const currentPlan = planParam || "essential";
+  const user = useSelector(selectCurrentUser);
+  const currentPlan = user?.plan || "startup"; // Default to 'startup' if plan is undefined
   const {
     data: connectionStatus,
     isLoading: qbLoading,

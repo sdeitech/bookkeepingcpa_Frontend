@@ -332,6 +332,7 @@ export default function AdminClientDetail() {
       label: "Assigned By",
       sortable: true,
       filterable: true,
+      filterSearchable: true,
       filterOptions: [{ label: "All", value: "" }, ...assignedByOptions],
       render: (task) => <span className="text-sm text-muted-foreground">{task.assignedByName}</span>,
     },
@@ -340,6 +341,7 @@ export default function AdminClientDetail() {
       label: "Status",
       sortable: true,
       filterable: true,
+      filterSearchable: true,
       filterOptions: [
         { label: "All", value: "" },
         { label: "Not Started", value: "NOT_STARTED" },
@@ -356,6 +358,7 @@ export default function AdminClientDetail() {
       label: "Priority",
       sortable: true,
       filterable: true,
+      filterSearchable: true,
       filterOptions: [
         { label: "All", value: "" },
         { label: "Low", value: "LOW" },
