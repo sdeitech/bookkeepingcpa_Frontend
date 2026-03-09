@@ -362,7 +362,7 @@ export default function StaffCreateTask() {
       label: "Status",
       sortable: true,
       filterable: true,
-      filterSearchable: true,
+      filterSearchable: false,
       filterOptions: [
         { label: "All", value: "" },
         { label: "Not Started", value: "not_started" },
@@ -384,7 +384,7 @@ export default function StaffCreateTask() {
       label: "Priority",
       sortable: true,
       filterable: true,
-      filterSearchable: true,
+      filterSearchable: false,
       filterOptions: [
         { label: "All", value: "" },
         { label: "Low", value: "low" },

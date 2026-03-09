@@ -38,7 +38,7 @@ export default function StaffTaskDetail() {
   const [deleteTask] = useDeleteTaskMutation();
   const [updateTaskStatus] = useUpdateTaskStatusMutation();
   const [uploadDocument] = useUploadDocumentMutation();
-  
+
   // Document queries and mutations
   const { data: documentsData, refetch: refetchDocuments } = useGetTaskDocumentsQuery(taskId);
   const documents = documentsData?.data || [];
@@ -353,22 +353,22 @@ export default function StaffTaskDetail() {
 
     try {
       const result = await uploadDocument({ taskId, formData }).unwrap();
-      
+
       // Complete progress
       clearInterval(progressInterval);
       setUploadProgress(100);
-      
+
       // Show success message after brief delay
       setTimeout(() => {
         toast.success(`${docType.replace(/_/g, ' ')} uploaded successfully`);
-        
+
         // Check if all required documents are now uploaded
         if (result.data?.task?.allRequiredUploaded) {
           toast.success("✅ All required documents uploaded! Task status updated to Pending Review.", {
             duration: 5000,
           });
         }
-        
+
         // Refetch documents
         refetchDocuments();
       }, 300);
@@ -389,7 +389,7 @@ export default function StaffTaskDetail() {
   const getFilesForDocType = (docType) => {
     return documents.filter((doc) => doc.documentType === docType);
   };
-  
+
   const handleApproveDocument = async (documentId) => {
     try {
       await approveDocument({ documentId, reviewNotes: '', undo: false }).unwrap();
@@ -401,13 +401,13 @@ export default function StaffTaskDetail() {
       console.error("Approve error:", error);
     }
   };
-  
+
   const handleRejectDocument = async (documentId) => {
     if (!rejectionReason.trim()) {
       toast.error("Please provide a rejection reason");
       return;
     }
-    
+
     try {
       await rejectDocument({ documentId, rejectionReason, undo: false }).unwrap();
       toast.success("Document rejected successfully");
@@ -420,7 +420,7 @@ export default function StaffTaskDetail() {
       console.error("Reject error:", error);
     }
   };
-  
+
   const handleUndoApproval = async (documentId) => {
     try {
       await approveDocument({ documentId, reviewNotes: '', undo: true }).unwrap();
@@ -432,7 +432,7 @@ export default function StaffTaskDetail() {
       console.error("Undo approval error:", error);
     }
   };
-  
+
   const handleUndoRejection = async (documentId) => {
     try {
       await rejectDocument({ documentId, rejectionReason: '', undo: true }).unwrap();
@@ -444,17 +444,17 @@ export default function StaffTaskDetail() {
       console.error("Undo rejection error:", error);
     }
   };
-  
+
   const getDocumentStatusBadge = (reviewStatus) => {
     const statusConfig = {
       pending_review: { label: "Pending Review", className: "bg-yellow-100 text-yellow-800", icon: Clock },
       approved: { label: "Approved", className: "bg-green-100 text-green-800", icon: CheckCircle },
       rejected: { label: "Rejected", className: "bg-red-100 text-red-800", icon: XCircle }
     };
-    
+
     const config = statusConfig[reviewStatus] || statusConfig.pending_review;
     const Icon = config.icon;
-    
+
     return (
       <span className={cn("inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium", config.className)}>
         <Icon className="h-3 w-3" />
@@ -465,7 +465,7 @@ export default function StaffTaskDetail() {
 
   const getFileIcon = (fileName, mimeType) => {
     const ext = fileName?.split('.').pop()?.toLowerCase() || '';
-    
+
     if (ext === 'pdf' || mimeType?.includes('pdf')) {
       return <FileText className="h-4 w-4 text-red-500" />;
     }
@@ -518,9 +518,7 @@ export default function StaffTaskDetail() {
     <div className="space-y-6 animate-fade-in p-4 sm:p-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <Button variant="ghost" onClick={handleBack} className="gap-2 self-start">
-          <ArrowLeft className="h-4 w-4" /> {backLabel}
-        </Button>
+        <Button onClick={handleBack}>{backLabel}</Button>
         <div className="flex gap-2">
           {isEditMode ? (
             <>
@@ -589,12 +587,12 @@ export default function StaffTaskDetail() {
                       const totalRequired = task.requiredDocuments.filter(d => d.isRequired).length;
                       const uploadedRequired = task.requiredDocuments.filter(d => d.isRequired && d.uploaded).length;
                       const allRequiredUploaded = totalRequired === uploadedRequired;
-                      
+
                       return (
                         <div className={cn(
                           "flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium",
-                          allRequiredUploaded 
-                            ? "bg-green-100 text-green-700" 
+                          allRequiredUploaded
+                            ? "bg-green-100 text-green-700"
                             : "bg-blue-100 text-blue-700"
                         )}>
                           {allRequiredUploaded ? (
@@ -614,13 +612,13 @@ export default function StaffTaskDetail() {
                   </div>
                 )}
               </div>
-              
+
               {task.requiredDocuments && task.requiredDocuments.length > 0 ? (
                 <div className="space-y-4">
                   {task.requiredDocuments.map((reqDoc, index) => {
                     const files = getFilesForDocType(reqDoc.type);
                     const isUploaded = reqDoc.uploaded;
-                    
+
                     return (
                       <div
                         key={index}
@@ -659,7 +657,7 @@ export default function StaffTaskDetail() {
                               </div>
                             </div>
                           </div>
-                          
+
                           {canUpload && (
                             <div>
                               <input
@@ -753,14 +751,14 @@ export default function StaffTaskDetail() {
                                     </Button>
                                   </div>
                                 </div>
-                                
+
                                 {/* Rejection Notes */}
                                 {file.reviewStatus === 'rejected' && file.reviewNotes && (
                                   <div className="pl-6 text-xs text-red-600 bg-red-50 p-2 rounded">
                                     <strong>Rejection Reason:</strong> {file.reviewNotes}
                                   </div>
                                 )}
-                                
+
                                 {/* Review Action Buttons (Staff only) */}
                                 <div className="pl-6 flex items-center gap-2">
                                   {file.reviewStatus === 'pending_review' ? (
@@ -856,7 +854,7 @@ export default function StaffTaskDetail() {
           {/* Activity History */}
           <div className="bg-card border border-border rounded-xl p-4 sm:p-6">
             <h2 className="text-lg font-semibold text-foreground mb-4">Activity History</h2>
-            
+
             {task.statusHistory && task.statusHistory.length > 0 ? (
               <div className="space-y-4">
                 {task.statusHistory.map((activity, index) => (
@@ -914,7 +912,7 @@ export default function StaffTaskDetail() {
           {/* Metadata Card */}
           <div className="bg-card border border-border rounded-xl p-4 sm:p-6 space-y-4">
             <h3 className="font-semibold text-foreground">Task Details</h3>
-            
+
             {/* Status */}
             <div>
               <p className="text-xs text-muted-foreground mb-2">Status</p>

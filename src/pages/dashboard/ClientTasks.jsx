@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useSelector } from "react-redux";
-import { selectCurrentUser } from "@/features/auth/authSlice";
 import { useTasks } from "@/hooks/useTasks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,13 +8,12 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { TaskStatusBadge, TaskPriorityBadge } from "@/components/new_Admin/TaskStatusBadge";
 import { DataTable } from "@/components/common/DataTable";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { AlertTriangle, Check, ChevronDown, X, CheckCircle2 } from "lucide-react";
+import { AlertTriangle, Check, ChevronDown, X, CheckCircle2, Search } from "lucide-react";
 import { format, isBefore, startOfDay } from "date-fns";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -65,12 +62,12 @@ const toLowerPriority = (value) => {
   const priority = String(value || "").toLowerCase();
   if (priority === "low") return "low";
   if (priority === "medium") return "medium";
-  return "high";
+  if (priority === "high") return "high";
+  return "urgent";
 };
 
 export default function ClientTasks() {
   const navigate = useNavigate();
-  const user = useSelector(selectCurrentUser);
   const [categoryFilter, setCategoryFilter] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -256,7 +253,7 @@ export default function ClientTasks() {
       label: "Status",
       sortable: true,
       filterable: true,
-      filterSearchable: true,
+      filterSearchable: false,
       filterOptions: [
         { label: "All", value: "" },
         { label: "Not Started", value: "not_started" },
@@ -265,6 +262,7 @@ export default function ClientTasks() {
         { label: "Needs Revision", value: "needs_revision" },
         { label: "Completed", value: "completed" },
         { label: "Cancelled", value: "cancelled" },
+        { label: "Blocked", value: "blocked" },
       ],
       render: (row) => <TaskStatusBadge status={row.status} />,
     },
@@ -273,7 +271,7 @@ export default function ClientTasks() {
       label: "Priority",
       sortable: true,
       filterable: true,
-      filterSearchable: true,
+      filterSearchable: false,
       filterOptions: [
         { label: "All", value: "" },
         { label: "Low", value: "low" },
@@ -298,7 +296,11 @@ export default function ClientTasks() {
         },
       ],
       render: (row) => {
-        const isOverdue = row.status !== "completed" && row.dueDate && isBefore(new Date(row.dueDate), today);
+        const isOverdue =
+          row.status !== "completed" &&
+          row.status !== "cancelled" &&
+          row.dueDate &&
+          isBefore(new Date(row.dueDate), today);
         return <span className={isOverdue ? "font-medium text-destructive" : ""}>{row.dueDate ? format(new Date(row.dueDate), "MMM d, yyyy") : "-"}</span>;
       },
     },
@@ -369,6 +371,7 @@ export default function ClientTasks() {
 
       <div className="flex items-center gap-3 flex-wrap">
         <div className="relative flex-1 min-w-[200px] max-w-md">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search tasks..."
             value={searchQuery}
@@ -376,7 +379,7 @@ export default function ClientTasks() {
               setSearchQuery(e.target.value);
               setPage(1);
             }}
-            className="h-10"
+            className="h-10 pl-9"
           />
         </div>
 
@@ -412,17 +415,16 @@ export default function ClientTasks() {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {hasAnyFilter && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-10 gap-1.5 text-muted-foreground hover:text-destructive"
-            onClick={() => setClearAllOpen(true)}
-          >
-            <X className="h-3.5 w-3.5" />
-            Clear All
-          </Button>
-        )}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-10 gap-1.5 text-muted-foreground hover:text-destructive disabled:cursor-not-allowed disabled:opacity-50"
+          onClick={() => setClearAllOpen(true)}
+          disabled={!hasAnyFilter}
+        >
+          <X className="h-3.5 w-3.5" />
+          Clear All
+        </Button>
       </div>
 
       <DataTable

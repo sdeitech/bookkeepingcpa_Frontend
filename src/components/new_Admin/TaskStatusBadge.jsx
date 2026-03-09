@@ -35,18 +35,11 @@ const priorityLabels = {
   urgent: "Urgent",
 };
 
+
 export function TaskStatusBadge({ status }) {
-  const safeStatus = statusLabels[status] ? status : "not_started";
   return (
-    <Badge
-      variant="outline"
-      className={cn(
-        "text-xs font-medium",
-        safeStatus === "not_started" && "min-w-[10px] justify-center text-center whitespace-nowrap px-3 py-1",
-        statusStyles[safeStatus],
-      )}
-    >
-      {statusLabels[safeStatus]}
+    <Badge variant="outline" className={cn("text-xs font-medium w-32 flex justify-center", statusStyles[status])}>
+      {statusLabels[status]}
     </Badge>
   );
 }

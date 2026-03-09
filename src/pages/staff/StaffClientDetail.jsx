@@ -361,7 +361,7 @@ export default function StaffClientDetail() {
       label: "Status",
       sortable: true,
       filterable: true,
-      filterSearchable: true,
+      filterSearchable: false,
       filterOptions: [
         { label: "All", value: "" },
         { label: "Not Started", value: "not_started" },
@@ -379,7 +379,7 @@ export default function StaffClientDetail() {
       label: "Priority",
       sortable: true,
       filterable: true,
-      filterSearchable: true,
+      filterSearchable: false,
       filterOptions: [
         { label: "All", value: "" },
         { label: "Low", value: "low" },
@@ -410,9 +410,9 @@ export default function StaffClientDetail() {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
         <p className="text-lg mb-4">Invalid client ID</p>
-        <Link to="/staff/clients">
-          <Button variant="outline"><ArrowLeft className="mr-2 h-4 w-4" /> Back to Clients</Button>
-        </Link>
+        <Button variant="ghost" onClick={() => navigate("/staff/clients")} className="gap-2 self-start">
+          <ArrowLeft className="h-4 w-4" /> Back
+        </Button>
       </div>
     );
   }
@@ -432,23 +432,18 @@ export default function StaffClientDetail() {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
         <p className="text-lg mb-4">{clientError ? "Failed to load client." : "Client not found."}</p>
-        <Link to="/staff/clients">
-          <Button variant="outline">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Clients
-          </Button>
-        </Link>
+        <Button variant="ghost" onClick={() => navigate("/staff/clients")} className="gap-2 self-start">
+          <ArrowLeft className="h-4 w-4" /> Back
+        </Button>
       </div>
     );
   }
 
   return (
     <div className="space-y-8 animate-fade-in">
-      <Link
-        to="/staff/clients"
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-      >
-        <ArrowLeft className="h-4 w-4" /> Back to Clients
-      </Link>
+      <Button variant="ghost" onClick={() => navigate("/staff/clients")} className="gap-2 self-start">
+        <ArrowLeft className="h-4 w-4" /> Back
+      </Button>
 
       <div className="bg-card border border-border/70 rounded-2xl p-6 shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -606,58 +601,58 @@ export default function StaffClientDetail() {
               <div className="relative flex-1 min-w-[220px] max-w-md">
                 <Input
                   placeholder="Search tasks..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setPage(1);
-                }}
-                className="h-10 pl-9"
-              />
-            </div>
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setPage(1);
+                  }}
+                  className="h-10 pl-9"
+                />
+              </div>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant={statusFilter !== "all" ? "default" : "outline"}
-                  className={cn(
-                    "h-10 gap-2",
-                    statusFilter !== "all"
-                      ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
-                      : "border-border text-foreground hover:bg-accent",
-                  )}
-                >
-                  <span>{activeStatusLabel}</span>
-                  <ChevronDown className="h-3.5 w-3.5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="bg-popover z-50 min-w-[180px]">
-                {STATUS_FILTERS.map((item) => (
-                  <DropdownMenuItem
-                    key={item.value}
-                    onClick={() => {
-                      setStatusFilter(item.value);
-                      setPage(1);
-                    }}
-                    className="flex items-center justify-between"
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant={statusFilter !== "all" ? "default" : "outline"}
+                    className={cn(
+                      "h-10 gap-2",
+                      statusFilter !== "all"
+                        ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
+                        : "border-border text-foreground hover:bg-accent",
+                    )}
                   >
-                    <span>{item.label}</span>
-                    {statusFilter === item.value && <Check className="h-3.5 w-3.5 text-primary" />}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                    <span>{activeStatusLabel}</span>
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="bg-popover z-50 min-w-[180px]">
+                  {STATUS_FILTERS.map((item) => (
+                    <DropdownMenuItem
+                      key={item.value}
+                      onClick={() => {
+                        setStatusFilter(item.value);
+                        setPage(1);
+                      }}
+                      className="flex items-center justify-between"
+                    >
+                      <span>{item.label}</span>
+                      {statusFilter === item.value && <Check className="h-3.5 w-3.5 text-primary" />}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
 
-            {hasAnyFilter && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-10 gap-1.5 text-muted-foreground hover:text-destructive"
-                onClick={() => setClearAllOpen(true)}
-              >
-                <X className="h-3.5 w-3.5" />
-                Clear All
-              </Button>
-            )}
+              {hasAnyFilter && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-10 gap-1.5 text-muted-foreground hover:text-destructive"
+                  onClick={() => setClearAllOpen(true)}
+                >
+                  <X className="h-3.5 w-3.5" />
+                  Clear All
+                </Button>
+              )}
             </div>
           </div>
 

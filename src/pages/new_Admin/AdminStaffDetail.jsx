@@ -70,8 +70,8 @@ const pickPagination = (source) => {
     explicitTotalPages !== null
       ? explicitTotalPages
       : (totalItems !== null && itemsPerPage !== null && itemsPerPage > 0
-          ? Math.max(1, Math.ceil(totalItems / itemsPerPage))
-          : null);
+        ? Math.max(1, Math.ceil(totalItems / itemsPerPage))
+        : null);
 
   return {
     totalPages,
@@ -219,7 +219,7 @@ export default function AdminStaffDetail() {
         ? staffClientsData.clients
         : Array.isArray(staffClientsData?.items)
           ? staffClientsData.items
-      : [];
+          : [];
 
   const rawTasks = Array.isArray(tasksData?.data?.tasks)
     ? tasksData.data.tasks
@@ -229,7 +229,7 @@ export default function AdminStaffDetail() {
         ? tasksData.tasks
         : Array.isArray(tasksData?.items)
           ? tasksData.items
-      : [];
+          : [];
   const tasksPagination = pickPagination(tasksData);
   const tasksTotalPagesFromServer = tasksPagination.totalPages;
   const tasksTotalItemsFromServer = tasksPagination.totalItems;
@@ -243,10 +243,10 @@ export default function AdminStaffDetail() {
     const scopedTasks = tasksIsServerPaginated
       ? rawTasks
       : rawTasks.filter((task) => {
-          const assignedToId = getId(task.assignedTo);
-          const taskStaffId = getId(task.staffId);
-          return String(assignedToId) === String(staffId) || String(taskStaffId) === String(staffId);
-        });
+        const assignedToId = getId(task.assignedTo);
+        const taskStaffId = getId(task.staffId);
+        return String(assignedToId) === String(staffId) || String(taskStaffId) === String(staffId);
+      });
 
     return scopedTasks
       .map((task) => ({
@@ -641,7 +641,7 @@ export default function AdminStaffDetail() {
       label: "Priority",
       sortable: true,
       filterable: true,
-      filterSearchable: true,
+      filterSearchable: false,
       filterOptions: [
         { label: "All", value: "" },
         { label: "Low", value: "low" },
@@ -655,7 +655,7 @@ export default function AdminStaffDetail() {
       label: "Status",
       sortable: true,
       filterable: true,
-      filterSearchable: true,
+      filterSearchable: false,
       filterOptions: [
         { label: "All", value: "" },
         { label: "Not Started", value: "not_started" },
@@ -700,11 +700,9 @@ export default function AdminStaffDetail() {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
         <p className="text-lg mb-4">{staffError ? "Failed to load staff member." : "Staff member not found."}</p>
-        <Link to="/admin/staff">
-          <Button variant="outline">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Staff
-          </Button>
-        </Link>
+        <Button variant="ghost" onClick={() => navigate("/admin/staff")} className="gap-2 self-start">
+          <ArrowLeft className="h-4 w-4" /> Back
+        </Button>
       </div>
     );
   }
@@ -720,13 +718,9 @@ export default function AdminStaffDetail() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <Link
-        to="/admin/staff"
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-      >
-        <ArrowLeft className="h-4 w-4" /> Back to Staff
-      </Link>
-
+      <Button variant="ghost" onClick={() => navigate("/admin/staff")} className="gap-2 self-start">
+        <ArrowLeft className="h-4 w-4" /> Back
+      </Button>
       <div className="rounded-xl border border-border bg-card p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-start gap-4">

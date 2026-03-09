@@ -191,7 +191,7 @@ export default function AdminTasks() {
     return options;
   }, [filterOptions]);
 
-  const assignedToOptions = useMemo(() => {
+  const   assignedToOptions = useMemo(() => {
     const options = filterOptions?.assignedTo || [];
     return options;
   }, [filterOptions]);
@@ -343,7 +343,7 @@ export default function AdminTasks() {
       label: "Status",
       sortable: true,
       filterable: true,
-      filterSearchable: true,
+      filterSearchable: false,
       filterOptions: [
         { label: "All", value: "" },
         { label: "Not Started", value: "not_started" },
@@ -365,7 +365,7 @@ export default function AdminTasks() {
       label: "Priority",
       sortable: true,
       filterable: true,
-      filterSearchable: true,
+      filterSearchable: false,
       filterOptions: [
         { label: "All", value: "" },
         { label: "Low", value: "low" },
