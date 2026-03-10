@@ -1,14 +1,16 @@
 import { Outlet, useLocation } from "react-router-dom";
 import { AdminSidebar } from "@/components/new_Admin/AdminSidebar";
 import NotificationBell from "@/components/notifications/NotificationBell";
-import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Search, User, Settings, LogOut } from "lucide-react";
+import { User, Settings, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { logout, selectCurrentUser } from "@/features/auth/authSlice";
 import config from "@/config";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useState } from "react";
+import { toast } from "sonner";
 
 const pageTitles = {
   "/admin": "Dashboard",
@@ -26,8 +28,9 @@ export default function AdminLayout() {
   const navigate = useNavigate();
   const baseRoute = "/" + location.pathname.split("/").slice(1, 3).join("/");
   const title = pageTitles[baseRoute] || "Admin Panel";
-  const user=useSelector(selectCurrentUser)
+  const user = useSelector(selectCurrentUser)
   const dispatch = useDispatch();
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const getInitials = (u) => {
     const first = (u?.first_name || "").trim();
     const last = (u?.last_name || "").trim();
@@ -36,7 +39,9 @@ export default function AdminLayout() {
   };
   const handleLogout = () => {
     dispatch(logout());
+    toast.success("Signed out successfully");
     navigate("/");
+    setLogoutConfirmOpen(false);
   };
 
   return (
@@ -45,12 +50,6 @@ export default function AdminLayout() {
       <div className="flex-1 flex flex-col min-w-0">
         <header className="h-16 bg-card border-b border-border px-6 flex items-center justify-between gap-4 shrink-0">
           <h1 className="text-lg font-semibold text-foreground whitespace-nowrap">{title}</h1>
-          {/* <div className="flex-1 max-w-md mx-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search clients, tasks, documents..." className="pl-9 bg-muted/50 border-transparent focus:border-border" />
-            </div>
-          </div> */}
           <div className="flex items-center gap-2 shrink-0">
             <NotificationBell />
             <DropdownMenu>
@@ -66,10 +65,10 @@ export default function AdminLayout() {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-popover w-48">
-                <DropdownMenuItem onClick={()=>navigate("/admin/profile")}><User className="mr-2 h-4 w-4" /> Profile</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/admin/profile")}><User className="mr-2 h-4 w-4" /> Profile</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate("/admin/settings")}><Settings className="mr-2 h-4 w-4" /> Settings</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() =>dispatch(handleLogout)}><LogOut className="mr-2 h-4 w-4" /> Logout</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setLogoutConfirmOpen(true)}><LogOut className="mr-2 h-4 w-4" /> Sign out</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -78,6 +77,15 @@ export default function AdminLayout() {
           <Outlet />
         </main>
       </div>
+      <ConfirmDialog
+        open={logoutConfirmOpen}
+        onOpenChange={setLogoutConfirmOpen}
+        title="Sign out?"
+        description="You will be logged out of the admin panel."
+        confirmLabel="Sign Out"
+        variant="destructive"
+        onConfirm={handleLogout}
+      />
     </div>
   );
 }

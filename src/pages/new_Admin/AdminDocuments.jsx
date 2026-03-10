@@ -9,6 +9,7 @@ import { PaginationControls } from "@/components/ui/pagination-controls";
 import { FileClock, FileText, User, X, ChevronDown } from "lucide-react";
 import { useGetAllDocumentsQuery } from "@/features/tasks/tasksApi";
 import { useGetAllClientsQuery } from "@/features/user/userApi";
+import { toast } from "sonner";
 
 const DEFAULT_PAGE_SIZE = 12;
 
@@ -41,7 +42,7 @@ export default function AdminDocuments() {
     setPage(1);
   }, [filters.status, filters.fromDate, filters.toDate, debouncedSearch, filters.clientId]);
 
-  const { data, isLoading } = useGetAllDocumentsQuery({
+  const { data, isLoading, isFetching, error } = useGetAllDocumentsQuery({
     page,
     limit: DEFAULT_PAGE_SIZE,
     status: filters.status,
@@ -50,6 +51,12 @@ export default function AdminDocuments() {
     toDate: filters.toDate,
     clientId: filters.clientId || undefined,
   });
+
+  useEffect(() => {
+    if (error) {
+      toast.error(error?.data?.message || "Failed to load documents");
+    }
+  }, [error]);
 
   // Fetch all clients once, filter on frontend
   const { data: clientsData } = useGetAllClientsQuery();
@@ -105,6 +112,7 @@ export default function AdminDocuments() {
         <p className="text-muted-foreground mt-2">
           Filter and manage uploaded documents.
         </p>
+        {isFetching && !isLoading ? <p className="text-xs text-muted-foreground mt-2">Refreshing documents...</p> : null}
       </div>
 
       {/* FILTERS */}
@@ -240,6 +248,7 @@ export default function AdminDocuments() {
             onClick={() => {
               setFilters({ status: "all", search: "", fromDate: "", toDate: "", clientId: null, clientLabel: "" });
               setClientSearch("");
+              toast.success("Filters reset");
             }}
           >
             Reset Filters

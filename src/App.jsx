@@ -109,6 +109,7 @@ function App() {
       <div className="app">
         <Toaster
           richColors
+          position="top-right"
           toastOptions={{
             className: "bg-card text-foreground border border-border shadow-lg",
           }}

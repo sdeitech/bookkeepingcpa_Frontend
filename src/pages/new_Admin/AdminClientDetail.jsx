@@ -27,15 +27,12 @@ import { useGetQuickBooksConnectionStatusQuery } from "@/features/quickbooks/qui
 
 const DEFAULT_PAGE_SIZE = 10;
 
-const STATUS_FILTERS = [
+
+const VIEW_FILTERS = [
   { label: "All Tasks", value: "all" },
-  { label: "Not Started", value: "NOT_STARTED" },
-  { label: "In Progress", value: "IN_PROGRESS" },
-  { label: "Completed", value: "COMPLETED" },
-  { label: "Pending Review", value: "PENDING_REVIEW" },
-  { label: "Needs Revision", value: "NEEDS_REVISION" },
-  { label: "Cancelled", value: "CANCELLED" },
-];
+  { label: "Admin Tasks", value: "admin_tasks" },
+  { label: "Staff Tasks", value: "staff_tasks" },
+]
 
 const getTaskId = (task) => task?._id || task?.id;
 const getId = (value) => {
@@ -68,7 +65,10 @@ export default function AdminClientDetail() {
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [columnFilters, setColumnFilters] = useState({});
   const [clearAllOpen, setClearAllOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState(null);
   const [activeTab, setActiveTab] = useState("overview");
+  const [viewFilter, setViewFilter] = useState("all");
   const apiFilters = useMemo(() => {
     const filters = {
       clientId,
@@ -77,6 +77,10 @@ export default function AdminClientDetail() {
       sortBy: sortKey || "createdAt",
       sortOrder: sortKey ? sortDir : "desc",
     };
+
+    if (viewFilter && viewFilter !== 'all') {
+      filters.viewFilter = viewFilter;
+    }
 
     if (debouncedSearch) filters.search = debouncedSearch;
 
@@ -90,19 +94,31 @@ export default function AdminClientDetail() {
     if (assignedByFilter) filters.assignedBy = assignedByFilter;
 
     return filters;
-  }, [clientId, page, pageSize, sortKey, sortDir, debouncedSearch, statusFilter, columnFilters]);
+  }, [clientId, page, pageSize, sortKey, sortDir, debouncedSearch, statusFilter, columnFilters,viewFilter]);
 
   const { data: clientData, isLoading: clientLoading, error: clientError } = useGetClientProfileQuery(clientId, {
     skip: !clientId,
   });
 
-  const { data: tasksData, isLoading: tasksLoading } = useGetTasksQuery(apiFilters, { skip: !clientId });
+  const { data: tasksData, isLoading: tasksLoading, error: tasksError } = useGetTasksQuery(apiFilters, { skip: !clientId });
   const [deleteTaskMutation] = useDeleteTaskMutation();
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  useEffect(() => {
+    if (clientError) {
+      toast.error(clientError?.data?.message || "Failed to load client details");
+    }
+  }, [clientError]);
+
+  useEffect(() => {
+    if (tasksError) {
+      toast.error(tasksError?.data?.message || "Failed to load tasks");
+    }
+  }, [tasksError]);
 
   const client = clientData?.data?.client;
   const normalizedClientId = client?._id || client?.id || clientId;
@@ -120,6 +136,16 @@ export default function AdminClientDetail() {
     ? format(new Date(client.subscription.nextBillingDate), "MMM d, yyyy")
     : "—";
   const paymentMethod = client?.subscription?.paymentMethod || client?.paymentMethod || "—";
+  const assignedStaffName =
+    client?.assignedStaffName ||
+    client?.assignedStaff?.staffName ||
+    getName(client?.assignedStaff);
+  const assignedStaffEmail =
+    client?.assignedStaffEmail ||
+    client?.assignedStaff?.staffEmail ||
+    client?.assignedStaff?.email ||
+    "—";
+  const resolvedAssignedStaffName = assignedStaffName && assignedStaffName !== "-" ? assignedStaffName : "Unassigned";
   const createTaskClientList = useMemo(() => {
     if (!client) return [];
     return [
@@ -274,21 +300,30 @@ export default function AdminClientDetail() {
     if (!taskId) return;
     const backTo = `${location.pathname}${location.search}`;
 
+    if (action === "view") {
+      navigate(`/admin/tasks/${taskId}`, { state: { backTo } });
+      return;
+    }
+    if (action === "edit") {
+      navigate(`/admin/tasks/${taskId}?mode=edit`, { state: { backTo } });
+      return;
+    }
+    if (action === "delete") {
+      setTaskToDelete(task);
+      setDeleteConfirmOpen(true);
+    }
+  };
+
+  const handleConfirmDeleteTask = async () => {
+    const taskId = getTaskId(taskToDelete);
+    if (!taskId) return;
     try {
-      if (action === "view") {
-        navigate(`/admin/tasks/${taskId}`, { state: { backTo } });
-        return;
-      }
-      if (action === "edit") {
-        navigate(`/admin/tasks/${taskId}?mode=edit`, { state: { backTo } });
-        return;
-      }
-      if (action === "delete") {
-        await deleteTaskMutation(taskId).unwrap();
-        toast.success("Task deleted");
-      }
+      await deleteTaskMutation(taskId).unwrap();
+      toast.success("Task deleted");
+      setDeleteConfirmOpen(false);
+      setTaskToDelete(null);
     } catch {
-      toast.error("Failed to update task");
+      toast.error("Failed to delete task");
     }
   };
 
@@ -302,7 +337,7 @@ export default function AdminClientDetail() {
     }
   };
 
-  const activeStatusLabel = STATUS_FILTERS.find((item) => item.value === statusFilter)?.label || "All Tasks";
+  const activeStatusLabel = VIEW_FILTERS.find((item) => item.value === viewFilter )?.label || "All Tasks";
   const hasAnyFilter = statusFilter !== "all" || !!debouncedSearch || Object.keys(columnFilters).length > 0;
 
   const handleClearAll = () => {
@@ -476,6 +511,11 @@ export default function AdminClientDetail() {
                 <span>Completed: {completedCount}</span>
                 <span>Progress: {progressPercent}%</span>
               </div>
+              <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                <span>Assigned Staff: {resolvedAssignedStaffName}</span>
+                <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60" />
+                <span>{assignedStaffEmail || "—"}</span>
+              </div>
             </div>
           </div>
 
@@ -614,10 +654,10 @@ export default function AdminClientDetail() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
-                    variant={statusFilter !== "all" ? "default" : "outline"}
+                    variant={viewFilter  !== "all" ? "default" : "outline"}
                     className={cn(
                       "h-10 gap-2",
-                      statusFilter !== "all"
+                      viewFilter  !== "all"
                         ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
                         : "border-border text-foreground hover:bg-accent",
                     )}
@@ -627,17 +667,17 @@ export default function AdminClientDetail() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="bg-popover z-50 min-w-[180px]">
-                  {STATUS_FILTERS.map((item) => (
+                  {VIEW_FILTERS.map((item) => (
                     <DropdownMenuItem
                       key={item.value}
                       onClick={() => {
-                        setStatusFilter(item.value);
+                        setViewFilter(item.value);
                         setPage(1);
                       }}
                       className="flex items-center justify-between"
                     >
                       <span>{item.label}</span>
-                      {statusFilter === item.value && <Check className="h-3.5 w-3.5 text-primary" />}
+                      {viewFilter === item.value && <Check className="h-3.5 w-3.5 text-primary" />}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
@@ -727,6 +767,19 @@ export default function AdminClientDetail() {
         confirmLabel="Clear All"
         variant="destructive"
         onConfirm={handleClearAll}
+      />
+
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={(open) => {
+          setDeleteConfirmOpen(open);
+          if (!open) setTaskToDelete(null);
+        }}
+        title="Delete this task?"
+        description={`This action cannot be undone. ${taskToDelete?.title ? `Task: ${taskToDelete.title}` : ""}`}
+        confirmLabel="Delete"
+        variant="destructive"
+        onConfirm={handleConfirmDeleteTask}
       />
     </div>
   );
