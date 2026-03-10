@@ -117,12 +117,18 @@ export default function ClientTasks() {
   }, [page, sortKey, sortDir, debouncedSearch, categoryFilter, columnFilters]);
 
   // Fetch tasks with filters
-  const { tasks: apiTasks, filterOptions, pagination, isLoading, refetch } = useTasks(apiFilters);
+  const { tasks: apiTasks, filterOptions, pagination, isLoading, error, refetch } = useTasks(apiFilters);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  useEffect(() => {
+    if (error) {
+      toast.error(error?.data?.message || "Failed to load tasks");
+    }
+  }, [error]);
 
   const today = startOfDay(new Date());
 

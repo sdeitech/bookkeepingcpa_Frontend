@@ -110,12 +110,18 @@ export default function StaffCreateTask() {
     return filters;
   }, [page, pageSize, sortKey, sortDir, debouncedSearch, viewFilter, categoryFilter, columnFilters]);
 
-  const { tasks, pagination, isLoading, createTask, deleteTask } = useTasks(apiFilters);
+  const { tasks, pagination, isLoading, error, createTask, deleteTask } = useTasks(apiFilters);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  useEffect(() => {
+    if (error) {
+      toast.error(error?.data?.message || "Failed to load tasks");
+    }
+  }, [error]);
 
   const today = startOfDay(new Date());
   const weekStart = startOfWeek(today, { weekStartsOn: 1 });

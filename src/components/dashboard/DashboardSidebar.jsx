@@ -1,9 +1,12 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Home, FileText, CreditCard, HelpCircle, LogOut, BookOpen, CheckSquare } from "lucide-react";
-import { PlutifyLogo } from "../../components/PlutifyLogo";
 import { cn } from "../../lib/utils";
 import { useDispatch } from "react-redux";
 import { logout } from "@/features/auth/authSlice";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useState } from "react";
+import { toast } from "sonner";
+import { PlutifyLogo } from "@/components/PlutifyLogo";
 
 const navItems = [
   { icon: Home, label: "Home", href: "/new-dashboard" },
@@ -18,12 +21,13 @@ export function DashboardSidebar() {
   const location = useLocation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
 
   return (
-    <aside className="w-64 bg-sidebar text-sidebar-foreground flex flex-col h-screen sticky top-0 shrink-0 overflow-y-auto">
-      {/* Logo */}
-      <div className="p-6 border-b border-sidebar-border">
+    <aside className="w-64 bg-sidebar text-sidebar-foreground flex flex-col border-r border-sidebar-border fixed top-0 left-0 h-screen z-50 overflow-y-auto">
+      <div className="p-4 border-b border-sidebar-border">
         <PlutifyLogo variant="light" />
+        <span className="text-xs text-sidebar-foreground/70 uppercase tracking-wide font-semibold mt-2 block">Client Panel</span>
       </div>
 
       {/* Navigation */}
@@ -55,8 +59,7 @@ export function DashboardSidebar() {
       <button
           type="button"
           onClick={() => {
-            dispatch(logout());
-            navigate("/");
+            setLogoutConfirmOpen(true);
           }}
           className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium bg-sidebar-accent text-sidebar-accent-foreground transition-colors"
         >
@@ -64,6 +67,21 @@ export function DashboardSidebar() {
           Sign Out
         </button>
       </div>
+
+      <ConfirmDialog
+        open={logoutConfirmOpen}
+        onOpenChange={setLogoutConfirmOpen}
+        title="Sign out?"
+        description="You will be logged out of your dashboard."
+        confirmLabel="Sign Out"
+        variant="destructive"
+        onConfirm={() => {
+          dispatch(logout());
+          toast.success("Signed out successfully");
+          navigate("/");
+          setLogoutConfirmOpen(false);
+        }}
+      />
     </aside>
   );
 }

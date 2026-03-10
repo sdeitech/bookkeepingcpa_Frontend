@@ -3,7 +3,8 @@ import { useTasks } from "@/hooks/useTasks";
 import { Building2, ArrowRight, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useGetAllClientsQuery } from "@/features/user/userApi";
-import { useGetTasksQuery } from "@/features/tasks/tasksApi";
+import { useEffect } from "react";
+import { toast } from "sonner";
 
 export default function AdminClients() {
   // Fetch real clients from backend
@@ -16,6 +17,12 @@ export default function AdminClients() {
 
   // Extract clients from response
   const clients = clientsData?.data || [];
+
+  useEffect(() => {
+    if (clientsError) {
+      toast.error(clientsError?.data?.message || clientsError?.message || "Failed to fetch clients");
+    }
+  }, [clientsError]);
 
   // Loading state
   if (clientsLoading || tasksLoading) {
