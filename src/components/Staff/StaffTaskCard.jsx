@@ -15,20 +15,18 @@ const statusStyles = {
   not_started: "bg-muted text-muted-foreground",
   in_progress: "bg-primary/15 text-primary",
   completed: "bg-success/15 text-success",
-  blocked: "bg-destructive/15 text-destructive",
   pending_review: "bg-warning/15 text-warning",
   needs_revision: "bg-destructive/15 text-destructive",
-  cancelled: "bg-muted text-muted-foreground",
+  on_hold: "bg-muted text-muted-foreground",
 };
 
 const statusLabels = {
   not_started: "Not Started",
   in_progress: "In Progress",
   completed: "Completed",
-  blocked: "Blocked",
   pending_review: "Pending Review",
   needs_revision: "Needs Revision",
-  cancelled: "Cancelled",
+  on_hold: "On Hold",
 };
 
 export function StaffTaskCard({ task, onEdit, onComplete }) {

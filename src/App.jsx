@@ -34,6 +34,7 @@ import { Toaster } from 'sonner';
 import Dashboard from './pages/Dashboard';
 import QuickBooksData from './pages/dashboard/QuickBooksData';
 import ClientTasks from './pages/dashboard/ClientTasks';
+import ClientTaskDetail from './pages/dashboard/ClientTaskDetail';
 import AdminDashboard from './pages/admin/AdminDashboard';
 // import AdminLayout from './pages/admin/AdminLayout';
 // import AdminTasks from './pages/admin/AdminTasks';
@@ -151,8 +152,9 @@ function App() {
             <Route path="support" element={<ComingSoon title="Support" message="Support is coming soon." />} />
             <Route path="tasks/:taskId" element={
               <ErrorBoundary fallbackMessage="Unable to load task details. The task may not exist or there was an error loading it." showHomeButton>
-                <AdminTaskDetail />
+                <ClientTaskDetail />
               </ErrorBoundary>
+            } />
             } />
             <Route path="profile" element={<Profile />} />
           </Route>

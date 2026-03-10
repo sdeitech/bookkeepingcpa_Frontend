@@ -151,8 +151,20 @@ export default function StaffTaskDetail() {
     { value: "NEEDS_REVISION", label: "Needs Revision" },
     { value: "COMPLETED", label: "Completed" },
     { value: "ON_HOLD", label: "On Hold" },
-    { value: "CANCELLED", label: "Cancelled" },
   ];
+
+  // Get valid next statuses based on current status (Jira-style transitions)
+  const getValidNextStatuses = (currentStatus) => {
+    const transitions = {
+      'NOT_STARTED': ['IN_PROGRESS', 'ON_HOLD'],
+      'IN_PROGRESS': ['PENDING_REVIEW', 'NEEDS_REVISION', 'ON_HOLD'],
+      'PENDING_REVIEW': ['COMPLETED', 'NEEDS_REVISION', 'ON_HOLD'],
+      'NEEDS_REVISION': ['IN_PROGRESS', 'ON_HOLD'],
+      'ON_HOLD': ['IN_PROGRESS'],
+      'COMPLETED': []
+    };
+    return transitions[currentStatus] || [];
+  };
 
   const priorityOptions = [
     { value: "LOW", label: "Low" },
@@ -173,8 +185,6 @@ export default function StaffTaskDetail() {
         return <AlertCircle className="h-4 w-4 text-orange-500" />;
       case "ON_HOLD":
         return <AlertCircle className="h-4 w-4 text-yellow-500" />;
-      case "CANCELLED":
-        return <X className="h-4 w-4 text-red-500" />;
       default:
         return <Clock className="h-4 w-4 text-gray-500" />;
     }
@@ -922,11 +932,20 @@ export default function StaffTaskDetail() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {statusOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
+                    {statusOptions.map((option) => {
+                      const validStatuses = getValidNextStatuses(task.status);
+                      const isDisabled = !validStatuses.includes(option.value) && option.value !== task.status;
+                      
+                      return (
+                        <SelectItem 
+                          key={option.value} 
+                          value={option.value}
+                          disabled={isDisabled}
+                        >
+                          {option.label}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               ) : (
@@ -935,11 +954,20 @@ export default function StaffTaskDetail() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {statusOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
+                    {statusOptions.map((option) => {
+                      const validStatuses = getValidNextStatuses(task.status);
+                      const isDisabled = !validStatuses.includes(option.value) && option.value !== task.status;
+                      
+                      return (
+                        <SelectItem 
+                          key={option.value} 
+                          value={option.value}
+                          disabled={isDisabled}
+                        >
+                          {option.label}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               )}

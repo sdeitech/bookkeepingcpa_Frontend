@@ -5,7 +5,7 @@ const statusStyles = {
   NOT_STARTED: "bg-muted text-muted-foreground",
   IN_PROGRESS: "bg-primary/15 text-primary border-primary/30",
   COMPLETED: "bg-success/15 text-success border-success/30",
-  CANCELLED: "bg-destructive/15 text-destructive border-destructive/30",
+  CANCELLED: "bg-destructive/15 text-destructive border-destructive/30", // Legacy - use ON_HOLD instead
   PENDING_REVIEW: "bg-warning/15 text-warning border-warning/30",
   NEEDS_REVISION: "bg-warning/20 text-warning border-warning/40",
 };
@@ -14,7 +14,7 @@ const statusLabels = {
   NOT_STARTED: "Not Started",
   IN_PROGRESS: "In Progress",
   COMPLETED: "Completed",
-  CANCELLED: "Cancelled",
+  CANCELLED: "Cancelled", // Legacy - use ON_HOLD instead
   PENDING_REVIEW: "Pending Review",
   NEEDS_REVISION: "Needs Revision",
 };

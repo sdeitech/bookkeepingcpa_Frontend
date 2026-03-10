@@ -54,7 +54,7 @@ const toLowerStatus = (value) => {
   if (status === "completed") return "completed";
   if (status === "pending_review") return "pending_review";
   if (status === "needs_revision") return "needs_revision";
-  if (status === "cancelled") return "cancelled";
+  if (status === "on_hold") return "on_hold";
   return "blocked";
 };
 
@@ -234,7 +234,7 @@ export default function StaffTasks() {
         { label: "Pending Review", value: "pending_review" },
         { label: "Needs Revision", value: "needs_revision" },
         { label: "Completed", value: "completed" },
-        { label: "Cancelled", value: "cancelled" },
+        { label: "On Hold", value: "on_hold" },
       ],
       render: (row) => <TaskStatusBadge status={row.status} />,
     },
