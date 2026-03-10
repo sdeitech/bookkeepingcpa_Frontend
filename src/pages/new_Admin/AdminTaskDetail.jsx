@@ -936,9 +936,34 @@ export default function AdminTaskDetail() {
             <div>
               <p className="text-xs text-muted-foreground mb-2">Status</p>
               {isClient ? (
-                <p className="text-sm font-medium capitalize">
-                  {task.status?.replace(/_/g, " ")}
-                </p>
+                // Client can update status with limited options
+                <Select value={task.status} onValueChange={handleStatusChange}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statusOptions.map((option) => {
+                      const validStatuses = getValidNextStatuses(task.status);
+                      // Clients can only change to IN_PROGRESS and PENDING_REVIEW
+                      const clientAllowedStatuses = ['IN_PROGRESS', 'PENDING_REVIEW'];
+                      const isDisabled = !validStatuses.includes(option.value) && option.value !== task.status;
+                      const isClientAllowed = clientAllowedStatuses.includes(option.value) || option.value === task.status;
+                      
+                      // Hide options that clients can't use
+                      if (!isClientAllowed) return null;
+                      
+                      return (
+                        <SelectItem 
+                          key={option.value} 
+                          value={option.value}
+                          disabled={isDisabled}
+                        >
+                          {option.label}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
               ) : isEditMode ? (
                 <Select value={editStatus} onValueChange={setEditStatus}>
                   <SelectTrigger>
