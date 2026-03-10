@@ -59,7 +59,7 @@ export function CreateTaskDialog({
     { value: "PENDING_REVIEW", label: "Pending Review" },
     { value: "NEEDS_REVISION", label: "Needs Revision" },
     { value: "COMPLETED", label: "Completed" },
-    { value: "CANCELLED", label: "Cancelled" },
+    { value: "ON_HOLD", label: "On Hold" },
   ];
 
   const TASK_PRIORITIES = [

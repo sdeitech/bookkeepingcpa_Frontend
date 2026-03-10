@@ -103,7 +103,7 @@ const toLowerStatus = (value) => {
   if (status === "pending_review") return "pending_review";
   if (status === "needs_revision") return "needs_revision";
   if (status === "completed") return "completed";
-  if (status === "cancelled") return "cancelled";
+  if (status === "on_hold") return "on_hold";
   return "blocked";
 };
 
@@ -115,7 +115,7 @@ const toLowerPriority = (value) => {
   return "urgent";
 };
 
-const isTaskOpen = (status) => !["COMPLETED", "CANCELLED"].includes(String(status || "").toUpperCase());
+const isTaskOpen = (status) => !["COMPLETED", "ON_HOLD"].includes(String(status || "").toUpperCase());
 const toClientStatus = (client) => {
   const rawActive = client?.active;
   if (typeof rawActive === "boolean") return rawActive ? "active" : "inactive";
@@ -463,7 +463,7 @@ export default function AdminStaffDetail() {
     const completedTasks = taskStats.completedTasks ?? normalizedTasks.filter((task) => task.rawStatus === "COMPLETED").length;
     const overdueTasks =
       taskStats.overdueTasks ??
-      normalizedTasks.filter((task) => task.rawStatus !== "COMPLETED" && task.dueDate && isBefore(new Date(task.dueDate), today)).length;
+      normalizedTasks.filter((task) => task.rawStatus !== "COMPLETED" && task.rawStatus !== "ON_HOLD" && task.dueDate && isBefore(new Date(task.dueDate), today)).length;
 
     return { totalClients, activeClients, totalTasks, pendingTasks, completedTasks, overdueTasks };
   }, [payload, tasksData, clientsIsServerPaginated, clientsTotalItemsFromServer, tasksIsServerPaginated, tasksTotalItemsFromServer, normalizedClients, normalizedTasks, today]);
@@ -663,7 +663,7 @@ export default function AdminStaffDetail() {
         { label: "Pending Review", value: "pending_review" },
         { label: "Needs Revision", value: "needs_revision" },
         { label: "Completed", value: "completed" },
-        { label: "Cancelled", value: "cancelled" },
+        { label: "On Hold", value: "on_hold" },
       ],
       render: (row) => <TaskStatusBadge status={row.status} />,
     },

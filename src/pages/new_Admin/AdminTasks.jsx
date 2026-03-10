@@ -65,7 +65,7 @@ const toLowerStatus = (value) => {
   if (status === "pending_review") return "pending_review";
   if (status === "needs_revision") return "needs_revision";
   if (status === "completed") return "completed";
-  if (status === "cancelled") return "cancelled";
+  if (status === "on_hold") return "on_hold";
   return "blocked";
 };
 
@@ -178,7 +178,7 @@ export default function AdminTasks() {
       normalizedTasks.filter(
         (task) =>
           task.status !== "completed" &&
-          task.status !== "cancelled" &&
+          task.status !== "on_hold" &&
           task.dueDate &&
           isBefore(new Date(task.dueDate), today),
       ),
@@ -351,7 +351,7 @@ export default function AdminTasks() {
         { label: "Pending Review", value: "pending_review" },
         { label: "Needs Revision", value: "needs_revision" },
         { label: "Completed", value: "completed" },
-        { label: "Cancelled", value: "cancelled" },
+        { label: "On Hold", value: "on_hold" },
         { label: "Blocked", value: "blocked" },
       ],
       render: (row) => (
@@ -396,7 +396,7 @@ export default function AdminTasks() {
       render: (row) => {
         const isOverdue =
           row.status !== "completed" &&
-          row.status !== "cancelled" &&
+          row.status !== "on_hold" &&
           row.dueDate &&
           isBefore(new Date(row.dueDate), today);
         return <span className={isOverdue ? "font-medium text-destructive" : ""}>{row.dueDate ? format(new Date(row.dueDate), "MMM d, yyyy") : "-"}</span>;

@@ -46,9 +46,13 @@ const DEFAULT_PAGE_SIZE = 10;
 
 const VIEW_FILTERS = [
   { label: "All Tasks", value: "all" },
-  { label: "Admin Tasks", value: "admin_tasks" },
-  { label: "Staff Tasks", value: "staff_tasks" },
-]
+  { label: "Not Started", value: "NOT_STARTED" },
+  { label: "In Progress", value: "IN_PROGRESS" },
+  { label: "Completed", value: "COMPLETED" },
+  { label: "Pending Review", value: "PENDING_REVIEW" },
+  { label: "Needs Revision", value: "NEEDS_REVISION" },
+  { label: "On Hold", value: "ON_HOLD" },
+];
 
 const getTaskId = (task) => task?._id || task?.id;
 const getId = (value) => {
@@ -254,7 +258,7 @@ export default function AdminClientDetail() {
     if (columnFilters.dueDate) {
       const dueDateFilter = columnFilters.dueDate;
       if (dueDateFilter === "overdue") {
-        result = result.filter((task) => task.status !== "COMPLETED" && task.dueDate && isBefore(new Date(task.dueDate), today));
+        result = result.filter((task) => task.status !== "COMPLETED" && task.status !== "ON_HOLD" && task.dueDate && isBefore(new Date(task.dueDate), today));
       } else if (dueDateFilter === "today") {
         result = result.filter((task) => task.dueDate && isToday(new Date(task.dueDate)));
       } else if (dueDateFilter === "this_week") {
@@ -400,7 +404,7 @@ export default function AdminClientDetail() {
         { label: "Pending Review", value: "PENDING_REVIEW" },
         { label: "Needs Revision", value: "NEEDS_REVISION" },
         { label: "Completed", value: "COMPLETED" },
-        { label: "Cancelled", value: "CANCELLED" },
+        { label: "On Hold", value: "ON_HOLD" },
       ],
       render: (task) => <TaskStatusBadge status={task.status} />,
     },
