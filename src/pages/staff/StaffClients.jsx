@@ -48,7 +48,7 @@ const getClientName = (client) => {
 
 export default function StaffClients() {
   const navigate = useNavigate();
-  const { tasks = [], isLoading: tasksLoading } = useTasks();
+  const { tasks = [], isLoading: tasksLoading, error: tasksError } = useTasks();
 
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -69,12 +69,24 @@ export default function StaffClients() {
     if (filter !== "all") filters.status = filter;
     return filters;
   }, [page, pageSize, sortField, sortAsc, debouncedSearch, filter]);
-  const { data: myClientsData, isLoading: clientsLoading, isFetching: clientsFetching } = useGetMyClientsQuery(apiFilters);
+  const { data: myClientsData, isLoading: clientsLoading, isFetching: clientsFetching, error: clientsError } = useGetMyClientsQuery(apiFilters);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 300);
     return () => clearTimeout(timer);
   }, [search]);
+
+  useEffect(() => {
+    if (tasksError) {
+      toast.error(tasksError?.data?.message || "Failed to load tasks");
+    }
+  }, [tasksError]);
+
+  useEffect(() => {
+    if (clientsError) {
+      toast.error(clientsError?.data?.message || "Failed to load clients");
+    }
+  }, [clientsError]);
 
   const clientsPayload = myClientsData?.data;
   const clientPagination = clientsPayload?.pagination || {};

@@ -10,15 +10,14 @@ import { isToday, isPast } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { toast } from "sonner";
+import { useEffect, useState } from "react";
 import { CreateTaskWizard } from "@/components/new_Admin/CreateTaskWizard";
 
 const CURRENT_STAFF = "Sarah Mitchell";
 
 export default function StaffDashboard({myClients}) {
-  const { tasks, isLoading, updateTask } = useTasks();
-  const { toast } = useToast();
+  const { tasks, isLoading, error, updateTask } = useTasks();
   const [createOpen, setCreateOpen] = useState(false);
 
   const normalizeStatus = (status) =>
@@ -37,9 +36,19 @@ export default function StaffDashboard({myClients}) {
   ).length;
   const activeClients = myClient.length;
 
-  const handleComplete = (task) => {
-    updateTask(task.id, { status: "completed" });
-    toast({ title: "Task completed", description: task.title });
+  useEffect(() => {
+    if (error) {
+      toast.error(error?.data?.message || "Failed to load dashboard tasks");
+    }
+  }, [error]);
+
+  const handleComplete = async (task) => {
+    try {
+      await updateTask(task.id, { status: "completed" });
+      toast.success("Task completed");
+    } catch {
+      toast.error("Failed to complete task");
+    }
   };
 
   const createTask = (taskData) => {

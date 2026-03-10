@@ -5,6 +5,8 @@ import StaffDashboard from "./StaffDashboard";
 import { useSelector } from "react-redux";
 import { logout, selectCurrentUser } from "@/features/auth/authSlice";
 import { useGetMyClientsQuery } from "@/features/auth/authApi";
+import { useEffect } from "react";
+import { toast } from "sonner";
 
 const routeTitles = {
   "/staff": "Dashboard",
@@ -21,9 +23,14 @@ export default function StaffLayout() {
   const title = routeTitles[location.pathname] || "Dashboard";
   const isRoot = location.pathname === "/staff";
   const user = useSelector(selectCurrentUser);
-  const { data, isLoading: loadingClients, refetch: refetchClients } = useGetMyClientsQuery();
+  const { data, error } = useGetMyClientsQuery();
   const myClients = data?.data || [];
 
+  useEffect(() => {
+    if (error) {
+      toast.error(error?.data?.message || "Failed to load assigned clients");
+    }
+  }, [error]);
 
 
   return (

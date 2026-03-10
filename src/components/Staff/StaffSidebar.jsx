@@ -11,6 +11,9 @@ import { PlutifyLogo } from "@/components/PlutifyLogo";
 import { cn } from "@/lib/utils";
 import { useDispatch } from "react-redux";
 import { logout } from "@/features/auth/authSlice";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useState } from "react";
+import { toast } from "sonner";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/staff" },
@@ -24,6 +27,7 @@ export function StaffSidebar() {
   const location = useLocation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
 
   return (
     <aside className="flex flex-col h-screen sticky top-0 w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border shadow-lg shrink-0 overflow-y-auto">
@@ -58,8 +62,7 @@ export function StaffSidebar() {
       <button
           type="button"
           onClick={() => {
-            dispatch(logout());
-            navigate("/");
+            setLogoutConfirmOpen(true);
           }}
           className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium bg-sidebar-accent text-sidebar-accent-foreground transition-colors"
         >
@@ -67,6 +70,21 @@ export function StaffSidebar() {
           Sign Out
         </button>
       </div>
+
+      <ConfirmDialog
+        open={logoutConfirmOpen}
+        onOpenChange={setLogoutConfirmOpen}
+        title="Sign out?"
+        description="You will be logged out of the staff portal."
+        confirmLabel="Sign Out"
+        variant="destructive"
+        onConfirm={() => {
+          dispatch(logout());
+          toast.success("Signed out successfully");
+          navigate("/");
+          setLogoutConfirmOpen(false);
+        }}
+      />
     </aside>
   );
 }

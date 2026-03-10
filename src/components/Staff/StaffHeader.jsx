@@ -1,6 +1,5 @@
-import { Bell, Search, User, Settings, LogOut } from "lucide-react";
+import { User, Settings, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -13,14 +12,20 @@ import { useNavigate } from "react-router-dom";
 import NotificationBell from "../notifications/NotificationBell";
 import { useDispatch } from "react-redux";
 import config from "@/config";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useState } from "react";
+import { toast } from "sonner";
 
-export function StaffHeader({ title,user,logout }) {
+export function StaffHeader({ title, user, logout }) {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
 
   const handleLogout = () => {
     dispatch(logout());
+    toast.success("Signed out successfully");
     navigate("/");
+    setLogoutConfirmOpen(false);
   };
 
   return (
@@ -28,13 +33,6 @@ export function StaffHeader({ title,user,logout }) {
       <h1 className="text-lg font-semibold text-foreground">{title}</h1>
 
       <div className="flex items-center gap-4">
-        <div className="relative hidden md:block">
-          {/* <Search className="absolute left-1 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /> */}
-          <Input
-            placeholder="Search clients, tasks..."
-            className="pl-9 w-64 h-9 bg-secondary/50 border-border/50 focus:bg-card"
-          />
-        </div>
 
         <NotificationBell />
 
@@ -54,16 +52,26 @@ export function StaffHeader({ title,user,logout }) {
             <DropdownMenuItem onClick={() => navigate("/staff/profile")}>
               <User className="mr-2 h-4 w-4" /> Profile
             </DropdownMenuItem>
-            <DropdownMenuItem>
+            {/* <DropdownMenuItem>
               <Settings className="mr-2 h-4 w-4" /> Settings
-            </DropdownMenuItem>
+            </DropdownMenuItem> */}
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout}>
-              <LogOut className="mr-2 h-4 w-4" /> Logout
+            <DropdownMenuItem onClick={() => setLogoutConfirmOpen(true)}>
+              <LogOut className="mr-2 h-4 w-4" /> Sign out
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      <ConfirmDialog
+        open={logoutConfirmOpen}
+        onOpenChange={setLogoutConfirmOpen}
+        title="Sign out?"
+        description="You will be logged out of the staff portal."
+        confirmLabel="Sign Out"
+        variant="destructive"
+        onConfirm={handleLogout}
+      />
     </header>
   );
 }

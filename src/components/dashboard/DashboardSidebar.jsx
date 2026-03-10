@@ -4,6 +4,9 @@ import { PlutifyLogo } from "../../components/PlutifyLogo";
 import { cn } from "../../lib/utils";
 import { useDispatch } from "react-redux";
 import { logout } from "@/features/auth/authSlice";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useState } from "react";
+import { toast } from "sonner";
 
 const navItems = [
   { icon: Home, label: "Home", href: "/new-dashboard" },
@@ -18,6 +21,7 @@ export function DashboardSidebar() {
   const location = useLocation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
 
   return (
     <aside className="w-64 bg-sidebar text-sidebar-foreground flex flex-col h-screen sticky top-0 shrink-0 overflow-y-auto">
@@ -55,8 +59,7 @@ export function DashboardSidebar() {
       <button
           type="button"
           onClick={() => {
-            dispatch(logout());
-            navigate("/");
+            setLogoutConfirmOpen(true);
           }}
           className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium bg-sidebar-accent text-sidebar-accent-foreground transition-colors"
         >
@@ -64,6 +67,21 @@ export function DashboardSidebar() {
           Sign Out
         </button>
       </div>
+
+      <ConfirmDialog
+        open={logoutConfirmOpen}
+        onOpenChange={setLogoutConfirmOpen}
+        title="Sign out?"
+        description="You will be logged out of your dashboard."
+        confirmLabel="Sign Out"
+        variant="destructive"
+        onConfirm={() => {
+          dispatch(logout());
+          toast.success("Signed out successfully");
+          navigate("/");
+          setLogoutConfirmOpen(false);
+        }}
+      />
     </aside>
   );
 }
