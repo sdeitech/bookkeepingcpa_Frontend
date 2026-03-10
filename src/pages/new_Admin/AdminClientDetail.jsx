@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,7 +15,22 @@ import { PaginationControls } from "@/components/ui/pagination-controls";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { TaskStatusBadge, TaskPriorityBadge } from "@/components/Admin/TaskStatusBadge";
 import { CreateTaskWizard } from "@/components/new_Admin/CreateTaskWizard";
-import { ArrowLeft, Plus, Mail, Building2, Loader2, Search, ChevronDown, Check, X } from "lucide-react";
+import {
+  ArrowLeft,
+  Plus,
+  Mail,
+  Loader2,
+  Search,
+  ChevronDown,
+  Check,
+  X,
+  Calendar,
+  UserCheck,
+  ListChecks,
+  Clock3,
+  CheckCircle2,
+  AlertTriangle,
+} from "lucide-react";
 import { format, isBefore, isToday, startOfDay, startOfWeek, endOfWeek } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -460,66 +476,82 @@ export default function AdminClientDetail() {
     );
   }
 
+  const fullName = getName(client) || "Unnamed Client";
+  const initials = fullName
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
+  const memberSince = client?.createdAt ? format(new Date(client.createdAt), "MMM d, yyyy") : "-";
+  const pendingCount = normalizedTasks.filter((task) => !["COMPLETED", "CANCELLED"].includes(String(task.status || "").toUpperCase())).length;
+  const overdueCount = normalizedTasks.filter(
+    (task) =>
+      !["COMPLETED", "CANCELLED"].includes(String(task.status || "").toUpperCase()) &&
+      task.dueDate &&
+      isBefore(new Date(task.dueDate), today),
+  ).length;
+
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-6 animate-fade-in">
       <Button variant="ghost" onClick={() => navigate("/admin/clients")} className="gap-2 self-start">
         <ArrowLeft className="h-4 w-4" /> Back
       </Button>
-      <div className="bg-card border border-border/70 rounded-2xl p-6 shadow-sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+
+      <div className="rounded-xl border border-border bg-card p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-start gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
-              <Building2 className="h-7 w-7 text-primary" />
-            </div>
-            <div className="space-y-2">
+            <Avatar className="h-14 w-14">
+              <AvatarFallback className="bg-primary/10 text-primary text-base font-semibold">
+                {initials || "CL"}
+              </AvatarFallback>
+            </Avatar>
+            <div className="space-y-1.5">
               <div>
-                <h1 className="text-2xl font-semibold text-foreground">
-                  {getName(client)}
-                </h1>
-                <div className="flex flex-wrap items-center gap-2 mt-1 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <h1 className="text-2xl font-bold text-foreground">{fullName}</h1>
+                  {client.status && (
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "text-xs",
+                        String(client.status).toLowerCase() === "active"
+                          ? "bg-success/15 text-success border-success/30"
+                          : "bg-muted text-muted-foreground border-border",
+                      )}
+                    >
+                      {client.status}
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-sm text-muted-foreground">Client</p>
+                <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-muted-foreground">
                   <span className="inline-flex items-center gap-1">
                     <Mail className="h-3.5 w-3.5" />
                     {client.email || "Unknown Client"}
                   </span>
-                  {client.phone && (
-                    <span className="inline-flex items-center gap-1">
-                      <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60" />
-                      {client.phone}
-                    </span>
-                  )}
+                  <span className="inline-flex items-center gap-1">
+                    <Calendar className="h-3.5 w-3.5" />
+                    Member since {memberSince}
+                  </span>
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2 text-xs">
-                {client.subscription?.planName && (
-                  <span className="px-2.5 py-1 rounded-full bg-primary/10 text-primary font-medium">
-                    {client.subscription.planName}
-                  </span>
-                )}
-                {client.subscription?.status && (
-                  <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 font-medium">
-                    {client.subscription.status}
-                  </span>
-                )}
-                {client.status && (
-                  <span className="px-2.5 py-1 rounded-full bg-muted text-muted-foreground font-medium">
-                    {client.status}
-                  </span>
-                )}
+                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
+                  Plan: {subscriptionPlan}
+                </Badge>
+                <Badge variant="outline" className="bg-emerald-100 text-emerald-700 border-emerald-200">
+                  Subscription: {subscriptionStatus}
+                </Badge>
               </div>
-              <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-                <span>Tasks: {totalCount}</span>
-                <span>Completed: {completedCount}</span>
-                <span>Progress: {progressPercent}%</span>
-              </div>
-              <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                <span>Assigned Staff: {resolvedAssignedStaffName}</span>
-                <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60" />
-                <span>{assignedStaffEmail || "—"}</span>
-              </div>
+              <p className="text-sm text-muted-foreground">
+                Assigned Staff: <span className="text-foreground">{resolvedAssignedStaffName}</span> ({assignedStaffEmail || "—"})
+              </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button onClick={() => setCreateOpen(true)} className="gap-2">
               <Plus className="h-4 w-4" /> Create Task
             </Button>
@@ -527,51 +559,62 @@ export default function AdminClientDetail() {
         </div>
       </div>
 
-      <div className="bg-card border border-border/70 rounded-2xl p-6 shadow-sm">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h3 className="font-semibold text-foreground">Task Progress</h3>
-          <span className="text-sm text-muted-foreground">
-            {completedCount} of {totalCount} completed ({progressPercent}%)
-          </span>
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-3">
+        <div className="rounded-xl border border-border bg-card p-4">
+          <p className="text-xs text-muted-foreground">Total Tasks</p>
+          <div className="mt-2 flex items-center justify-between">
+            <p className="text-3xl font-bold">{totalCount}</p>
+            <ListChecks className="h-5 w-5 text-blue-600" />
+          </div>
         </div>
-        <Progress value={progressPercent} className="h-3 mt-3" />
+        <div className="rounded-xl border border-border bg-card p-4">
+          <p className="text-xs text-muted-foreground">Pending Tasks</p>
+          <div className="mt-2 flex items-center justify-between">
+            <p className="text-3xl font-bold">{pendingCount}</p>
+            <Clock3 className="h-5 w-5 text-orange-600" />
+          </div>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-4">
+          <p className="text-xs text-muted-foreground">Completed Tasks</p>
+          <div className="mt-2 flex items-center justify-between">
+            <p className="text-3xl font-bold">{completedCount}</p>
+            <CheckCircle2 className="h-5 w-5 text-green-600" />
+          </div>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-4">
+          <p className="text-xs text-muted-foreground">Overdue Tasks</p>
+          <div className="mt-2 flex items-center justify-between">
+            <p className="text-3xl font-bold">{overdueCount}</p>
+            <AlertTriangle className="h-5 w-5 text-destructive" />
+          </div>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-4">
+          <p className="text-xs text-muted-foreground">Progress</p>
+          <div className="mt-2 flex items-center justify-between">
+            <p className="text-3xl font-bold">{progressPercent}%</p>
+            <CheckCircle2 className="h-5 w-5 text-primary" />
+          </div>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-4">
+          <p className="text-xs text-muted-foreground">Assigned Staff</p>
+          <div className="mt-2 flex items-center justify-between">
+            <p className="text-3xl font-bold">{resolvedAssignedStaffName === "Unassigned" ? 0 : 1}</p>
+            <UserCheck className="h-5 w-5 text-primary" />
+          </div>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="flex flex-wrap items-center justify-start gap-2 bg-muted/40 border border-border/60 rounded-xl p-1.5">
-          <TabsTrigger value="overview" className="gap-2">
-            Overview
-          </TabsTrigger>
-          <TabsTrigger value="tasks" className="gap-2">
-            Tasks
-            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-              {totalCount}
-            </span>
-          </TabsTrigger>
-          <TabsTrigger value="quickbooks" className="gap-2">
-            QuickBooks
-            <span
-              className={cn(
-                "rounded-full px-2 py-0.5 text-xs font-medium",
-                qbConnected
-                  ? "bg-emerald-100 text-emerald-700"
-                  : "bg-muted text-muted-foreground"
-              )}
-            >
-              {qbConnected ? "Connected" : "Not connected"}
-            </span>
-          </TabsTrigger>
-          <TabsTrigger value="billing" className="gap-2">
-            Billing
-            <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-              Soon
-            </span>
-          </TabsTrigger>
+        <TabsList className="w-full justify-start">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="tasks">Tasks ({totalCount})</TabsTrigger>
+          <TabsTrigger value="quickbooks">QuickBooks</TabsTrigger>
+          <TabsTrigger value="billing">Billing</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className="bg-card border border-border/70 rounded-2xl p-5 shadow-sm transition-shadow hover:shadow-md">
+            <div className="rounded-xl border border-border bg-card p-5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-sm font-semibold">
@@ -603,7 +646,7 @@ export default function AdminClientDetail() {
               </div>
             </div>
 
-            <div className="bg-card border border-border/70 rounded-2xl p-5 shadow-sm transition-shadow hover:shadow-md">
+            <div className="rounded-xl border border-border bg-card p-5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-sm font-semibold">
@@ -637,27 +680,28 @@ export default function AdminClientDetail() {
         </TabsContent>
 
         <TabsContent value="tasks" className="space-y-4">
-          <div className="bg-card border border-border/70 rounded-2xl p-4 shadow-sm">
-            <div className="flex items-center gap-3 flex-wrap">
-              <div className="relative flex-1 min-w-[220px] max-w-md">
-                <Input
-                  placeholder="Search tasks..."
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    setPage(1);
-                  }}
-                  className="h-10 pl-9"
-                />
-              </div>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="relative flex-1 min-w-[220px] max-w-md">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search tasks..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setPage(1);
+                }}
+                className="h-10 pl-9"
+              />
+            </div>
 
+            <div className="flex items-center gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
-                    variant={viewFilter  !== "all" ? "default" : "outline"}
+                    variant={viewFilter !== "all" ? "default" : "outline"}
                     className={cn(
                       "h-10 gap-2",
-                      viewFilter  !== "all"
+                      viewFilter !== "all"
                         ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
                         : "border-border text-foreground hover:bg-accent",
                     )}
@@ -697,33 +741,28 @@ export default function AdminClientDetail() {
             </div>
           </div>
 
-          <div className="bg-card border border-border/70 rounded-2xl shadow-sm overflow-hidden">
-            <div className="p-4">
-              <DataTable
-                data={paginatedTasks}
-                columns={columns}
-                onSort={handleSort}
-                onRowAction={handleTaskAction}
-                rowActions={rowActions}
-                loading={tasksLoading}
-                getRowId={(row) => row.id}
-                columnFilters={columnFilters}
-                onColumnFilterChange={handleColumnFilterChange}
-                emptyMessage="No tasks found"
-                emptyDescription="Try adjusting your search or filters."
-              />
-            </div>
-            <div className="border-t border-border/70 p-4">
-              <PaginationControls
-                page={page}
-                totalPages={totalPages}
-                onPageChange={setPage}
-                totalItems={isServerPaginated ? taskPagination.totalItems || filtered.length : filtered.length}
-                pageSize={pageSize}
-                onPageSizeChange={setPageSize}
-              />
-            </div>
-          </div>
+          <DataTable
+            data={paginatedTasks}
+            columns={columns}
+            onSort={handleSort}
+            onRowAction={handleTaskAction}
+            rowActions={rowActions}
+            loading={tasksLoading}
+            getRowId={(row) => row.id}
+            columnFilters={columnFilters}
+            onColumnFilterChange={handleColumnFilterChange}
+            emptyMessage="No tasks found"
+            emptyDescription="Try adjusting your search or filters."
+          />
+
+          <PaginationControls
+            page={page}
+            totalPages={totalPages}
+            onPageChange={setPage}
+            totalItems={isServerPaginated ? taskPagination.totalItems || filtered.length : filtered.length}
+            pageSize={pageSize}
+            onPageSizeChange={setPageSize}
+          />
         </TabsContent>
 
         <TabsContent value="quickbooks" className="space-y-4">
@@ -741,7 +780,7 @@ export default function AdminClientDetail() {
         </TabsContent>
 
         <TabsContent value="billing" className="space-y-4">
-          <div className="bg-card border border-border/70 rounded-2xl p-6 shadow-sm">
+          <div className="rounded-xl border border-border bg-card p-6">
             <h3 className="text-lg font-semibold text-foreground">Billing</h3>
             <p className="text-sm text-muted-foreground mt-1">
               Billing details will appear here in a future update.

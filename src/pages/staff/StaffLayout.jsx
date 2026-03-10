@@ -1,11 +1,10 @@
 import { Outlet, useLocation } from "react-router-dom";
 import { StaffSidebar } from "@/components/Staff/StaffSidebar";
-import { StaffHeader } from "@/components/Staff/StaffHeader";
 import StaffDashboard from "./StaffDashboard";
-import { useSelector } from "react-redux";
-import { logout, selectCurrentUser } from "@/features/auth/authSlice";
 import { useGetMyClientsQuery } from "@/features/auth/authApi";
 import { useEffect } from "react";
+import { DashboardFooter } from "@/components/common/DashboardFooter";
+import { DashboardHeader } from "@/components/common/DashboardHeader";
 import { toast } from "sonner";
 
 const routeTitles = {
@@ -22,7 +21,6 @@ export default function StaffLayout() {
   const location = useLocation();
   const title = routeTitles[location.pathname] || "Dashboard";
   const isRoot = location.pathname === "/staff";
-  const user = useSelector(selectCurrentUser);
   const { data, error } = useGetMyClientsQuery();
   const myClients = data?.data || [];
 
@@ -34,11 +32,19 @@ export default function StaffLayout() {
 
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
       <StaffSidebar />
-      <div className="flex-1 flex flex-col min-w-0">
-        <StaffHeader title={title} user={user} logout={logout} />
-        <main className="flex-1 p-6 overflow-auto">{isRoot ? <StaffDashboard myClients={myClients} /> : <Outlet context={{myClients}} />}</main>
+      <div className="pl-64 min-h-screen flex flex-col">
+        <DashboardHeader
+          title={title}
+          profilePath="/staff/profile"
+          showSettings={false}
+          logoutDescription="You will be logged out of the staff portal."
+        />
+        <main className="flex-1 p-6 overflow-auto min-w-0">
+          {isRoot ? <StaffDashboard myClients={myClients} /> : <Outlet context={{myClients}} />}
+        </main>
+        <DashboardFooter />
       </div>
     </div>
   );

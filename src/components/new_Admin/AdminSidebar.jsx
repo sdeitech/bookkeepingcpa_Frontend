@@ -1,12 +1,12 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Home, Users, UserCheck, CheckSquare, FileText, Mail, Settings, LogOut } from "lucide-react";
-import { PlutifyLogo } from "@/components/PlutifyLogo";
 import { cn } from "@/lib/utils";
 import { useDispatch } from "react-redux";
 import { logout } from "@/features/auth/authSlice";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useState } from "react";
 import { toast } from "sonner";
+import { PlutifyLogo } from "@/components/PlutifyLogo";
 
 const navItems = [
   { icon: Home, label: "Dashboard", href: "/admin" },
@@ -31,12 +31,10 @@ export function AdminSidebar() {
   };
 
   return (
-    <aside className="bg-sidebar text-sidebar-foreground flex flex-col h-screen sticky top-0 w-64 shrink-0 overflow-y-auto">
-      <div className="p-4 border-b border-sidebar-border flex items-center justify-between">
-        <div>
-          <PlutifyLogo variant="light" />
-          <span className="text-xs text-sidebar-foreground/50 mt-1 block">Admin Panel</span>
-        </div>
+    <aside className="bg-sidebar text-sidebar-foreground flex flex-col w-64 border-r border-sidebar-border fixed top-0 left-0 h-screen z-50 overflow-y-auto">
+      <div className="p-4 border-b border-sidebar-border">
+        <PlutifyLogo variant="light" />
+        <span className="text-xs text-sidebar-foreground/70 uppercase tracking-wide font-semibold mt-2 block">Admin Panel</span>
       </div>
 
       <nav className="flex-1 p-3 space-y-1">

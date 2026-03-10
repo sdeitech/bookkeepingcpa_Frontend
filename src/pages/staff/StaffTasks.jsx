@@ -288,7 +288,7 @@ export default function StaffTasks() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Staff Tasks</h1>
+          <h1 className="text-2xl font-bold text-foreground">My Tasks</h1>
           <p className="text-sm text-muted-foreground">
             {isLoading ? "Loading..." : `${normalizedTasks.length} tasks`}
             {overdueTasks.length > 0 && ` · ${overdueTasks.length} overdue`}

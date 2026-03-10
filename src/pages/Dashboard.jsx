@@ -1,6 +1,5 @@
 import { useSearchParams, Outlet, useLocation } from "react-router-dom";
 import { DashboardSidebar } from "../components/dashboard/DashboardSidebar";
-import { DashboardHeader } from "../components/dashboard/DashboardHeader";
 import { AlertBanner } from "../components/dashboard/AlertBanner";
 import { MetricCard } from "../components/dashboard/MetricCard";
 import { OnboardingProgress } from "../components/dashboard/OnboardingProgress";
@@ -31,8 +30,10 @@ import {
 } from "lucide-react";
 
 import { Link } from "react-router-dom";
-import { logout, selectCurrentUser } from '../features/auth/authSlice';
-import {useSelector } from "react-redux";
+import { DashboardFooter } from "@/components/common/DashboardFooter";
+import { DashboardHeader } from "@/components/common/DashboardHeader";
+import { useSelector } from "react-redux";
+import { selectCurrentUser } from "../features/auth/authSlice";
 
 const onboardingSteps = [
   { id: "business-info", label: "Complete Business Information", completed: false },
@@ -350,16 +351,31 @@ function DashboardHome() {
 export default function Dashboard() {
   const location = useLocation();
   const isRootDashboard = location.pathname === "/new-dashboard";
-  const user = useSelector(selectCurrentUser);
+  const routeTitleMap = {
+    "/new-dashboard": "Dashboard",
+    "/new-dashboard/tasks": "My Tasks",
+    "/new-dashboard/documents": "Documents",
+    "/new-dashboard/billing": "Billing",
+    "/new-dashboard/support": "Support",
+    "/new-dashboard/quickbooks": "QuickBooks Data",
+    "/new-dashboard/profile": "Profile",
+  };
+  const title = routeTitleMap[location.pathname] || "Dashboard";
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
       <DashboardSidebar />
-      <div className="flex-1 flex flex-col">
-        <DashboardHeader user={user} logout={logout} />
-        <main className="flex-1 p-6">
+      <div className="pl-64 min-h-screen flex flex-col">
+        <DashboardHeader
+          title={title}
+          profilePath="/new-dashboard/profile"
+          showSettings={false}
+          logoutDescription="You will be logged out of your dashboard."
+        />
+        <main className="flex-1 p-6 overflow-auto min-w-0">
           {isRootDashboard ? <DashboardHome /> : <Outlet />}
         </main>
+        <DashboardFooter />
       </div>
     </div>
   );

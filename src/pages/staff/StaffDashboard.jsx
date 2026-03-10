@@ -6,18 +6,27 @@ import { Badge } from "@/components/ui/badge";
 import { useTasks } from "@/hooks/useTasks";
 import { MOCK_CLIENTS } from "@/lib/task-types";
 import { Link } from "react-router-dom";
-import { isToday, isPast } from "date-fns";
+import { format, isToday, isPast } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { CreateTaskWizard } from "@/components/new_Admin/CreateTaskWizard";
+import { useGetStaffDashboardQuery } from "@/features/auth/authApi";
+import { useSelector } from "react-redux";
+import { selectCurrentUser } from "@/features/auth/authSlice";
 
 const CURRENT_STAFF = "Sarah Mitchell";
 
 export default function StaffDashboard({myClients}) {
-  const { tasks, isLoading, error, updateTask } = useTasks();
+  const { tasks, isLoading, error, updateTask, createTask } = useTasks();
+  const {
+    data: dashboardData,
+    isLoading: dashboardLoading,
+    error: dashboardError,
+  } = useGetStaffDashboardQuery();
+  const user = useSelector(selectCurrentUser);
   const [createOpen, setCreateOpen] = useState(false);
 
   const normalizeStatus = (status) =>
@@ -35,12 +44,23 @@ export default function StaffDashboard({myClients}) {
     (t) => normalizeStatus(t.status) === "completed" && isToday(new Date(t.updatedAt)),
   ).length;
   const activeClients = myClient.length;
+  const dashboardStats = dashboardData?.data?.stats || {};
+  const assignedClientsStat = dashboardStats.assignedClients ?? myClient.length;
+  const pendingTasksStat = dashboardStats.pendingTasks ?? pendingTasks;
+  const completedTodayStat = dashboardStats.completedToday ?? completedToday;
+  const activeClientsStat = dashboardStats.activeClients ?? activeClients;
 
   useEffect(() => {
     if (error) {
       toast.error(error?.data?.message || "Failed to load dashboard tasks");
     }
   }, [error]);
+
+  useEffect(() => {
+    if (dashboardError) {
+      toast.error(dashboardError?.data?.message || "Failed to load dashboard stats");
+    }
+  }, [dashboardError]);
 
   const handleComplete = async (task) => {
     try {
@@ -51,15 +71,20 @@ export default function StaffDashboard({myClients}) {
     }
   };
 
-  const createTask = (taskData) => {
-    // Here you would typically call an API to create the task and then refresh your task list
-    console.log("Creating task with data:", taskData);
-    setCreateOpen(false);
-  }
+  const handleCreateTask = async (taskData) => {
+    try {
+      await createTask(taskData);
+      toast.success("Task created successfully");
+      setCreateOpen(false);
+    } catch {
+      toast.error("Failed to create task");
+    }
+  };
 
-  if (isLoading) {
+  if (isLoading || dashboardLoading) {
     return (
       <div className="space-y-6 animate-fade-in">
+        <Skeleton className="h-10 w-80" />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[...Array(4)].map((_, i) => (
             <Skeleton key={i} className="h-[100px] rounded-xl" />
@@ -74,11 +99,16 @@ export default function StaffDashboard({myClients}) {
 
   return (
     <div className="space-y-8 animate-fade-in">
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">Welcome back, {user?.first_name} {user?.last_name}</h1>
+        <p className="text-sm text-muted-foreground">{format(new Date(), "EEEE, MMMM d, yyyy · h:mm a")}</p>
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Assigned Clients" value={myClient.length} icon={Users} tint="bg-primary/10" iconColor="text-primary" />
-        <StatCard title="Pending Tasks" value={pendingTasks} icon={CheckSquare} tint="bg-warning/10" iconColor="text-warning" />
-        <StatCard title="Completed Today" value={completedToday} icon={CheckCircle2} tint="bg-success/10" iconColor="text-success" />
-        <StatCard title="Active Clients" value={activeClients} icon={Activity} tint="bg-chart-4/10" iconColor="text-chart-4" />
+        <StatCard title="Assigned Clients" value={assignedClientsStat} icon={Users} tint="bg-primary/10" iconColor="text-primary" />
+        <StatCard title="Pending Tasks" value={pendingTasksStat} icon={CheckSquare} tint="bg-warning/10" iconColor="text-warning" />
+        <StatCard title="Completed Today" value={completedTodayStat} icon={CheckCircle2} tint="bg-success/10" iconColor="text-success" />
+        <StatCard title="Active Clients" value={activeClientsStat} icon={Activity} tint="bg-chart-4/10" iconColor="text-chart-4" />
       </div>
 
       <div>
@@ -95,7 +125,7 @@ export default function StaffDashboard({myClients}) {
         </div>
       </div>
 
-      <div>
+      {/* <div>
         <h2 className="text-base font-semibold text-foreground mb-3">My Assigned Clients</h2>
         {myClient.length === 0 ? (
           <div className="bg-card border border-border rounded-xl p-10 text-center">
@@ -174,9 +204,9 @@ export default function StaffDashboard({myClients}) {
             ))}
           </div>
         )}
-      </div>
+      </div> */}
       <CreateTaskWizard
-        open={createOpen} onOpenChange={setCreateOpen} onCreate={createTask}
+        open={createOpen} onOpenChange={setCreateOpen} onCreate={handleCreateTask}
         defaultTarget="client" clientList={myClients}
       />
     </div>

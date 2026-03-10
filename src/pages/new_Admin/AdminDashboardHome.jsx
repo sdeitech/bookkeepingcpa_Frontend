@@ -94,7 +94,7 @@ export default function AdminDashboardHome() {
 
       {/* Welcome */}
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Welcome back,{user?.first_name} {user?.last_name}</h1>
+        <h1 className="text-2xl font-bold text-foreground">Welcome back, {user?.first_name} {user?.last_name}</h1>
         <p className="text-sm text-muted-foreground">{format(new Date(), "EEEE, MMMM d, yyyy · h:mm a")}</p>
       </div>
 

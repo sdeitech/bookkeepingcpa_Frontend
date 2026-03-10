@@ -38,7 +38,12 @@ const CLIENT_FILTERS = [
 ];
 
 const getClientId = (client) => client?._id || client?.id;
-const getTaskClientId = (task) => task?.clientId || task?.client?._id || task?.client?.id;
+const getTaskClientId = (task) =>
+  getClientId(task?.clientId) ||
+  getClientId(task?.client) ||
+  task?.client?._id ||
+  task?.client?.id ||
+  "";
 const getClientName = (client) => {
   if (client?.first_name || client?.last_name) {
     return [client?.first_name, client?.last_name].filter(Boolean).join(" ");

@@ -1,16 +1,7 @@
 import { Outlet, useLocation } from "react-router-dom";
 import { AdminSidebar } from "@/components/new_Admin/AdminSidebar";
-import NotificationBell from "@/components/notifications/NotificationBell";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { User, Settings, LogOut } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { useDispatch, useSelector } from "react-redux";
-import { logout, selectCurrentUser } from "@/features/auth/authSlice";
-import config from "@/config";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { useState } from "react";
-import { toast } from "sonner";
+import { DashboardFooter } from "@/components/common/DashboardFooter";
+import { DashboardHeader } from "@/components/common/DashboardHeader";
 
 const pageTitles = {
   "/admin": "Dashboard",
@@ -25,67 +16,25 @@ const pageTitles = {
 
 export default function AdminLayout() {
   const location = useLocation();
-  const navigate = useNavigate();
   const baseRoute = "/" + location.pathname.split("/").slice(1, 3).join("/");
   const title = pageTitles[baseRoute] || "Admin Panel";
-  const user = useSelector(selectCurrentUser)
-  const dispatch = useDispatch();
-  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
-  const getInitials = (u) => {
-    const first = (u?.first_name || "").trim();
-    const last = (u?.last_name || "").trim();
-    const initials = `${first[0] || ""}${last[0] || ""}`.toUpperCase();
-    return initials || "AD";
-  };
-  const handleLogout = () => {
-    dispatch(logout());
-    toast.success("Signed out successfully");
-    navigate("/");
-    setLogoutConfirmOpen(false);
-  };
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
       <AdminSidebar />
-      <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-16 bg-card border-b border-border px-6 flex items-center justify-between gap-4 shrink-0">
-          <h1 className="text-lg font-semibold text-foreground whitespace-nowrap">{title}</h1>
-          <div className="flex items-center gap-2 shrink-0">
-            <NotificationBell />
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 rounded-full border border-border bg-background px-2 py-1 pr-3 hover:bg-accent/50 transition-colors whitespace-nowrap">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={user?.profile ? `${config.api.baseUrl}${user.profile}` : undefined} />
-                    <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                      {user?.first_name?.[0]}{user?.last_name?.[0]}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm font-medium text-foreground hidden md:block">{user?.first_name} {user?.last_name}</span>
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-popover w-48">
-                <DropdownMenuItem onClick={() => navigate("/admin/profile")}><User className="mr-2 h-4 w-4" /> Profile</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate("/admin/settings")}><Settings className="mr-2 h-4 w-4" /> Settings</DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => setLogoutConfirmOpen(true)}><LogOut className="mr-2 h-4 w-4" /> Sign out</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </header>
-        <main className="flex-1 p-6 overflow-auto">
+      <div className="pl-64 min-h-screen flex flex-col">
+        <DashboardHeader
+          title={title}
+          profilePath="/admin/profile"
+          settingsPath="/admin/settings"
+          showSettings
+          logoutDescription="You will be logged out of the admin panel."
+        />
+        <main className="flex-1 p-6 overflow-auto min-w-0">
           <Outlet />
         </main>
+        <DashboardFooter />
       </div>
-      <ConfirmDialog
-        open={logoutConfirmOpen}
-        onOpenChange={setLogoutConfirmOpen}
-        title="Sign out?"
-        description="You will be logged out of the admin panel."
-        confirmLabel="Sign Out"
-        variant="destructive"
-        onConfirm={handleLogout}
-      />
     </div>
   );
 }
