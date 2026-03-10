@@ -10,16 +10,22 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import NotificationBell from "../notifications/NotificationBell";
+import { ConfirmDialog } from "../ui/confirm-dialog";
+import { useState } from "react";
+import { toast } from "sonner";
 
 
 
-export function DashboardHeader({user,logout}) {
+export function DashboardHeader({ user, logout }) {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
 
   const handleLogout = () => {
     dispatch(logout());
+    toast.success("Signed out successfully");
     navigate("/");
+    setLogoutConfirmOpen(false);
   };
 
   return (
@@ -44,12 +50,22 @@ export function DashboardHeader({user,logout}) {
             <DropdownMenuItem onClick={() => navigate("/new-dashboard/profile")}>Profile</DropdownMenuItem>
             {/* <DropdownMenuItem>Account</DropdownMenuItem> */}
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout}>
-              Logout
+            <DropdownMenuItem onClick={() => setLogoutConfirmOpen(true)}>
+              Sign out
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      <ConfirmDialog
+        open={logoutConfirmOpen}
+        onOpenChange={setLogoutConfirmOpen}
+        title="Sign out?"
+        description="You will be logged out of your dashboard."
+        confirmLabel="Sign Out"
+        variant="destructive"
+        onConfirm={handleLogout}
+      />
     </header>
   );
 }

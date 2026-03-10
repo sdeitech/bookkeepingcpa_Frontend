@@ -86,6 +86,8 @@ export default function StaffClientDetail() {
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [columnFilters, setColumnFilters] = useState({});
   const [clearAllOpen, setClearAllOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
 
@@ -125,12 +127,24 @@ export default function StaffClientDetail() {
     return filters;
   }, [normalizedClientId, page, pageSize, sortKey, sortDir, debouncedSearch, statusFilter, columnFilters]);
 
-  const { tasks, pagination, stats, isLoading: tasksLoading, createTask, deleteTask } = useTasks(apiFilters);
+  const { tasks, pagination, stats, isLoading: tasksLoading, error: tasksError, createTask, deleteTask } = useTasks(apiFilters);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  useEffect(() => {
+    if (clientError) {
+      toast.error(clientError?.data?.message || "Failed to load client");
+    }
+  }, [clientError]);
+
+  useEffect(() => {
+    if (tasksError) {
+      toast.error(tasksError?.data?.message || "Failed to load tasks");
+    }
+  }, [tasksError]);
 
   const today = startOfDay(new Date());
   const weekStart = startOfWeek(today, { weekStartsOn: 1 });
@@ -283,12 +297,21 @@ export default function StaffClientDetail() {
       return;
     }
     if (action === "delete") {
-      try {
-        await deleteTask(taskId);
-        toast.success("Task deleted");
-      } catch {
-        toast.error("Failed to delete task");
-      }
+      setTaskToDelete(task);
+      setDeleteConfirmOpen(true);
+    }
+  };
+
+  const handleConfirmDeleteTask = async () => {
+    const taskId = taskToDelete?.id || taskToDelete?._id;
+    if (!taskId) return;
+    try {
+      await deleteTask(taskId);
+      toast.success("Task deleted");
+      setDeleteConfirmOpen(false);
+      setTaskToDelete(null);
+    } catch {
+      toast.error("Failed to delete task");
     }
   };
 
@@ -726,6 +749,19 @@ export default function StaffClientDetail() {
         confirmLabel="Clear All"
         variant="destructive"
         onConfirm={handleClearAll}
+      />
+
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={(open) => {
+          setDeleteConfirmOpen(open);
+          if (!open) setTaskToDelete(null);
+        }}
+        title="Delete this task?"
+        description={`This action cannot be undone. ${taskToDelete?.title ? `Task: ${taskToDelete.title}` : ""}`}
+        confirmLabel="Delete"
+        variant="destructive"
+        onConfirm={handleConfirmDeleteTask}
       />
     </div>
   );

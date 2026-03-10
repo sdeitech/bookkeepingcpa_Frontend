@@ -38,7 +38,12 @@ const CLIENT_FILTERS = [
 ];
 
 const getClientId = (client) => client?._id || client?.id;
-const getTaskClientId = (task) => task?.clientId || task?.client?._id || task?.client?.id;
+const getTaskClientId = (task) =>
+  getClientId(task?.clientId) ||
+  getClientId(task?.client) ||
+  task?.client?._id ||
+  task?.client?.id ||
+  "";
 const getClientName = (client) => {
   if (client?.first_name || client?.last_name) {
     return [client?.first_name, client?.last_name].filter(Boolean).join(" ");
@@ -48,7 +53,7 @@ const getClientName = (client) => {
 
 export default function StaffClients() {
   const navigate = useNavigate();
-  const { tasks = [], isLoading: tasksLoading } = useTasks();
+  const { tasks = [], isLoading: tasksLoading, error: tasksError } = useTasks();
 
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -69,12 +74,24 @@ export default function StaffClients() {
     if (filter !== "all") filters.status = filter;
     return filters;
   }, [page, pageSize, sortField, sortAsc, debouncedSearch, filter]);
-  const { data: myClientsData, isLoading: clientsLoading, isFetching: clientsFetching } = useGetMyClientsQuery(apiFilters);
+  const { data: myClientsData, isLoading: clientsLoading, isFetching: clientsFetching, error: clientsError } = useGetMyClientsQuery(apiFilters);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 300);
     return () => clearTimeout(timer);
   }, [search]);
+
+  useEffect(() => {
+    if (tasksError) {
+      toast.error(tasksError?.data?.message || "Failed to load tasks");
+    }
+  }, [tasksError]);
+
+  useEffect(() => {
+    if (clientsError) {
+      toast.error(clientsError?.data?.message || "Failed to load clients");
+    }
+  }, [clientsError]);
 
   const clientsPayload = myClientsData?.data;
   const clientPagination = clientsPayload?.pagination || {};

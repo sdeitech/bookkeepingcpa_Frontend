@@ -13,6 +13,7 @@ import { DataTable } from "@/components/common/DataTable";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import StaffInviteModal from "@/components/new_Admin/StaffInviteModal";
 import { useNavigate } from "react-router-dom";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 
 const STATUS_FILTERS = [
@@ -58,6 +59,7 @@ export default function AdminStaff() {
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [inviteMode, setInviteMode] = useState("new");
   const [selectedStaffForInvite, setSelectedStaffForInvite] = useState(null);
+  const [staffActionTarget, setStaffActionTarget] = useState(null);
   const apiFilters = useMemo(() => {
     const filters = {
       page,
@@ -72,8 +74,8 @@ export default function AdminStaff() {
   }, [page, pageSize, sortField, sortAsc, debouncedSearch, statusFilter, assignmentFilter]);
 
   const { data: staffData, isLoading, error, refetch } = useGetAllStaffQuery(apiFilters);
-  const [deactivateStaff] = useDeactivateStaffMutation();
-  const [reactivateStaff] = useReactivateStaffMutation();
+  const [deactivateStaff, { isLoading: deactivatingStaff }] = useDeactivateStaffMutation();
+  const [reactivateStaff, { isLoading: reactivatingStaff }] = useReactivateStaffMutation();
   const { tasks } = useTasks();
 
   const staffPayload = staffData?.data || {};
@@ -118,6 +120,7 @@ export default function AdminStaff() {
     setSortField("name");
     setSortAsc(true);
     setPage(1);
+    toast.success("All filters cleared");
   };
 
   useEffect(() => {
@@ -134,6 +137,12 @@ export default function AdminStaff() {
       setPage(totalPages);
     }
   }, [page, totalPages]);
+
+  useEffect(() => {
+    if (error) {
+      toast.error(error?.data?.message || error?.message || "Failed to fetch staff members");
+    }
+  }, [error]);
 
   const openInviteModal = (staff = null, modeOverride = null) => {
     setInviteMode(modeOverride || (staff ? "resend" : "new"));
@@ -175,25 +184,25 @@ export default function AdminStaff() {
       return;
     }
 
-    if (action === "deactivate") {
-      try {
-        await deactivateStaff(row._id).unwrap();
-        toast.success("Staff deactivated");
-        await refetch();
-      } catch (deactivateError) {
-        toast.error(deactivateError?.data?.message || "Failed to deactivate staff");
-      }
-      return;
+    if (action === "deactivate" || action === "reactivate") {
+      setStaffActionTarget({ action, row });
     }
+  };
 
-    if (action === "reactivate") {
-      try {
-        await reactivateStaff(row._id).unwrap();
+  const handleConfirmStaffAction = async () => {
+    if (!staffActionTarget?.row?._id) return;
+    try {
+      if (staffActionTarget.action === "deactivate") {
+        await deactivateStaff(staffActionTarget.row._id).unwrap();
+        toast.success("Staff deactivated");
+      } else {
+        await reactivateStaff(staffActionTarget.row._id).unwrap();
         toast.success("Staff reactivated");
-        await refetch();
-      } catch (reactivateError) {
-        toast.error(reactivateError?.data?.message || "Failed to reactivate staff");
       }
+      setStaffActionTarget(null);
+      await refetch();
+    } catch (error) {
+      toast.error(error?.data?.message || "Failed to update staff status");
     }
   };
 
@@ -415,6 +424,28 @@ export default function AdminStaff() {
         onPageChange={setPage}
         onPageSizeChange={setPageSize}
         showCount={false}
+      />
+
+      <ConfirmDialog
+        open={!!staffActionTarget}
+        onOpenChange={(open) => {
+          if (!open) setStaffActionTarget(null);
+        }}
+        title={staffActionTarget?.action === "deactivate" ? "Deactivate staff member?" : "Reactivate staff member?"}
+        description={
+          staffActionTarget?.action === "deactivate"
+            ? `This will revoke access for ${staffActionTarget?.row?.fullName || "this staff member"} until reactivated.`
+            : `This will restore access for ${staffActionTarget?.row?.fullName || "this staff member"}.`
+        }
+        confirmLabel={
+          deactivatingStaff || reactivatingStaff
+            ? "Please wait..."
+            : staffActionTarget?.action === "deactivate"
+              ? "Deactivate"
+              : "Reactivate"
+        }
+        variant={staffActionTarget?.action === "deactivate" ? "destructive" : "default"}
+        onConfirm={handleConfirmStaffAction}
       />
     </div>
     </>

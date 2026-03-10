@@ -51,10 +51,11 @@ export default function AdminSettings() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingTemplateId, setEditingTemplateId] = useState(null);
   const [deleteTemplateId, setDeleteTemplateId] = useState(null);
+  const [toggleTemplateTarget, setToggleTemplateTarget] = useState(null);
   const [newTemplate, setNewTemplate] = useState(INITIAL_TEMPLATE_FORM);
   const { data: activeTemplatesData } = useGetTemplatesQuery({ active: true });
   const { data: inactiveTemplatesData } = useGetTemplatesQuery({ active: false });
-  const [toggleTemplate] = useToggleTemplateMutation();
+  const [toggleTemplate, { isLoading: isTogglingTemplate }] = useToggleTemplateMutation();
   const [createTemplate, { isLoading: isCreatingTemplate }] = useCreateTemplateMutation();
   const [updateTemplate, { isLoading: isUpdatingTemplate }] = useUpdateTemplateMutation();
   const [deleteTemplate, { isLoading: isDeletingTemplate }] = useDeleteTemplateMutation();
@@ -128,6 +129,26 @@ export default function AdminSettings() {
       return;
     }
     toast.success(`Template ${nextActive ? "enabled" : "disabled"}`);
+  };
+
+  const requestTemplateToggle = (id) => {
+    if (!id) {
+      toast.error("Invalid template id");
+      return;
+    }
+    const target = templates.find((t) => t.id === id);
+    if (!target) return;
+    setToggleTemplateTarget({
+      id,
+      name: target.name,
+      nextActive: !target.active,
+    });
+  };
+
+  const handleConfirmTemplateToggle = async () => {
+    if (!toggleTemplateTarget?.id) return;
+    await handleToggleTemplate(toggleTemplateTarget.id);
+    setToggleTemplateTarget(null);
   };
 
   const handleSaveTemplate = async () => {
@@ -277,7 +298,7 @@ export default function AdminSettings() {
                             >
                               {t.active ? "Active" : "Inactive"}
                             </Badge>
-                            <Switch checked={t.active} disabled={!t.id} onCheckedChange={() => handleToggleTemplate(t.id)} />
+                            <Switch checked={t.active} disabled={!t.id} onCheckedChange={() => requestTemplateToggle(t.id)} />
                           </div>
                         </TableCell>
                       </TableRow>
@@ -341,7 +362,7 @@ export default function AdminSettings() {
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <Switch checked={t.active} disabled={!t.id} onCheckedChange={() => handleToggleTemplate(t.id)} />
+                            <Switch checked={t.active} disabled={!t.id} onCheckedChange={() => requestTemplateToggle(t.id)} />
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
@@ -514,6 +535,24 @@ export default function AdminSettings() {
               confirmLabel={isDeletingTemplate ? "Deleting..." : "Delete"}
               variant="destructive"
               onConfirm={handleDeleteTemplate}
+            />
+
+            <ConfirmDialog
+              open={!!toggleTemplateTarget}
+              onOpenChange={(open) => {
+                if (!open) setToggleTemplateTarget(null);
+              }}
+              title={`${toggleTemplateTarget?.nextActive ? "Enable" : "Disable"} template?`}
+              description={`Are you sure you want to ${toggleTemplateTarget?.nextActive ? "enable" : "disable"} "${toggleTemplateTarget?.name || "this template"}"?`}
+              confirmLabel={
+                isTogglingTemplate
+                  ? "Please wait..."
+                  : toggleTemplateTarget?.nextActive
+                    ? "Enable"
+                    : "Disable"
+              }
+              variant={toggleTemplateTarget?.nextActive ? "default" : "destructive"}
+              onConfirm={handleConfirmTemplateToggle}
             />
           </>
         )}

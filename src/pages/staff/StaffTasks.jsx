@@ -97,12 +97,18 @@ export default function StaffTasks() {
     return filters;
   }, [page, sortKey, sortDir, debouncedSearch, categoryFilter, columnFilters]);
 
-  const { tasks: apiTasks, filterOptions, pagination, isLoading, refetch, updateTask } = useTasks(apiFilters);
+  const { tasks: apiTasks, filterOptions, pagination, isLoading, error, refetch, updateTask } = useTasks(apiFilters);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  useEffect(() => {
+    if (error) {
+      toast.error(error?.data?.message || "Failed to load staff tasks");
+    }
+  }, [error]);
 
   const today = startOfDay(new Date());
 
@@ -282,7 +288,7 @@ export default function StaffTasks() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Staff Tasks</h1>
+          <h1 className="text-2xl font-bold text-foreground">My Tasks</h1>
           <p className="text-sm text-muted-foreground">
             {isLoading ? "Loading..." : `${normalizedTasks.length} tasks`}
             {overdueTasks.length > 0 && ` · ${overdueTasks.length} overdue`}

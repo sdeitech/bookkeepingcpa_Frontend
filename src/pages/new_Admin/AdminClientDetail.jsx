@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,7 +15,22 @@ import { PaginationControls } from "@/components/ui/pagination-controls";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { TaskStatusBadge, TaskPriorityBadge } from "@/components/Admin/TaskStatusBadge";
 import { CreateTaskWizard } from "@/components/new_Admin/CreateTaskWizard";
-import { ArrowLeft, Plus, Mail, Building2, Loader2, Search, ChevronDown, Check, X } from "lucide-react";
+import {
+  ArrowLeft,
+  Plus,
+  Mail,
+  Loader2,
+  Search,
+  ChevronDown,
+  Check,
+  X,
+  Calendar,
+  UserCheck,
+  ListChecks,
+  Clock3,
+  CheckCircle2,
+  AlertTriangle,
+} from "lucide-react";
 import { format, isBefore, isToday, startOfDay, startOfWeek, endOfWeek } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -27,7 +43,8 @@ import { useGetQuickBooksConnectionStatusQuery } from "@/features/quickbooks/qui
 
 const DEFAULT_PAGE_SIZE = 10;
 
-const STATUS_FILTERS = [
+
+const VIEW_FILTERS = [
   { label: "All Tasks", value: "all" },
   { label: "Not Started", value: "NOT_STARTED" },
   { label: "In Progress", value: "IN_PROGRESS" },
@@ -68,7 +85,10 @@ export default function AdminClientDetail() {
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [columnFilters, setColumnFilters] = useState({});
   const [clearAllOpen, setClearAllOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState(null);
   const [activeTab, setActiveTab] = useState("overview");
+  const [viewFilter, setViewFilter] = useState("all");
   const apiFilters = useMemo(() => {
     const filters = {
       clientId,
@@ -77,6 +97,10 @@ export default function AdminClientDetail() {
       sortBy: sortKey || "createdAt",
       sortOrder: sortKey ? sortDir : "desc",
     };
+
+    if (viewFilter && viewFilter !== 'all') {
+      filters.viewFilter = viewFilter;
+    }
 
     if (debouncedSearch) filters.search = debouncedSearch;
 
@@ -90,19 +114,31 @@ export default function AdminClientDetail() {
     if (assignedByFilter) filters.assignedBy = assignedByFilter;
 
     return filters;
-  }, [clientId, page, pageSize, sortKey, sortDir, debouncedSearch, statusFilter, columnFilters]);
+  }, [clientId, page, pageSize, sortKey, sortDir, debouncedSearch, statusFilter, columnFilters,viewFilter]);
 
   const { data: clientData, isLoading: clientLoading, error: clientError } = useGetClientProfileQuery(clientId, {
     skip: !clientId,
   });
 
-  const { data: tasksData, isLoading: tasksLoading } = useGetTasksQuery(apiFilters, { skip: !clientId });
+  const { data: tasksData, isLoading: tasksLoading, error: tasksError } = useGetTasksQuery(apiFilters, { skip: !clientId });
   const [deleteTaskMutation] = useDeleteTaskMutation();
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  useEffect(() => {
+    if (clientError) {
+      toast.error(clientError?.data?.message || "Failed to load client details");
+    }
+  }, [clientError]);
+
+  useEffect(() => {
+    if (tasksError) {
+      toast.error(tasksError?.data?.message || "Failed to load tasks");
+    }
+  }, [tasksError]);
 
   const client = clientData?.data?.client;
   const normalizedClientId = client?._id || client?.id || clientId;
@@ -120,6 +156,16 @@ export default function AdminClientDetail() {
     ? format(new Date(client.subscription.nextBillingDate), "MMM d, yyyy")
     : "—";
   const paymentMethod = client?.subscription?.paymentMethod || client?.paymentMethod || "—";
+  const assignedStaffName =
+    client?.assignedStaffName ||
+    client?.assignedStaff?.staffName ||
+    getName(client?.assignedStaff);
+  const assignedStaffEmail =
+    client?.assignedStaffEmail ||
+    client?.assignedStaff?.staffEmail ||
+    client?.assignedStaff?.email ||
+    "—";
+  const resolvedAssignedStaffName = assignedStaffName && assignedStaffName !== "-" ? assignedStaffName : "Unassigned";
   const createTaskClientList = useMemo(() => {
     if (!client) return [];
     return [
@@ -274,21 +320,30 @@ export default function AdminClientDetail() {
     if (!taskId) return;
     const backTo = `${location.pathname}${location.search}`;
 
+    if (action === "view") {
+      navigate(`/admin/tasks/${taskId}`, { state: { backTo } });
+      return;
+    }
+    if (action === "edit") {
+      navigate(`/admin/tasks/${taskId}?mode=edit`, { state: { backTo } });
+      return;
+    }
+    if (action === "delete") {
+      setTaskToDelete(task);
+      setDeleteConfirmOpen(true);
+    }
+  };
+
+  const handleConfirmDeleteTask = async () => {
+    const taskId = getTaskId(taskToDelete);
+    if (!taskId) return;
     try {
-      if (action === "view") {
-        navigate(`/admin/tasks/${taskId}`, { state: { backTo } });
-        return;
-      }
-      if (action === "edit") {
-        navigate(`/admin/tasks/${taskId}?mode=edit`, { state: { backTo } });
-        return;
-      }
-      if (action === "delete") {
-        await deleteTaskMutation(taskId).unwrap();
-        toast.success("Task deleted");
-      }
+      await deleteTaskMutation(taskId).unwrap();
+      toast.success("Task deleted");
+      setDeleteConfirmOpen(false);
+      setTaskToDelete(null);
     } catch {
-      toast.error("Failed to update task");
+      toast.error("Failed to delete task");
     }
   };
 
@@ -302,7 +357,7 @@ export default function AdminClientDetail() {
     }
   };
 
-  const activeStatusLabel = STATUS_FILTERS.find((item) => item.value === statusFilter)?.label || "All Tasks";
+  const activeStatusLabel = VIEW_FILTERS.find((item) => item.value === viewFilter )?.label || "All Tasks";
   const hasAnyFilter = statusFilter !== "all" || !!debouncedSearch || Object.keys(columnFilters).length > 0;
 
   const handleClearAll = () => {
@@ -425,61 +480,82 @@ export default function AdminClientDetail() {
     );
   }
 
+  const fullName = getName(client) || "Unnamed Client";
+  const initials = fullName
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
+  const memberSince = client?.createdAt ? format(new Date(client.createdAt), "MMM d, yyyy") : "-";
+  const pendingCount = normalizedTasks.filter((task) => !["COMPLETED", "CANCELLED"].includes(String(task.status || "").toUpperCase())).length;
+  const overdueCount = normalizedTasks.filter(
+    (task) =>
+      !["COMPLETED", "CANCELLED"].includes(String(task.status || "").toUpperCase()) &&
+      task.dueDate &&
+      isBefore(new Date(task.dueDate), today),
+  ).length;
+
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-6 animate-fade-in">
       <Button variant="ghost" onClick={() => navigate("/admin/clients")} className="gap-2 self-start">
         <ArrowLeft className="h-4 w-4" /> Back
       </Button>
-      <div className="bg-card border border-border/70 rounded-2xl p-6 shadow-sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+
+      <div className="rounded-xl border border-border bg-card p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-start gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
-              <Building2 className="h-7 w-7 text-primary" />
-            </div>
-            <div className="space-y-2">
+            <Avatar className="h-14 w-14">
+              <AvatarFallback className="bg-primary/10 text-primary text-base font-semibold">
+                {initials || "CL"}
+              </AvatarFallback>
+            </Avatar>
+            <div className="space-y-1.5">
               <div>
-                <h1 className="text-2xl font-semibold text-foreground">
-                  {getName(client)}
-                </h1>
-                <div className="flex flex-wrap items-center gap-2 mt-1 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <h1 className="text-2xl font-bold text-foreground">{fullName}</h1>
+                  {client.status && (
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "text-xs",
+                        String(client.status).toLowerCase() === "active"
+                          ? "bg-success/15 text-success border-success/30"
+                          : "bg-muted text-muted-foreground border-border",
+                      )}
+                    >
+                      {client.status}
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-sm text-muted-foreground">Client</p>
+                <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-muted-foreground">
                   <span className="inline-flex items-center gap-1">
                     <Mail className="h-3.5 w-3.5" />
                     {client.email || "Unknown Client"}
                   </span>
-                  {client.phone && (
-                    <span className="inline-flex items-center gap-1">
-                      <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60" />
-                      {client.phone}
-                    </span>
-                  )}
+                  <span className="inline-flex items-center gap-1">
+                    <Calendar className="h-3.5 w-3.5" />
+                    Member since {memberSince}
+                  </span>
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2 text-xs">
-                {client.subscription?.planName && (
-                  <span className="px-2.5 py-1 rounded-full bg-primary/10 text-primary font-medium">
-                    {client.subscription.planName}
-                  </span>
-                )}
-                {client.subscription?.status && (
-                  <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 font-medium">
-                    {client.subscription.status}
-                  </span>
-                )}
-                {client.status && (
-                  <span className="px-2.5 py-1 rounded-full bg-muted text-muted-foreground font-medium">
-                    {client.status}
-                  </span>
-                )}
+                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
+                  Plan: {subscriptionPlan}
+                </Badge>
+                <Badge variant="outline" className="bg-emerald-100 text-emerald-700 border-emerald-200">
+                  Subscription: {subscriptionStatus}
+                </Badge>
               </div>
-              <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-                <span>Tasks: {totalCount}</span>
-                <span>Completed: {completedCount}</span>
-                <span>Progress: {progressPercent}%</span>
-              </div>
+              <p className="text-sm text-muted-foreground">
+                Assigned Staff: <span className="text-foreground">{resolvedAssignedStaffName}</span> ({assignedStaffEmail || "—"})
+              </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button onClick={() => setCreateOpen(true)} className="gap-2">
               <Plus className="h-4 w-4" /> Create Task
             </Button>
@@ -487,51 +563,62 @@ export default function AdminClientDetail() {
         </div>
       </div>
 
-      <div className="bg-card border border-border/70 rounded-2xl p-6 shadow-sm">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h3 className="font-semibold text-foreground">Task Progress</h3>
-          <span className="text-sm text-muted-foreground">
-            {completedCount} of {totalCount} completed ({progressPercent}%)
-          </span>
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-3">
+        <div className="rounded-xl border border-border bg-card p-4">
+          <p className="text-xs text-muted-foreground">Total Tasks</p>
+          <div className="mt-2 flex items-center justify-between">
+            <p className="text-3xl font-bold">{totalCount}</p>
+            <ListChecks className="h-5 w-5 text-blue-600" />
+          </div>
         </div>
-        <Progress value={progressPercent} className="h-3 mt-3" />
+        <div className="rounded-xl border border-border bg-card p-4">
+          <p className="text-xs text-muted-foreground">Pending Tasks</p>
+          <div className="mt-2 flex items-center justify-between">
+            <p className="text-3xl font-bold">{pendingCount}</p>
+            <Clock3 className="h-5 w-5 text-orange-600" />
+          </div>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-4">
+          <p className="text-xs text-muted-foreground">Completed Tasks</p>
+          <div className="mt-2 flex items-center justify-between">
+            <p className="text-3xl font-bold">{completedCount}</p>
+            <CheckCircle2 className="h-5 w-5 text-green-600" />
+          </div>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-4">
+          <p className="text-xs text-muted-foreground">Overdue Tasks</p>
+          <div className="mt-2 flex items-center justify-between">
+            <p className="text-3xl font-bold">{overdueCount}</p>
+            <AlertTriangle className="h-5 w-5 text-destructive" />
+          </div>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-4">
+          <p className="text-xs text-muted-foreground">Progress</p>
+          <div className="mt-2 flex items-center justify-between">
+            <p className="text-3xl font-bold">{progressPercent}%</p>
+            <CheckCircle2 className="h-5 w-5 text-primary" />
+          </div>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-4">
+          <p className="text-xs text-muted-foreground">Assigned Staff</p>
+          <div className="mt-2 flex items-center justify-between">
+            <p className="text-3xl font-bold">{resolvedAssignedStaffName === "Unassigned" ? 0 : 1}</p>
+            <UserCheck className="h-5 w-5 text-primary" />
+          </div>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="flex flex-wrap items-center justify-start gap-2 bg-muted/40 border border-border/60 rounded-xl p-1.5">
-          <TabsTrigger value="overview" className="gap-2">
-            Overview
-          </TabsTrigger>
-          <TabsTrigger value="tasks" className="gap-2">
-            Tasks
-            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-              {totalCount}
-            </span>
-          </TabsTrigger>
-          <TabsTrigger value="quickbooks" className="gap-2">
-            QuickBooks
-            <span
-              className={cn(
-                "rounded-full px-2 py-0.5 text-xs font-medium",
-                qbConnected
-                  ? "bg-emerald-100 text-emerald-700"
-                  : "bg-muted text-muted-foreground"
-              )}
-            >
-              {qbConnected ? "Connected" : "Not connected"}
-            </span>
-          </TabsTrigger>
-          <TabsTrigger value="billing" className="gap-2">
-            Billing
-            <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-              Soon
-            </span>
-          </TabsTrigger>
+        <TabsList className="w-full justify-start">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="tasks">Tasks ({totalCount})</TabsTrigger>
+          <TabsTrigger value="quickbooks">QuickBooks</TabsTrigger>
+          <TabsTrigger value="billing">Billing</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className="bg-card border border-border/70 rounded-2xl p-5 shadow-sm transition-shadow hover:shadow-md">
+            <div className="rounded-xl border border-border bg-card p-5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-sm font-semibold">
@@ -563,7 +650,7 @@ export default function AdminClientDetail() {
               </div>
             </div>
 
-            <div className="bg-card border border-border/70 rounded-2xl p-5 shadow-sm transition-shadow hover:shadow-md">
+            <div className="rounded-xl border border-border bg-card p-5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-sm font-semibold">
@@ -597,27 +684,28 @@ export default function AdminClientDetail() {
         </TabsContent>
 
         <TabsContent value="tasks" className="space-y-4">
-          <div className="bg-card border border-border/70 rounded-2xl p-4 shadow-sm">
-            <div className="flex items-center gap-3 flex-wrap">
-              <div className="relative flex-1 min-w-[220px] max-w-md">
-                <Input
-                  placeholder="Search tasks..."
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    setPage(1);
-                  }}
-                  className="h-10 pl-9"
-                />
-              </div>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="relative flex-1 min-w-[220px] max-w-md">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search tasks..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setPage(1);
+                }}
+                className="h-10 pl-9"
+              />
+            </div>
 
+            <div className="flex items-center gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
-                    variant={statusFilter !== "all" ? "default" : "outline"}
+                    variant={viewFilter !== "all" ? "default" : "outline"}
                     className={cn(
                       "h-10 gap-2",
-                      statusFilter !== "all"
+                      viewFilter !== "all"
                         ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
                         : "border-border text-foreground hover:bg-accent",
                     )}
@@ -627,17 +715,17 @@ export default function AdminClientDetail() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="bg-popover z-50 min-w-[180px]">
-                  {STATUS_FILTERS.map((item) => (
+                  {VIEW_FILTERS.map((item) => (
                     <DropdownMenuItem
                       key={item.value}
                       onClick={() => {
-                        setStatusFilter(item.value);
+                        setViewFilter(item.value);
                         setPage(1);
                       }}
                       className="flex items-center justify-between"
                     >
                       <span>{item.label}</span>
-                      {statusFilter === item.value && <Check className="h-3.5 w-3.5 text-primary" />}
+                      {viewFilter === item.value && <Check className="h-3.5 w-3.5 text-primary" />}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
@@ -657,33 +745,28 @@ export default function AdminClientDetail() {
             </div>
           </div>
 
-          <div className="bg-card border border-border/70 rounded-2xl shadow-sm overflow-hidden">
-            <div className="p-4">
-              <DataTable
-                data={paginatedTasks}
-                columns={columns}
-                onSort={handleSort}
-                onRowAction={handleTaskAction}
-                rowActions={rowActions}
-                loading={tasksLoading}
-                getRowId={(row) => row.id}
-                columnFilters={columnFilters}
-                onColumnFilterChange={handleColumnFilterChange}
-                emptyMessage="No tasks found"
-                emptyDescription="Try adjusting your search or filters."
-              />
-            </div>
-            <div className="border-t border-border/70 p-4">
-              <PaginationControls
-                page={page}
-                totalPages={totalPages}
-                onPageChange={setPage}
-                totalItems={isServerPaginated ? taskPagination.totalItems || filtered.length : filtered.length}
-                pageSize={pageSize}
-                onPageSizeChange={setPageSize}
-              />
-            </div>
-          </div>
+          <DataTable
+            data={paginatedTasks}
+            columns={columns}
+            onSort={handleSort}
+            onRowAction={handleTaskAction}
+            rowActions={rowActions}
+            loading={tasksLoading}
+            getRowId={(row) => row.id}
+            columnFilters={columnFilters}
+            onColumnFilterChange={handleColumnFilterChange}
+            emptyMessage="No tasks found"
+            emptyDescription="Try adjusting your search or filters."
+          />
+
+          <PaginationControls
+            page={page}
+            totalPages={totalPages}
+            onPageChange={setPage}
+            totalItems={isServerPaginated ? taskPagination.totalItems || filtered.length : filtered.length}
+            pageSize={pageSize}
+            onPageSizeChange={setPageSize}
+          />
         </TabsContent>
 
         <TabsContent value="quickbooks" className="space-y-4">
@@ -701,7 +784,7 @@ export default function AdminClientDetail() {
         </TabsContent>
 
         <TabsContent value="billing" className="space-y-4">
-          <div className="bg-card border border-border/70 rounded-2xl p-6 shadow-sm">
+          <div className="rounded-xl border border-border bg-card p-6">
             <h3 className="text-lg font-semibold text-foreground">Billing</h3>
             <p className="text-sm text-muted-foreground mt-1">
               Billing details will appear here in a future update.
@@ -727,6 +810,19 @@ export default function AdminClientDetail() {
         confirmLabel="Clear All"
         variant="destructive"
         onConfirm={handleClearAll}
+      />
+
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={(open) => {
+          setDeleteConfirmOpen(open);
+          if (!open) setTaskToDelete(null);
+        }}
+        title="Delete this task?"
+        description={`This action cannot be undone. ${taskToDelete?.title ? `Task: ${taskToDelete.title}` : ""}`}
+        confirmLabel="Delete"
+        variant="destructive"
+        onConfirm={handleConfirmDeleteTask}
       />
     </div>
   );

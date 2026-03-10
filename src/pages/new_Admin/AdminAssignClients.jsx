@@ -68,6 +68,7 @@ export default function AdminAssignClients() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const [staffFilter, setStaffFilter] = useState("all");
+  const [staffFilterSearch, setStaffFilterSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [sortField, setSortField] = useState("name");
   const [sortAsc, setSortAsc] = useState(true);
@@ -154,6 +155,16 @@ export default function AdminAssignClients() {
       count: clients.filter((client) => client.assignedStaffId === staff.id).length,
     }));
   }, [staffMembers, clients]);
+
+  const filteredStaffMembers = useMemo(() => {
+    const query = staffFilterSearch.trim().toLowerCase();
+    if (!query) return staffMembers;
+    return staffMembers.filter(
+      (staff) =>
+        staff.name.toLowerCase().includes(query) ||
+        String(staff.email || "").toLowerCase().includes(query),
+    );
+  }, [staffMembers, staffFilterSearch]);
 
   const maxWorkload = Math.max(...workload.map((w) => w.count), 1);
 
@@ -491,6 +502,15 @@ export default function AdminAssignClients() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="bg-popover z-50 min-w-[180px]">
+                <div className="p-2" onClick={(e) => e.stopPropagation()}>
+                  <Input
+                    value={staffFilterSearch}
+                    onChange={(e) => setStaffFilterSearch(e.target.value)}
+                    placeholder="Search staff..."
+                    className="h-8"
+                    onKeyDown={(e) => e.stopPropagation()}
+                  />
+                </div>
                 <DropdownMenuItem
                   onClick={() => {
                     setStaffFilter("all");
@@ -502,19 +522,23 @@ export default function AdminAssignClients() {
                   {staffFilter === "all" && <Check className="h-3.5 w-3.5 text-primary" />}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                {staffMembers.map((staff) => (
-                  <DropdownMenuItem
-                    key={staff.id}
-                    onClick={() => {
-                      setStaffFilter(staff.id);
-                      setPage(1);
-                    }}
-                    className="flex items-center justify-between"
-                  >
-                    <span>{staff.name}</span>
-                    {staffFilter === staff.id && <Check className="h-3.5 w-3.5 text-primary" />}
-                  </DropdownMenuItem>
-                ))}
+                {filteredStaffMembers.length > 0 ? (
+                  filteredStaffMembers.map((staff) => (
+                    <DropdownMenuItem
+                      key={staff.id}
+                      onClick={() => {
+                        setStaffFilter(staff.id);
+                        setPage(1);
+                      }}
+                      className="flex items-center justify-between"
+                    >
+                      <span>{staff.name}</span>
+                      {staffFilter === staff.id && <Check className="h-3.5 w-3.5 text-primary" />}
+                    </DropdownMenuItem>
+                  ))
+                ) : (
+                  <div className="px-2 py-1.5 text-xs text-muted-foreground">No staff found</div>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
 

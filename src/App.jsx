@@ -109,8 +109,17 @@ function App() {
       <div className="app">
         <Toaster
           richColors
+          position="top-right"
           toastOptions={{
-            className: "bg-card text-foreground border border-border shadow-lg",
+            classNames: {
+              toast: "bg-card text-foreground border border-border shadow-lg",
+              title: "text-foreground",
+              description: "text-muted-foreground",
+              success: "bg-success/15 text-success border-success/30",
+              error: "bg-destructive/15 text-destructive border-destructive/30",
+              warning: "bg-warning/15 text-warning border-warning/30",
+              info: "bg-primary/15 text-primary border-primary/30",
+            },
           }}
         />
         <Routes>
@@ -213,7 +222,7 @@ function App() {
                 <AdminTaskDetail />
               </ErrorBoundary>
             } />
-            <Route path="reports" element={<StaffReports />} />
+            <Route path="reports" element={<ComingSoon title="Reports" message="Reports is coming soon." />} />
             <Route path="create-task" element={<StaffCreateTask />} />
             <Route path="profile" element={<Profile />} />
           </Route>
