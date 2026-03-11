@@ -8,8 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "staging:build": "vite build --mode staging",
-    "staging:start": "vite preview --mode staging --port 8081",
-    "staging": "serve -s dist/ -p 8081"
+    "staging:start": "vite preview --mode staging --port 8082",
+    "staging": "serve -s dist/ -p 8082"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
