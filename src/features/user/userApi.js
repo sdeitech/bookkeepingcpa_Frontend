@@ -1,6 +1,19 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import config from '../../config';
 
+/**
+ * @typedef {Object} ProfileUser
+ * @property {string=} profile
+ * @property {string=} profileSignedUrl
+ */
+
+/**
+ * @typedef {Object} UploadProfilePictureResponseData
+ * @property {ProfileUser=} user
+ * @property {string=} profilePicturePath
+ * @property {string=} profilePictureSignedUrl
+ */
+
 export const userApi = createApi({
   reducerPath: 'userApi',
   baseQuery: fetchBaseQuery({
@@ -37,6 +50,14 @@ export const userApi = createApi({
         url: '/user/profile/upload-picture',
         method: 'POST',
         body: formData,
+      }),
+      invalidatesTags: ['Profile'],
+    }),
+
+    removeProfilePicture: builder.mutation({
+      query: () => ({
+        url: '/user/profile/picture',
+        method: 'DELETE',
       }),
       invalidatesTags: ['Profile'],
     }),
@@ -101,6 +122,7 @@ export const {
   useGetUserProfileQuery,
   useUpdateUserProfileMutation,
   useUploadProfilePictureMutation,
+  useRemoveProfilePictureMutation,
   useLazyGetUserProfileQuery,
   useChangePasswordMutation,
   // Admin hooks

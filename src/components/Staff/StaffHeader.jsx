@@ -16,6 +16,15 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useState } from "react";
 import { toast } from "sonner";
 
+const resolveHeaderProfileImage = (user) => {
+  const candidate = user?.profilePictureSignedUrl || user?.profileSignedUrl || user?.profile || "";
+  if (!candidate) return undefined;
+  if (candidate.startsWith("http://") || candidate.startsWith("https://") || candidate.startsWith("blob:")) {
+    return candidate;
+  }
+  return `${config.api.baseUrl}${candidate}`;
+};
+
 export function StaffHeader({ title, user, logout }) {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -40,7 +49,7 @@ export function StaffHeader({ title, user, logout }) {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="flex items-center gap-2">
               <Avatar className="h-8 w-8">
-                <AvatarImage src={user?.profile ? `${config.api.baseUrl}${user.profile}` : undefined} />
+                <AvatarImage src={resolveHeaderProfileImage(user)} />
                 <AvatarFallback className="bg-primary text-primary-foreground text-xs">
                   {user?.first_name?.[0]}{user?.last_name?.[0]}
                 </AvatarFallback>

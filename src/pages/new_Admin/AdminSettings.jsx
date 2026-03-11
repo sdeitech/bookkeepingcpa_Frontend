@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -22,6 +23,7 @@ import {
 } from "@/features/tasks/taskTemplateApi";
 
 const TABS = ["General", "Task Templates", "Notifications", "Integrations"];
+const ASSIGNABLE_ROLE_OPTIONS = ["CLIENT", "STAFF"];
 
 
 const SYSTEM_TEMPLATES = [
@@ -38,6 +40,7 @@ const INITIAL_TEMPLATE_FORM = {
   name: "",
   description: "",
   taskType: "DOCUMENT_UPLOAD",
+  assignableTo: ["CLIENT"],
   documentType: "",
   integrationType: "",
   actionCategory: "",
@@ -84,6 +87,9 @@ export default function AdminSettings() {
       actionCategory: t.actionCategory || "",
       defaultPriority: t.defaultPriority || "MEDIUM",
       defaultDueInDays: t.defaultDueInDays || 7,
+      assignableTo: Array.isArray(t.assignableTo) && t.assignableTo.length > 0
+        ? t.assignableTo.map((role) => String(role).toUpperCase())
+        : ["STAFF", "CLIENT"],
     }));
   }, [activeTemplatesData, inactiveTemplatesData]);
 
@@ -156,6 +162,10 @@ export default function AdminSettings() {
       toast.error("Name and task type are required");
       return;
     }
+    if (!Array.isArray(newTemplate.assignableTo) || newTemplate.assignableTo.length === 0) {
+      toast.error("Select at least one assignable role");
+      return;
+    }
 
     if (newTemplate.taskType === "DOCUMENT_UPLOAD" && !newTemplate.documentType.trim()) {
       toast.error("Document type is required");
@@ -178,6 +188,8 @@ export default function AdminSettings() {
         description: newTemplate.description.trim() || undefined,
         category: newTemplate.taskType,
         taskType: newTemplate.taskType,
+        availableFor: ["ADMIN", "STAFF"],
+        assignableTo: newTemplate.assignableTo,
         documentType: newTemplate.taskType === "DOCUMENT_UPLOAD" ? newTemplate.documentType.trim() : undefined,
         integrationType: newTemplate.taskType === "INTEGRATION" ? newTemplate.integrationType.trim() : undefined,
         actionCategory: newTemplate.taskType === "ACTION" ? newTemplate.actionCategory.trim() : undefined,
@@ -212,6 +224,9 @@ export default function AdminSettings() {
       name: template.name || "",
       description: template.description || "",
       taskType: template.taskType || "DOCUMENT_UPLOAD",
+      assignableTo: Array.isArray(template.assignableTo) && template.assignableTo.length > 0
+        ? template.assignableTo.map((role) => String(role).toUpperCase())
+        : ["STAFF", "CLIENT"],
       documentType: template.documentType || "",
       integrationType: template.integrationType || "",
       actionCategory: template.actionCategory || "",
@@ -273,6 +288,7 @@ export default function AdminSettings() {
                     <TableRow className="bg-muted/50">
                       <TableHead>Template Name</TableHead>
                       <TableHead>Category</TableHead>
+                      <TableHead>Assignable To</TableHead>
                       <TableHead>Times Used</TableHead>
                       <TableHead>Status</TableHead>
                     </TableRow>
@@ -283,6 +299,15 @@ export default function AdminSettings() {
                         <TableCell className="font-medium">{t.name}</TableCell>
                         <TableCell>
                           <Badge variant="outline" className={cn("text-xs", categoryColor[t.category])}>{t.category}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {(t.assignableTo || ["STAFF", "CLIENT"]).map((role) => (
+                              <Badge key={`${t.id}-${role}`} variant="outline" className="text-[10px]">
+                                {role}
+                              </Badge>
+                            ))}
+                          </div>
                         </TableCell>
                         <TableCell className="text-muted-foreground">{t.used}</TableCell>
                         <TableCell>
@@ -334,6 +359,7 @@ export default function AdminSettings() {
                       <TableRow className="bg-muted/50">
                         <TableHead>Template Name</TableHead>
                         <TableHead>Category</TableHead>
+                        <TableHead>Assignable To</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Toggle</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
@@ -347,6 +373,15 @@ export default function AdminSettings() {
                             <Badge variant="outline" className={cn("text-xs", categoryColor[t.category])}>
                               {t.category}
                             </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                              {(t.assignableTo || ["STAFF", "CLIENT"]).map((role) => (
+                                <Badge key={`${t.id}-${role}`} variant="outline" className="text-[10px]">
+                                  {role}
+                                </Badge>
+                              ))}
+                            </div>
                           </TableCell>
                           <TableCell>
                             <Badge
@@ -440,6 +475,32 @@ export default function AdminSettings() {
                         <SelectItem value="ACTION">Action</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label>Assignable To *</Label>
+                    <div className="flex flex-wrap gap-4 rounded-md border border-border p-3">
+                      {ASSIGNABLE_ROLE_OPTIONS.map((role) => {
+                        const checked = newTemplate.assignableTo.includes(role);
+                        return (
+                          <label key={role} className="inline-flex items-center gap-2 text-sm">
+                            <Checkbox
+                              checked={checked}
+                              onCheckedChange={(nextChecked) => {
+                                setNewTemplate((prev) => {
+                                  const current = Array.isArray(prev.assignableTo) ? prev.assignableTo : [];
+                                  if (nextChecked) {
+                                    return { ...prev, assignableTo: Array.from(new Set([...current, role])) };
+                                  }
+                                  return { ...prev, assignableTo: current.filter((value) => value !== role) };
+                                });
+                              }}
+                            />
+                            <span>{role}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   {newTemplate.taskType === "DOCUMENT_UPLOAD" && (

@@ -17,6 +17,15 @@ import { logout, selectCurrentUser } from "@/features/auth/authSlice";
 import config from "@/config";
 import { toast } from "sonner";
 
+const resolveHeaderProfileImage = (user) => {
+  const candidate = user?.profilePictureSignedUrl || user?.profileSignedUrl || user?.profile || "";
+  if (!candidate) return undefined;
+  if (candidate.startsWith("http://") || candidate.startsWith("https://") || candidate.startsWith("blob:")) {
+    return candidate;
+  }
+  return `${config.api.baseUrl}${candidate}`;
+};
+
 export function DashboardHeader({
   profilePath,
   settingsPath = "",
@@ -44,7 +53,7 @@ export function DashboardHeader({
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="h-9 flex items-center gap-2 rounded-full px-2">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={user?.profile ? `${config.api.baseUrl}${user.profile}` : undefined} />
+                  <AvatarImage src={resolveHeaderProfileImage(user)} />
                   <AvatarFallback className="bg-primary text-primary-foreground text-xs">
                     {user?.first_name?.[0]}{user?.last_name?.[0]}
                   </AvatarFallback>

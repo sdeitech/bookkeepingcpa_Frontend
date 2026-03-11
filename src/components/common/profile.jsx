@@ -11,7 +11,7 @@ import { Camera, Check, Eye, EyeOff, Loader2, Pencil, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDispatch, useSelector } from "react-redux";
 import { selectCurrentToken, selectCurrentUser, setCredentials } from "@/features/auth/authSlice";
-import { useChangePasswordMutation, useUpdateUserProfileMutation, useUploadProfilePictureMutation } from "@/features/user/userApi";
+import { useChangePasswordMutation, useLazyGetUserProfileQuery, useRemoveProfilePictureMutation, useUpdateUserProfileMutation, useUploadProfilePictureMutation } from "@/features/user/userApi";
 import config from "@/config";
 
 
@@ -55,17 +55,32 @@ const buildPhoneNumber = (countryCode, localPhone) => {
     return `${code} ${local}`.trim();
 };
 
+const resolveProfileImageUrl = (source = {}) => {
+    const candidate =
+        source.profilePictureSignedUrl ||
+        source.profileSignedUrl ||
+        source.avatarUrl ||
+        source.profile ||
+        "";
+
+    if (!candidate) return "";
+    if (
+        candidate.startsWith("http://") ||
+        candidate.startsWith("https://") ||
+        candidate.startsWith("blob:") ||
+        candidate.startsWith("data:")
+    ) {
+        return candidate;
+    }
+    return `${config.api.baseUrl}${candidate}`;
+};
+
 const normalizeProfile = (source = {}) => {
     const rawPhone = source.phoneNumber ?? source.phone ?? "";
     const { countryCode, localPhone } = splitPhoneNumber(rawPhone);
 
     // Get profile picture path and convert to full URL if needed
-    let avatarUrl = source.avatarUrl ?? source.profile ?? "";
-    
-    // If we have a profile path but it's not a full URL, prepend the API base URL
-    if (avatarUrl && !avatarUrl.startsWith('http') && !avatarUrl.startsWith('blob:')) {
-        avatarUrl = `${config.api.baseUrl}${avatarUrl}`;
-    }
+    const avatarUrl = resolveProfileImageUrl(source);
 
     return {
         first_name: source.first_name ?? source.firstName ?? "",
@@ -157,7 +172,9 @@ export function Profile({
     const token = useSelector(selectCurrentToken);
     const [updateUserProfile] = useUpdateUserProfileMutation();
     const [uploadProfilePicture] = useUploadProfilePictureMutation();
+    const [removeProfilePicture] = useRemoveProfilePictureMutation();
     const [changePassword] = useChangePasswordMutation();
+    const [fetchUserProfile] = useLazyGetUserProfileQuery();
     const { toast } = useToast();
     const fileInputRef = useRef(null);
 
@@ -166,7 +183,9 @@ export function Profile({
     const [editProfile, setEditProfile] = useState(emptyProfile);
     const [saving, setSaving] = useState(false);
     const [uploadingAvatar, setUploadingAvatar] = useState(false);
+    const [removingAvatar, setRemovingAvatar] = useState(false);
     const [errors, setErrors] = useState({});
+    const hasTriedAvatarRefreshRef = useRef(false);
 
     useEffect(() => {
         if (isEditing) return;
@@ -174,6 +193,7 @@ export function Profile({
         const nextProfile = normalizeProfile(source);
         setProfile(nextProfile);
         setEditProfile(nextProfile);
+        hasTriedAvatarRefreshRef.current = false;
     }, [defaultProfile, user, isEditing]);
 
     const [currentPassword, setCurrentPassword] = useState("");
@@ -298,15 +318,17 @@ export function Profile({
             const result = await uploadProfilePicture(formData).unwrap();
             
             if (result.success) {
-                // Update with server URL
-                const serverUrl = `${config.api.baseUrl}${result.data.profilePicturePath}`;
+                // Update with signed URL when available; fallback to key/path if needed.
+                const serverUrl = resolveProfileImageUrl(result?.data || {});
                 setEditProfile((prev) => ({ ...prev, avatarUrl: serverUrl }));
                 setProfile((prev) => ({ ...prev, avatarUrl: serverUrl }));
                 
                 // Update Redux store
                 const updatedUser = {
                     ...user,
+                    ...(result?.data?.user || {}),
                     profile: result.data.profilePicturePath,
+                    profileSignedUrl: result.data.profilePictureSignedUrl || undefined,
                 };
                 dispatch(
                     setCredentials({
@@ -323,7 +345,7 @@ export function Profile({
         } catch (error) {
             console.error('Avatar upload error:', error);
             // Revert preview on error
-            const oldUrl = user?.profile ? `${config.api.baseUrl}${user.profile}` : '';
+            const oldUrl = resolveProfileImageUrl(user || {});
             setEditProfile((prev) => ({ ...prev, avatarUrl: oldUrl }));
             setProfile((prev) => ({ ...prev, avatarUrl: oldUrl }));
             
@@ -336,6 +358,63 @@ export function Profile({
             setUploadingAvatar(false);
             // Clean up preview URL
             URL.revokeObjectURL(previewUrl);
+        }
+    };
+
+    const handleRemoveAvatar = async () => {
+        setRemovingAvatar(true);
+        try {
+            await removeProfilePicture().unwrap();
+            const response = await fetchUserProfile().unwrap();
+            const refreshedUser = response?.data || response?.user || {};
+            const normalized = normalizeProfile(refreshedUser);
+
+            dispatch(
+                setCredentials({
+                    user: {
+                        ...(user || {}),
+                        ...refreshedUser,
+                        profile: null,
+                        profileSignedUrl: undefined,
+                    },
+                    token: token || localStorage.getItem("token"),
+                })
+            );
+
+            setProfile(normalized);
+            setEditProfile(normalized);
+            toast({
+                title: "Profile picture removed",
+                description: "Your profile picture has been removed.",
+            });
+        } catch (error) {
+            toast({
+                title: "Remove failed",
+                description: error?.data?.message || "Unable to remove profile picture.",
+                variant: "destructive",
+            });
+        } finally {
+            setRemovingAvatar(false);
+        }
+    };
+
+    const refreshProfileImage = async () => {
+        if (hasTriedAvatarRefreshRef.current) return;
+        hasTriedAvatarRefreshRef.current = true;
+        try {
+            const response = await fetchUserProfile().unwrap();
+            const refreshedUser = response?.data || response?.user || {};
+            const normalized = normalizeProfile(refreshedUser);
+            setProfile(normalized);
+            setEditProfile((prev) => ({ ...prev, avatarUrl: normalized.avatarUrl }));
+            dispatch(
+                setCredentials({
+                    user: { ...(user || {}), ...refreshedUser },
+                    token: token || localStorage.getItem("token"),
+                })
+            );
+        } catch {
+            // Keep current image if refresh fails.
         }
     };
 
@@ -440,7 +519,10 @@ export function Profile({
                                         }}
                                     >
                                         <Avatar className="h-20 w-20">
-                                            <AvatarImage src={displayProfile?.avatarUrl} />
+                                            <AvatarImage
+                                                src={displayProfile?.avatarUrl}
+                                                onError={refreshProfileImage}
+                                            />
                                             <AvatarFallback className="bg-primary/10 text-primary text-xl font-semibold">
                                                 {initials}
                                             </AvatarFallback>
@@ -468,9 +550,17 @@ export function Profile({
                                         />
                                     </div>
                                     {isEditing && (
-                                        <p className="text-xs text-muted-foreground text-center">
-                                            Click to upload photo
-                                        </p>
+                                        <div className="text-xs text-muted-foreground text-center space-y-1">
+                                            <p>Click to upload photo</p>
+                                            <button
+                                                type="button"
+                                                onClick={handleRemoveAvatar}
+                                                disabled={uploadingAvatar || removingAvatar}
+                                                className="text-destructive hover:underline disabled:opacity-50"
+                                            >
+                                                {removingAvatar ? "Removing..." : "Remove profile picture"}
+                                            </button>
+                                        </div>
                                     )}
                                 </div>
 
