@@ -1,0 +1,17 @@
+# Notification Sound File
+This is a placeholder for the notification sound file.
+To add an actual notification sound:
+1. Download a notification sound file in MP3 format
+2. Replace this file with your notification.mp3 file
+3. The file will be accessible at /notification.mp3 in your app
+
+Example free notification sounds:
+- https://notificationsounds.com/
+- https://freesound.org/
+- https://zapsplat.com/ (requires free account)
+
+Make sure the sound file is:
+- Short (1-2 seconds max)
+- Not too loud or jarring
+- Professional sounding
+- Small in file size (< 100KB ideally)
