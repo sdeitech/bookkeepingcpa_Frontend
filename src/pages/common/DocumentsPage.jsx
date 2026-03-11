@@ -6,11 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PaginationControls } from "@/components/ui/pagination-controls";
-import { FileClock, FileText, User, X, ChevronDown, Calendar as CalendarIcon } from "lucide-react";
+import { FileClock, FileText, User, X, ChevronDown, Upload, Loader2, Plus } from "lucide-react";
 import { useGetAllDocumentsQuery } from "@/features/tasks/tasksApi";
+import { useUploadStandaloneDocumentMutation } from "@/features/taskDocuments/taskDocumentApi";
 import { useGetAllClientsQuery } from "@/features/user/userApi";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 
 const DEFAULT_PAGE_SIZE = 12;
@@ -25,6 +27,11 @@ export default function DocumentsPage({ role = "admin" }) {
   const [clientSearch, setClientSearch] = useState("");
   const [showClientDropdown, setShowClientDropdown] = useState(false);
 
+  // Standalone upload state
+  const [uploadingStandalone, setUploadingStandalone] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [showUploadArea, setShowUploadArea] = useState(false);
+
   const [filters, setFilters] = useState({
     status: "all",
     search: "",
@@ -32,6 +39,8 @@ export default function DocumentsPage({ role = "admin" }) {
     toDate: "",
     clientId: null,
     clientLabel: "",
+    type: "all", // all, task-related, standalone
+    includeDeleted: false, // New filter for deleted tasks
   });
   const [appliedFilters, setAppliedFilters] = useState({
     status: "all",
@@ -40,6 +49,8 @@ export default function DocumentsPage({ role = "admin" }) {
     toDate: "",
     clientId: null,
     clientLabel: "",
+    type: "all",
+    includeDeleted: false,
   });
   // Debounce search so it applies immediately without waiting on "Apply Filters"
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -59,9 +70,18 @@ export default function DocumentsPage({ role = "admin" }) {
     appliedFilters.status,
     appliedFilters.fromDate,
     appliedFilters.toDate,
+    appliedFilters.type,
+    appliedFilters.includeDeleted,
     debouncedSearch,
     appliedFilters.clientId,
   ]);
+
+  // Auto-apply includeDeleted filter when it changes
+  useEffect(() => {
+    if (filters.includeDeleted !== appliedFilters.includeDeleted) {
+      setAppliedFilters(prev => ({ ...prev, includeDeleted: filters.includeDeleted }));
+    }
+  }, [filters.includeDeleted, appliedFilters.includeDeleted]);
 
   // 🔥 Common API
   const { data, isLoading, refetch } = useGetAllDocumentsQuery({
@@ -71,8 +91,13 @@ export default function DocumentsPage({ role = "admin" }) {
     search: debouncedSearch,
     fromDate: appliedFilters.fromDate,
     toDate: appliedFilters.toDate,
+    type: appliedFilters.type,
+    includeDeleted: appliedFilters.includeDeleted, // New filter parameter
     clientId: isAdmin ? appliedFilters.clientId || undefined : undefined,
   });
+
+  // Standalone upload mutation
+  const [uploadStandaloneDocument] = useUploadStandaloneDocumentMutation();
 
   // Fetch clients only if admin
   const { data: clientsData } = useGetAllClientsQuery(undefined, {
@@ -126,18 +151,202 @@ export default function DocumentsPage({ role = "admin" }) {
     });
   };
 
+  const handleStandaloneUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'text/csv',
+      'text/plain',
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+      'application/zip',
+      'application/x-rar-compressed'
+    ];
+
+    const allowedExtensions = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.csv', '.txt', '.jpg', '.jpeg', '.png', '.gif', '.webp', '.zip', '.rar'];
+    const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+
+    if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
+      toast.error("Invalid file type. Please upload PDF, Word, Excel, images, or compressed files only.");
+      event.target.value = '';
+      return;
+    }
+
+    // Validate file size (max 10MB)
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      toast.error("File size must be less than 10MB");
+      event.target.value = '';
+      return;
+    }
+
+    setUploadingStandalone(true);
+    setUploadProgress(0);
+
+    // Simulate upload progress
+    const progressInterval = setInterval(() => {
+      setUploadProgress(prev => {
+        if (prev >= 90) {
+          clearInterval(progressInterval);
+          return 90;
+        }
+        return prev + 10;
+      });
+    }, 200);
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      await uploadStandaloneDocument(formData).unwrap();
+      
+      // Complete progress
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+      
+      // Show success message after brief delay
+      setTimeout(() => {
+        toast.success("Standalone document uploaded successfully");
+        refetch(); // Refresh the documents list
+        setShowUploadArea(false); // Hide upload area
+      }, 300);
+    } catch (error) {
+      clearInterval(progressInterval);
+      toast.error("Failed to upload document");
+      console.error("Upload error:", error);
+    } finally {
+      setTimeout(() => {
+        setUploadingStandalone(false);
+        setUploadProgress(0);
+        // Reset file input
+        event.target.value = '';
+      }, 500);
+    }
+  };
+
   return (
     <div className="space-y-8">
       {/* HEADER */}
       <div className="rounded-3xl bg-gradient-to-r from-primary/10 to-muted/40 border p-8">
-        <h2 className="text-3xl font-bold">
-          {isAdmin ? "Documents Management" : "My Documents"}
-        </h2>
-        <p className="text-muted-foreground mt-2">
-          {isAdmin
-            ? "Filter and manage uploaded documents."
-            : "View and manage your uploaded documents."}
-        </p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-3xl font-bold">
+              {isAdmin ? "Documents Management" : "My Documents"}
+            </h2>
+            <p className="text-muted-foreground mt-2">
+              {isAdmin
+                ? "Filter and manage uploaded documents."
+                : "View and manage your uploaded documents."}
+            </p>
+          </div>
+          
+          {/* Upload Standalone Document Button */}
+          <div className="flex gap-2">
+            <Button
+              onClick={() => setShowUploadArea(!showUploadArea)}
+              className="gap-2"
+              variant={showUploadArea ? "secondary" : "default"}
+            >
+              <Plus className="h-4 w-4" />
+              Upload Document
+            </Button>
+          </div>
+        </div>
+
+        {/* Standalone Upload Area */}
+        {showUploadArea && (
+          <div className="mt-6 p-6 bg-white/50 rounded-2xl border border-white/20">
+            <div className={cn(
+              "border-2 border-dashed rounded-lg p-6 transition-all",
+              uploadingStandalone 
+                ? "border-primary bg-primary/5" 
+                : "border-gray-300 hover:border-primary/50"
+            )}>
+              <div className="text-center">
+                <input
+                  type="file"
+                  id="upload-standalone-main"
+                  className="hidden"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.jpg,.jpeg,.png,.gif,.webp,.zip,.rar"
+                  onChange={handleStandaloneUpload}
+                  disabled={uploadingStandalone}
+                />
+                
+                {uploadingStandalone ? (
+                  <div className="space-y-3">
+                    <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Uploading document...</p>
+                      <p className="text-xs text-muted-foreground">{uploadProgress}% complete</p>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden max-w-xs mx-auto">
+                      <div
+                        className="bg-primary h-full transition-all duration-300 ease-out"
+                        style={{ width: `${uploadProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <Upload className="h-8 w-8 mx-auto text-gray-400" />
+                    <div>
+                      <Button
+                        variant="outline"
+                        onClick={() => document.getElementById('upload-standalone-main').click()}
+                        className="gap-2"
+                      >
+                        <Upload className="h-4 w-4" />
+                        Choose File
+                      </Button>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Upload documents not related to any specific task
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        PDF, Word, Excel, Images, or ZIP files (max 10MB)
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* DOCUMENT TYPE TABS */}
+      <div className="flex flex-wrap gap-2 p-1 bg-muted rounded-lg">
+        {[
+          { value: "all", label: "All Documents" },
+          { value: "task-related", label: "Task Documents" },
+          { value: "standalone", label: "Standalone Documents" }
+        ].map((tab) => (
+          <button
+            key={tab.value}
+            onClick={() => {
+              const newFilters = { ...filters, type: tab.value };
+              setFilters(newFilters);
+              setAppliedFilters(newFilters); // Sync ALL filters, not just type
+            }}
+            className={cn(
+              "px-4 py-2 rounded-md text-sm font-medium transition-all",
+              appliedFilters.type === tab.value
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {/* FILTERS */}
@@ -157,6 +366,25 @@ export default function DocumentsPage({ role = "admin" }) {
               }))
             }
           />
+        </div>
+
+        {/* Include Deleted Tasks Toggle */}
+        <div className="flex items-center space-x-2">
+          <input
+            type="checkbox"
+            id="includeDeleted"
+            checked={filters.includeDeleted}
+            onChange={(e) =>
+              setFilters((prev) => ({
+                ...prev,
+                includeDeleted: e.target.checked,
+              }))
+            }
+            className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+          />
+          <label htmlFor="includeDeleted" className="text-sm font-medium text-foreground">
+            Include Deleted Tasks
+          </label>
         </div>
 
         <div
@@ -319,6 +547,8 @@ export default function DocumentsPage({ role = "admin" }) {
                 toDate: "",
                 clientId: null,
                 clientLabel: "",
+                type: "all",
+                includeDeleted: false,
               });
               setClientSearch("");
               setAppliedFilters({
@@ -328,6 +558,8 @@ export default function DocumentsPage({ role = "admin" }) {
                 toDate: "",
                 clientId: null,
                 clientLabel: "",
+                type: "all",
+                includeDeleted: false,
               });
             }}
           >
@@ -356,17 +588,50 @@ export default function DocumentsPage({ role = "admin" }) {
           {documents.map((doc) => (
             <div
               key={doc._id}
-              className="rounded-2xl border bg-card shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 flex flex-col justify-between"
+              className={cn(
+                "rounded-2xl border bg-card shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 flex flex-col justify-between",
+                // Gray out deleted task documents
+                doc.taskId?.deleted && "opacity-60 bg-gray-50"
+              )}
             >
               <div className="p-6 space-y-4">
                 <div className="flex items-start gap-4">
                   <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
                     <FileText className="h-6 w-6 text-primary" />
                   </div>
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <h3 className="font-medium text-lg mt-2 truncate">
                       {doc.originalName || doc.fileName}
                     </h3>
+                    {/* Document Type Badge */}
+                    <div className="mt-2">
+                      {doc.taskId ? (
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs">
+                            {doc.documentType ? (
+                              doc.documentType.replace(/_/g, ' ')
+                            ) : (
+                              'Additional Document'
+                            )}
+                          </Badge>
+                          {/* Task Status Badge */}
+                          {doc.taskId?.deleted && (
+                            <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200">
+                              Task Removed
+                            </Badge>
+                          )}
+                          {doc.taskId?.status === 'ON_HOLD' && !doc.taskId?.deleted && (
+                            <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
+                              Task On Hold
+                            </Badge>
+                          )}
+                        </div>
+                      ) : (
+                        <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
+                          Standalone Document
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -398,20 +663,31 @@ export default function DocumentsPage({ role = "admin" }) {
                 >
                   View
                 </Button>
-                <Button
-                  size="sm"
-                  onClick={() =>
-                    navigate(
-                      isAdmin
-                        ? `/admin/tasks/${doc.taskId?._id}`
-                        : isStaff
-                          ? `/staff/tasks/${doc.taskId?._id}`
-                          : `/new-dashboard/tasks/${doc.taskId?._id}`
-                    )
-                  }
-                >
-                  Go to Task
-                </Button>
+                {/* Conditional Go to Task button */}
+                {doc.taskId && !doc.taskId.deleted ? (
+                  <Button
+                    size="sm"
+                    onClick={() =>
+                      navigate(
+                        isAdmin
+                          ? `/admin/tasks/${doc.taskId?._id}`
+                          : isStaff
+                            ? `/staff/tasks/${doc.taskId?._id}`
+                            : `/new-dashboard/tasks/${doc.taskId?._id}`
+                      )
+                    }
+                  >
+                    Go to Task
+                  </Button>
+                ) : doc.taskId?.deleted ? (
+                  <Badge variant="secondary" className="text-xs">
+                    Task Removed
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary" className="text-xs">
+                    No Task
+                  </Badge>
+                )}
               </div>
             </div>
           ))}

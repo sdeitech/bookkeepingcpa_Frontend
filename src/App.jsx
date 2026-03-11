@@ -163,7 +163,6 @@ function App() {
                 <AdminTaskDetail />
               </ErrorBoundary>
             } />
-            } />
             <Route path="profile" element={<Profile />} />
           </Route>
 

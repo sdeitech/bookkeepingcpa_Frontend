@@ -64,6 +64,16 @@ export const taskDocumentApi = createApi({
       invalidatesTags: (result, error, { taskId }) =>
         taskId ? [{ type: 'TaskDocument', id: taskId }] : [],
     }),
+
+    // Upload standalone document
+    uploadStandaloneDocument: builder.mutation({
+      query: (formData) => ({
+        url: '/documents/standalone',
+        method: 'POST',
+        body: formData,
+      }),
+      invalidatesTags: ['TaskDocument'],
+    }),
   })
 });
 
@@ -74,4 +84,5 @@ export const {
   useDeleteDocumentMutation,
   useGetTaskDocumentUrlQuery,
   useLazyGetTaskDocumentUrlQuery,
+  useUploadStandaloneDocumentMutation,
 } = taskDocumentApi;

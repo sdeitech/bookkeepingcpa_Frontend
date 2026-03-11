@@ -3,6 +3,8 @@
 @tailwind components;
 @tailwind utilities;
 
+@import "./Assets/Styles/Variable/variable.css";
+
 @layer base {
   :root {
     /* Plutify Brand Colors */
@@ -104,8 +106,6 @@
     --sidebar-ring: 217 91% 55%;
   }
 }
-
-@import "./Assets/Styles/Variable/variable.css";
 
 * {
   margin: 0;
