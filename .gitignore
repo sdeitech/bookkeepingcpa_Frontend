@@ -10,13 +10,13 @@ coverage/
 dist-ssr/
 build/
 
-# Environment files
-# .env
-# .env.local
-# .env.development
-# .env.staging
-# .env.production
-# .env*.local
+Environment files
+.env
+.env.local
+.env.development
+.env.staging
+.env.production
+.env*.local
 
 # Editor directories and files
 .vscode/*
