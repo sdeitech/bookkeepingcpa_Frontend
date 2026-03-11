@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   useGetUserProfileQuery,
+  useLazyGetUserProfileQuery,
+  useRemoveProfilePictureMutation,
   useUpdateUserProfileMutation,
   useUploadProfilePictureMutation
 } from '../../features/user/userApi';
@@ -9,12 +11,28 @@ import './ProfileEdit.css';
 
 const ProfileEdit = ({ onClose }) => {
   const { data: profileData, isLoading, refetch } = useGetUserProfileQuery();
+  const [fetchUserProfile] = useLazyGetUserProfileQuery();
   const [updateProfile, { isLoading: isUpdating }] = useUpdateUserProfileMutation();
   const [uploadPicture, { isLoading: isUploading }] = useUploadProfilePictureMutation();
+  const [removePicture, { isLoading: isRemoving }] = useRemoveProfilePictureMutation();
   
   const fileInputRef = useRef(null);
   const [previewImage, setPreviewImage] = useState(null);
   const [errors, setErrors] = useState({});
+  const [avatarRefreshTried, setAvatarRefreshTried] = useState(false);
+
+  const resolveProfileImageUrl = (source = {}) => {
+    const candidate =
+      source.profilePictureSignedUrl ||
+      source.profileSignedUrl ||
+      source.profile ||
+      "";
+    if (!candidate) return null;
+    if (candidate.startsWith('http://') || candidate.startsWith('https://') || candidate.startsWith('blob:') || candidate.startsWith('data:')) {
+      return candidate;
+    }
+    return `${config.api.baseUrl}${candidate}`;
+  };
   
   // Form state
   const [formData, setFormData] = useState({
@@ -37,10 +55,8 @@ const ProfileEdit = ({ onClose }) => {
         address: user.address || ''
       });
       
-      // Set profile picture if exists
-      if (user.profile) {
-        setPreviewImage(`${config.api.baseUrl}${user.profile}`);
-      }
+      setPreviewImage(resolveProfileImageUrl(user));
+      setAvatarRefreshTried(false);
     }
   }, [profileData]);
 
@@ -142,6 +158,7 @@ const ProfileEdit = ({ onClose }) => {
     try {
       const result = await uploadPicture(formData).unwrap();
       if (result.success) {
+        setPreviewImage(resolveProfileImageUrl(result?.data || {}));
         alert('Profile picture updated successfully!');
         refetch();
       }
@@ -151,6 +168,33 @@ const ProfileEdit = ({ onClose }) => {
         ...prev,
         picture: 'Failed to upload picture'
       }));
+    }
+  };
+
+  const handleRemovePicture = async () => {
+    try {
+      await removePicture().unwrap();
+      setPreviewImage(null);
+      await refetch();
+      alert('Profile picture removed successfully!');
+    } catch (error) {
+      console.error('Remove error:', error);
+      setErrors(prev => ({
+        ...prev,
+        picture: 'Failed to remove picture'
+      }));
+    }
+  };
+
+  const handleImageError = async () => {
+    if (avatarRefreshTried) return;
+    setAvatarRefreshTried(true);
+    try {
+      const fresh = await fetchUserProfile().unwrap();
+      const freshUser = fresh?.data || fresh?.user || {};
+      setPreviewImage(resolveProfileImageUrl(freshUser));
+    } catch {
+      // ignore
     }
   };
 
@@ -195,7 +239,7 @@ const ProfileEdit = ({ onClose }) => {
           <div className="profile-picture-section">
             <div className="current-picture">
               {previewImage ? (
-                <img src={previewImage} alt="Profile" />
+                <img src={previewImage} alt="Profile" onError={handleImageError} />
               ) : (
                 <div className="no-picture">
                   <span>No Picture</span>
@@ -218,6 +262,16 @@ const ProfileEdit = ({ onClose }) => {
               >
                 {isUploading ? 'Uploading...' : 'Change Picture'}
               </button>
+              {previewImage && (
+                <button
+                  type="button"
+                  className="upload-btn"
+                  onClick={handleRemovePicture}
+                  disabled={isRemoving || isUploading}
+                >
+                  {isRemoving ? 'Removing...' : 'Remove Picture'}
+                </button>
+              )}
               {errors.picture && (
                 <span className="error-text">{errors.picture}</span>
               )}

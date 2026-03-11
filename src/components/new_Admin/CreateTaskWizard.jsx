@@ -20,6 +20,17 @@ const CATEGORIES = [
   { id: "action", icon: CheckCircle, title: "Complete Action", desc: "Action item to complete", taskType: "ACTION" },
   { id: "custom", icon: Edit, title: "Custom Task", desc: "Create your own task", taskType: null },
 ];
+const ROLE_BY_TARGET = {
+  client: "CLIENT",
+  staff: "STAFF",
+  admin: "ADMIN",
+};
+const TARGET_BY_ROLE = {
+  CLIENT: "client",
+  STAFF: "staff",
+  ADMIN: "admin",
+};
+const FALLBACK_ASSIGNABLE_TO = ["STAFF", "CLIENT"];
 
 export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget = null, clientList, defaultClientId = "" }) {
 
@@ -47,8 +58,13 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
   const totalSteps = 4;
 
 
+  const selectedRole = ROLE_BY_TARGET[taskTarget] || "";
+
   // Fetch data from APIs
-  const { data: templatesData, isLoading: templatesLoading } = useGetTemplatesQuery({ active: true });
+  const { data: templatesData, isLoading: templatesLoading } = useGetTemplatesQuery({
+    active: true,
+    ...(selectedRole ? { assignableTo: selectedRole } : {}),
+  });
   const { data: clientsData, isLoading: clientsLoading } = useGetAllClientsQuery(
     undefined,
     { skip: step < 4 }
@@ -57,7 +73,7 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
 
   const { data: staffData, isLoading: staffLoading } = useGetAllStaffQuery(
     undefined,
-    { skip: defaultTarget === "client" || step < 4 }
+    { skip: step < 4 || selectedRole === "CLIENT" }
   )
 
   const templates = templatesData?.data?.templates || [];
@@ -86,6 +102,11 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
     [clients]
   );
 
+  const getTemplateAssignableRoles = (template) => {
+    const roles = Array.isArray(template?.assignableTo) ? template.assignableTo : [];
+    const normalized = roles.map((role) => String(role).toUpperCase()).filter(Boolean);
+    return normalized.length > 0 ? normalized : FALLBACK_ASSIGNABLE_TO;
+  };
 
 
   const resolvedClients = useMemo(() => {
@@ -109,8 +130,39 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
   const categoryTemplates = useMemo(() => {
     if (!category || category === "custom") return [];
     const categoryObj = CATEGORIES.find(c => c.id === category);
-    return templates.filter(t => t.taskType === categoryObj?.taskType && t.active);
-  }, [templates, category]);
+    return templates.filter((t) => {
+      if (t.taskType !== categoryObj?.taskType || !t.active) return false;
+      if (!selectedRole) return true;
+      return getTemplateAssignableRoles(t).includes(selectedRole);
+    });
+  }, [templates, category, selectedRole]);
+
+  const selectedTemplateAssignableRoles = useMemo(() => {
+    if (selectedTemplates.length === 0) return selectedRole ? [selectedRole] : FALLBACK_ASSIGNABLE_TO;
+    return selectedTemplates.reduce((acc, template, index) => {
+      const roles = getTemplateAssignableRoles(template);
+      if (index === 0) return roles;
+      return acc.filter((role) => roles.includes(role));
+    }, []);
+  }, [selectedTemplates, selectedRole]);
+
+  const availableAssigneeRoles = useMemo(
+    () => selectedTemplateAssignableRoles.filter((role) => ["CLIENT", "STAFF"].includes(role)),
+    [selectedTemplateAssignableRoles],
+  );
+
+  useEffect(() => {
+    if (selectedTemplates.length === 0) return;
+    if (!availableAssigneeRoles.length) return;
+    const currentRole = ROLE_BY_TARGET[taskTarget] || "";
+    if (currentRole && availableAssigneeRoles.includes(currentRole)) return;
+
+    const nextTarget = TARGET_BY_ROLE[availableAssigneeRoles[0]];
+    if (!nextTarget) return;
+    setTaskTarget(nextTarget);
+    if (nextTarget !== "client") setClientId("");
+    if (nextTarget !== "staff") setStaffId("");
+  }, [availableAssigneeRoles, taskTarget, selectedTemplates]);
 
   const reset = () => {
     setStep(defaultTarget ? 2 : 1); // skip step 1 if target is preset
@@ -193,6 +245,8 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
     return selectedTemplates[0]?.name || "";
   };
 
+  const getAssignableRolesLabel = (template) => getTemplateAssignableRoles(template).join(" / ");
+
   const handleCreate = async () => {
     if (!getTaskTitle() || !dueDate) {
       toast.error("Please fill in all required fields");
@@ -205,6 +259,12 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
       return;
     }
 
+    const targetRole = ROLE_BY_TARGET[taskTarget] || "";
+    if (selectedTemplates.length > 0 && targetRole && !selectedTemplateAssignableRoles.includes(targetRole)) {
+      toast.error("Template cannot be assigned to this role.");
+      return;
+    }
+
     // Determine assignedTo based on target
     let assignedToId;
     if (taskTarget === "staff") {
@@ -213,6 +273,9 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
         return;
       }
       assignedToId = staffId;
+    } else if (taskTarget === "admin") {
+      toast.error("Template cannot be assigned to this role.");
+      return;
     } else {
       if (!clientId) {
         toast.error("Please select a client");
@@ -266,11 +329,24 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
 
   const canProceedStep3 = category === "custom" ? customTitle.trim() :
     (category === "documents" ? selectedDocTypes.length > 0 : selectedTemplates.length > 0);
+  const canProceedStep1 = Boolean(taskTarget);
+  const canProceedStep2 = Boolean(category);
+  const canProceedCurrentStep =
+    step === 1
+      ? canProceedStep1
+      : step === 2
+        ? canProceedStep2
+        : step === 3
+          ? Boolean(canProceedStep3)
+          : true;
 
   const canCreate = () => {
     if (!getTaskTitle() || !dueDate) return false;
+    const targetRole = ROLE_BY_TARGET[taskTarget] || "";
+    if (selectedTemplates.length > 0 && targetRole && !selectedTemplateAssignableRoles.includes(targetRole)) return false;
     if (taskTarget === "staff" && !staffId) return false;
     if (taskTarget === "client" && !clientId) return false;
+    if (taskTarget === "admin") return false;
     return true;
   };
 
@@ -410,7 +486,12 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
                               />
                               <div className="flex-1">
                                 <div className="flex items-center justify-between">
-                                  <span className="text-sm font-medium">{template.name}</span>
+                                  <div>
+                                    <span className="text-sm font-medium">{template.name}</span>
+                                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                                      Assignable to: {getAssignableRolesLabel(template)}
+                                    </p>
+                                  </div>
                                   {isSelected && docType && (
                                     <Select
                                       value={docType.isRequired ? "required" : "optional"}
@@ -538,7 +619,12 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
                             <RadioGroupItem value={template._id} className="mt-0.5" />
                             <div className="flex-1">
                               <div className="flex items-center justify-between">
-                                <span className="text-sm font-medium">{template.name}</span>
+                                <div>
+                                  <span className="text-sm font-medium">{template.name}</span>
+                                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                                    Assignable to: {getAssignableRolesLabel(template)}
+                                  </p>
+                                </div>
                                 {template.usageCount > 0 && (
                                   <span className="text-xs text-muted-foreground">Used {template.usageCount}x</span>
                                 )}
@@ -633,8 +719,32 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
               </div>
 
               {/* Assign To */}
+              {availableAssigneeRoles.length > 1 && (
+                <div className="space-y-2">
+                  <Label>Assignee Role</Label>
+                  <div className="flex gap-2">
+                    {availableAssigneeRoles.map((role) => (
+                      <Button
+                        key={role}
+                        type="button"
+                        variant={selectedRole === role ? "default" : "outline"}
+                        onClick={() => {
+                          const nextTarget = TARGET_BY_ROLE[role];
+                          if (!nextTarget) return;
+                          setTaskTarget(nextTarget);
+                          if (nextTarget !== "client") setClientId("");
+                          if (nextTarget !== "staff") setStaffId("");
+                        }}
+                      >
+                        {role}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2">
-                <Label>{taskTarget === "staff" ? "Assign to Staff *" : "Assign to Client *"}</Label>
+                <Label>{selectedRole === "STAFF" ? "Assign to Staff *" : "Assign to Client *"}</Label>
                 {taskTarget === "staff" ? (
                   staffLoading ? (
                     <div className="flex items-center gap-2 p-2 text-sm text-muted-foreground">
@@ -760,7 +870,7 @@ export function CreateTaskWizard({ open, onOpenChange, onCreate, defaultTarget =
           {step < totalSteps ? (
             <Button
               onClick={() => setStep(step + 1)}
-              disabled={isCreating || (step === 3 && !canProceedStep3)}
+              disabled={isCreating || !canProceedCurrentStep}
               className="gap-1.5"
             >
               Next <ArrowRight className="w-4 h-4" />
