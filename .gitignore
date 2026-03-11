@@ -14,7 +14,7 @@ Environment files
 .env
 .env.local
 .env.development
-.env.staging
+# .env.staging
 .env.production
 .env*.local
 
